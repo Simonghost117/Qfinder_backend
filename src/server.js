@@ -1,28 +1,32 @@
-import app from './app.js'; // Importa la instancia de Express
-import { testConnection, safeSync } from './config/database.js';
+import dotenv from 'dotenv';
+import app from './app.js';
+import { sequelize, testConnection, safeSync } from './config/database.js';
 
-const PORT = process.env.PORT || 4000;
+dotenv.config();
+
+const PORT = process.env.PORT || 3000;
+
+if (!sequelize) {
+  console.error('Error: La instancia de Sequelize no se cargó correctamente.');
+  process.exit(1);
+}
 
 const startServer = async () => {
   try {
-    // Probar conexión
     const isConnected = await testConnection();
     
     if (!isConnected) {
       throw new Error('No se pudo conectar a la base de datos');
     }
 
-    // Sincronizar solo en desarrollo
     if (process.env.NODE_ENV === 'development') {
       await safeSync();
     }
-    
-    // Iniciar servidor HTTP
+
     const server = app.listen(PORT, () => {
       console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
     });
 
-    // Manejo de cierre adecuado
     process.on('SIGTERM', () => {
       server.close(() => {
         console.log('Servidor cerrado');

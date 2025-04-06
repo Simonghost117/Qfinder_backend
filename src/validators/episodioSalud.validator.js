@@ -7,7 +7,14 @@ const sintomas = [
 
 export const episodioSchema = z.object({
   id_paciente: z.number().int().positive(),
-  tipo: z.enum(['crisis', 'recaida', 'hospitalizacion', 'otro']),
+  tipo: z.enum([
+    'crisis_psiquiatrica',
+    'crisis_epileptica',
+    'recaida',
+    'hospitalizacion',
+    'observacion',
+    'datos_dispositivo'
+  ]),
   fecha_hora_inicio: z.coerce.date().max(new Date()),
   severidad: z.number().int().min(1).max(10),
   sintomas: z.array(z.enum(sintomas)).min(1),

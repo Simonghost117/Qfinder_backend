@@ -1,4 +1,5 @@
-import  sequelize  from '../config/database.js';
+import  {sequelize}  from '../config/database.js';
+
 import { Usuario } from './Usuario.js';
 import { Paciente } from './Paciente.js';
 import { Medico } from './Medico.js';

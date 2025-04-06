@@ -1,5 +1,5 @@
 import { DataTypes } from 'sequelize';
-import  sequelize  from '../config/database.js';
+import  {sequelize}  from '../config/database.js';
 
 export const Usuario = sequelize.define('Usuario', {
   id_usuario: {
@@ -21,7 +21,7 @@ export const Usuario = sequelize.define('Usuario', {
     allowNull: false
   },
   tipo_usuario: {
-    type: DataTypes.ENUM('Paciente', 'Familiar', 'Medico', 'Administrador'),
+    type: DataTypes.ENUM('Familiar', 'Medico', 'Administrador'),
     allowNull: false
   },
   estado_usuario: {
