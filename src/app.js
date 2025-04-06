@@ -3,7 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
- import usuarioRoutes from './routes/usuarioRoutes.js';
+import usuarioRoutes from './routes/usuarioRoutes.js';
 // import notaMedicaRoutes from './routes/notaMedicaRoutes.js';
 // import errorHandler from './middlewares/errorHandler.js';
 import cookieParser from 'cookie-parser';
