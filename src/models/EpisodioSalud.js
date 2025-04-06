@@ -1,5 +1,5 @@
 import { DataTypes } from 'sequelize';
-import  sequelize  from '../config/database.js';
+import  {sequelize}  from '../config/database.js';
 import { NotificacionesService } from '../services/notificaciones.service.js';
 
 export const EpisodioSalud = sequelize.define('episodio_salud', {
@@ -64,7 +64,7 @@ export const EpisodioSalud = sequelize.define('episodio_salud', {
     },
     registrado_por: {
         type: DataTypes.INTEGER,
-        allowNull: false
+        allowNull: true,
     },
     registrado_por_role: {
         type: DataTypes.ENUM('Medico', 'Familiar', 'Administrador', 'Sistema'),
@@ -92,27 +92,16 @@ export const EpisodioSalud = sequelize.define('episodio_salud', {
     timestamps: true,
     tableName: 'episodio_salud',
     hooks: {
-        afterCreate: async (episodio) => {
-            const notificacionService = new NotificacionesService();
+        // afterCreate: async (episodio) => {
+        //     const notificacionService = new NotificacionesService();
             
-            if (episodio.origen === 'cuidador') {
-                await notificacionService.notificarMedico(episodio);
-            } else if (episodio.origen === 'sistema' && episodio.severidad >= 7) {
-                await notificacionService.notificarUrgencia(episodio);
-            }
-        }
+        //     if (episodio.origen === 'cuidador') {
+        //         await notificacionService.notificarMedico(episodio);
+        //     } else if (episodio.origen === 'sistema' && episodio.severidad >= 7) {
+        //         await notificacionService.notificarUrgencia(episodio);
+        //     }
+        // }
     }
 });
 
 // Relaciones
-export const setupEpisodioRelations = (models) => {
-    EpisodioSalud.belongsTo(models.Paciente, {
-        foreignKey: 'id_paciente',
-        as: 'paciente'
-    });
-    
-    EpisodioSalud.belongsTo(models.Usuario, {
-        foreignKey: 'registrado_por',
-        as: 'registrador'
-    });
-};

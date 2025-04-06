@@ -4,36 +4,54 @@ import { handleError } from '../utils/errorHandler.js';
 
 export class EpisodioSaludService {
   static async crearEpisodio(data) {
+    console.log("Datos recibidos:", data); 
     try {
-      const episodio = await EpisodioSalud.create(data);
-      
-      // Notificar si es necesario
-      if (episodio.severidad >= 5 || data.origen === 'paciente') {
-        await NotificacionesService.notificarCuidadores(episodio);
+      if (!data.id_paciente) {
+        throw new Error('El campo id_paciente es requerido');
       }
       
+      const episodio = await EpisodioSalud.create(data);
+
+      // ✅ Instancia del servicio de notificaciones
+      const notificacionesService = new NotificacionesService();
+
+      if (episodio.severidad >= 5 || data.origen === 'paciente') {
+        await notificacionesService.notificarCuidadores(episodio);
+      }
+
       return episodio;
     } catch (error) {
-      handleError(error);
-      throw new Error('Error al crear episodio');
+      console.error("Error detallado al crear episodio:", error);
+
+      if (error.name === 'SequelizeValidationError') {
+        throw new Error(`Error de validación: ${error.errors.map(e => e.message).join(', ')}`);
+      } else if (error.name === 'SequelizeForeignKeyConstraintError') {
+        throw new Error('Error de clave foránea: Verifica que el id_paciente sea válido');
+      } else if (error.name === 'SequelizeUniqueConstraintError') {
+        throw new Error('Error de duplicidad: Este episodio ya existe');
+      } else {
+        handleError(error);
+        throw new Error(`Error al crear episodio: ${error.message}`);
+      }
     }
   }
 
   static async obtenerPorPaciente(idPaciente, rolUsuario) {
     try {
       const where = { id_paciente: idPaciente };
-      
+
       if (rolUsuario === 'Paciente') {
         where.estado = 'confirmado';
       }
-      
+
       return await EpisodioSalud.findAll({ 
         where,
         order: [['fecha_hora_inicio', 'DESC']]
       });
     } catch (error) {
+      console.error("Error al obtener episodios:", error);
       handleError(error);
-      throw new Error('Error al obtener episodios');
+      throw new Error(`Error al obtener episodios: ${error.message}`);
     }
   }
 
@@ -41,8 +59,9 @@ export class EpisodioSaludService {
     try {
       return await EpisodioSalud.findByPk(idEpisodio);
     } catch (error) {
+      console.error("Error al obtener episodio:", error);
       handleError(error);
-      throw new Error('Error al obtener episodio');
+      throw new Error(`Error al obtener episodio: ${error.message}`);
     }
   }
 
@@ -53,8 +72,9 @@ export class EpisodioSaludService {
       });
       return updated;
     } catch (error) {
+      console.error("Error al actualizar episodio:", error);
       handleError(error);
-      throw new Error('Error al actualizar episodio');
+      throw new Error(`Error al actualizar episodio: ${error.message}`);
     }
   }
 
@@ -64,8 +84,9 @@ export class EpisodioSaludService {
         where: { id_episodio: idEpisodio }
       });
     } catch (error) {
+      console.error("Error al eliminar episodio:", error);
       handleError(error);
-      throw new Error('Error al eliminar episodio');
+      throw new Error(`Error al eliminar episodio: ${error.message}`);
     }
   }
 }

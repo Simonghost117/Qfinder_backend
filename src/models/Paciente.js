@@ -1,5 +1,5 @@
 import { DataTypes } from 'sequelize';
-import  sequelize  from '../config/database.js';
+import { sequelize } from '../config/database.js'; // 👈 esta línea debe ir ANTES de usar sequelize
 
 export const Paciente = sequelize.define('Paciente', {
   id_paciente: {
@@ -32,5 +32,6 @@ export const Paciente = sequelize.define('Paciente', {
 }, {
   tableName: 'paciente',
   timestamps: true,
+  createdAt: 'creado_el',
   updatedAt: 'ultima_actualizacion'
 });

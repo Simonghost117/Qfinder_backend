@@ -95,7 +95,7 @@ export class ReporteSaludController {
                     sintomas.push('evento_detectado');
             }
 
-            const reporte = await EpisodioService.crearEpisodio({
+            const reporte = await EpisodioSaludService.crearEpisodio({
                 id_paciente,
                 tipo: tipoEpisodio,
                 fecha_hora_inicio: new Date(datos.timestamp || Date.now()),
