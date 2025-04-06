@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const UsuarioSchema = z.object({
+export const registerSchema = z.object({
     nombre_usuario: z.string()
         .min(2, { message: "El nombre debe tener al menos 2 caracteres" })
         .max(255, { message: "El nombre de usuario no puede exceder los 255 caracteres" }),
@@ -16,4 +16,9 @@ const UsuarioSchema = z.object({
     updatedAt: z.date().optional()
 });
 
-export default UsuarioSchema;
+export const loginSchema = z.object({
+    correo_usuario: z.string()
+        .email({ message: "El correo electrónico debe tener un formato válido" }),
+    contrasena_usuario: z.string()
+        .min(8, { message: "La contraseña debe tener al menos 8 caracteres" }),
+});
