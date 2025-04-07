@@ -13,6 +13,26 @@ const Usuario = sequelize.define('Usuario', {
         allowNull: false,
         field: 'nombre_usuario'
     },
+    apellido_usuario: {
+        type: DataTypes.STRING(255),
+        allowNull: false,
+        field: 'apellido_usuario'
+    },
+    identificacion_usuario: {
+        type: DataTypes.STRING(25),
+        allowNull: false,
+        field: 'identificacion_usuario'
+    },
+    direccion_usuario: {
+        type: DataTypes.STRING(255),
+        allowNull: false,
+        field: 'direccion_usuario'
+    },
+    telefono_usuario: {
+        type: DataTypes.STRING(255),
+        allowNull: false,
+        field: 'telefono_usuario'
+    },
     correo_usuario: {
         type: DataTypes.STRING(255),
         allowNull: false,

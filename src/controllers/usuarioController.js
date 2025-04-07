@@ -5,17 +5,12 @@ import { createAccessToken } from '../libs/jwt.js';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 dotenv.config();
-import { promisify } from 'util';
-
-const verifyTokenAsync = promisify(jwt.verify);
-
-
 
 export const register = async (req, res) => {
 
     try {
 
-        const { nombre_usuario, correo_usuario, contrasena_usuario, tipo_usuario } = req.body;
+        const { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, contrasena_usuario, tipo_usuario } = req.body;
     
         // Verificar si el usuario ya existe
         const usuarioExistente = await Usuario.findOne({ 
@@ -28,6 +23,10 @@ export const register = async (req, res) => {
 
         const usuario = await createUser(
             nombre_usuario,
+            apellido_usuario,
+            identificacion_usuario,
+            direccion_usuario,
+            telefono_usuario,
             correo_usuario,
             contrasena_usuario,
             tipo_usuario
@@ -45,7 +44,11 @@ export const register = async (req, res) => {
   
         res.status(201).json({ message: 'Usuario registrado exitosamente', 
             id: usuario._id_usuario,
-            username: usuario.nombre_usuario,
+            nombre: usuario.nombre_usuario,
+            apellido : usuario.apellido_usuario,
+            identificacion: usuario.identificacion_usuario,
+            direccion: usuario.direccion_usuario,
+            telefono: usuario.telefono_usuario,
             email: usuario.correo_usuario, 
             tipo_usuario: usuario.tipo_usuario,
             token: token,
@@ -102,4 +105,77 @@ export const logout = async (req, res) => {
     });
     return res.status(200).json({ message: "Logout exitoso" });
   };
-  
+
+export const listarUsers = async (req, res) => {
+    try {
+        const usuarios = await Usuario.findAll();
+        res.status(200).json(usuarios.map(usuario => ({
+            id_usuario: usuario.id_usuario,
+            nombre_usuario: usuario.nombre_usuario,
+            apellido_usuario: usuario.apellido_usuario,
+            identificacion_usuario: usuario.identificacion_usuario,
+            direccion_usuario: usuario.direccion_usuario,
+            telefono_usuario: usuario.telefono_usuario,
+            correo_usuario: usuario.correo_usuario,
+            tipo_usuario: usuario.tipo_usuario,
+            estado_usuario: usuario.estado_usuario
+        })
+    ));
+    } catch (error) {
+        res.status(500).json({ message: 'Error al listar los usuarios', error });
+    }
+};
+
+export const actualizarUser = async (req, res) => {
+  try {
+    const { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario, correo_usuario, contrasena_usuario } = req.body;
+
+    // Obtener el id del usuario autenticado desde el token
+    const { id } = req.usuario; // Esto asume que el middleware verifyToken adjunta el id al req.usuario
+    console.log("Contenido de req.usuario:", req.usuario);
+
+    // Verificar si el usuario existe
+    const usuario = await Usuario.findByPk(id);
+    if (!usuario) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
+
+    const dataToUpdate = { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario, correo_usuario };
+    if (contrasena_usuario) {
+      const salt = await bcrypt.genSalt(10); // Hashear contraseña si fue proporcionada
+      dataToUpdate.contrasena_usuario = await bcrypt.hash(contrasena_usuario, salt);
+    }
+
+    // Actualizar el usuario autenticado
+    await Usuario.update(dataToUpdate, {
+      where: { id_usuario: id },
+    });
+
+    res.status(200).json({ message: 'Información del usuario actualizada exitosamente' });
+  } catch (error) {
+    console.error('Error al actualizar el usuario:',  error);
+    res.status(500).json({ message: 'Error al actualizar el usuario', error });
+  }
+};
+
+export const eliminarUser = async (req, res) => {
+    try {
+        const { id } = req.usuario; // Obtener el id del usuario autenticado desde el token
+
+        // Verificar si el usuario existe
+        const usuario = await Usuario.findByPk(id);
+        if (!usuario) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+
+        // Eliminar el usuario autenticado
+        await Usuario.destroy({
+            where: { id_usuario: id },
+        });
+
+        res.status(200).json({ message: 'Usuario eliminado exitosamente' });
+    } catch (error) {
+        console.error('Error al eliminar el usuario:', error);
+        res.status(500).json({ message: 'Error al eliminar el usuario', error });
+    }
+};
