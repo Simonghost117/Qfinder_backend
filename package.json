@@ -2,9 +2,12 @@
   "name": "api_qfinder_2.0",
   "version": "1.0.0",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "type": "module",
+ "scripts": {
+  "start": "node src/server.js",
+  "dev": "nodemon src/server.js",
+  "migrate": "sequelize-cli db:migrate"
+},
   "keywords": [],
   "author": "",
   "license": "ISC",
