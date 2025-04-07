@@ -3,7 +3,7 @@ import cors from 'cors';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 
-import panelRoutes from '../routes/panel.routes.js';
+import panelRoutes from './routes/panel.routes.js';
 
 dotenv.config();
 const app = express();
