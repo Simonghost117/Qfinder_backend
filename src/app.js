@@ -4,7 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
  import usuarioRoutes from './routes/usuario.routes.js';
- import redesRoutes from './routes/redes.routes';
+ import redesRoutes from './routes/redes.routes.js';
 //import { handleError } from './utils/errorHandler.js';
 
 import cookieParser from 'cookie-parser';
@@ -34,7 +34,9 @@ app.get('/test', (req, res) => {
  app.use('/api/auth', usuarioRoutes);
  app.use('/api/episodios', router);
 app.use('/api/reportes', routerReport);
+
 app.use('/api/redes', redesRoutes);
+
 // app.use('/api', notaMedicaRoutes);
 
 app.use(cors({

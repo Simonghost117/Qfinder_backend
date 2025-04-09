@@ -1,10 +1,14 @@
-const express = require('express');
+import express from 'express';
+import {
+    listarPorEnfermedad,
+  unirseARed,
+  salirDeRed
+} from '../controllers/redes.controller.js';
+
 const router = express.Router();
-const redesController = require('../controllers/redes.controller');
-const authMiddleware = require('../middlewares/auth.middleware'); // si ya existe
 
-router.get('/', redesController.listarPorEnfermedad);
-router.post('/:id/unirse', authMiddleware, redesController.unirseARed);
-router.delete('/:id/salir', authMiddleware, redesController.salirDeRed);
+router.get('/', listarPorEnfermedad);
+router.post('/:id/unirse', unirseARed);
+router.delete('/:id/salir', salirDeRed);
 
-module.exports = router;
+export default router;

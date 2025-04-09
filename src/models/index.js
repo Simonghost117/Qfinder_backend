@@ -13,6 +13,10 @@ import { Familiar } from './Familiar.js';
 // import { ActividadFisica } from './ActividadFisica.js';
 // import { CuidadoPersonal } from './CuidadoPersonal.js';
 import { EpisodioSalud } from './EpisodioSalud.js';
+import Red from './Red.js';
+import UsuarioRed from './UsuarioRed.js';
+
+
 // import { AlertaEmergencia } from './AlertaEmergencia.js';
 // import { ReclamacionMedicamento } from './ReclamacionMedicamento.js';
 
@@ -42,6 +46,7 @@ Familiar.belongsTo(Paciente, { foreignKey: 'id_paciente' });
 Usuario.belongsToMany(Red, { through: UsuarioRed, foreignKey: 'usuarioId' });
 Red.belongsToMany(Usuario, { through: UsuarioRed, foreignKey: 'redId' });
 
+
 // Relaciones Medico
 Medico.belongsTo(Usuario, { foreignKey: 'id_usuario' });
 // Medico.hasMany(CitaMedica, { foreignKey: 'id_medico' });
@@ -59,7 +64,8 @@ export {
   Usuario,
   Paciente,
   Medico,
-  Familiar,
+  Familiar, Red,           // 👈 Agrega esta línea
+  UsuarioRed,
 //   PanelPersonalizado,
 //   Medicamento,
 //   PacienteMedicamento,
