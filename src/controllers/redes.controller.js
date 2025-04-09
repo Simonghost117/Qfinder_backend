@@ -1,8 +1,9 @@
+// src/controllers/redes.controller.js
+import { Red, UsuarioRed } from '../models/index.js';
 
-const { Red, UsuarioRed } = require('../models');
-
-exports.listarPorEnfermedad = async (req, res) => {
+export const listarPorEnfermedad = async (req, res) => {
   const { enfermedad } = req.query;
+
   try {
     const redes = await Red.findAll({
       where: enfermedad ? { enfermedad } : {},
@@ -13,32 +14,32 @@ exports.listarPorEnfermedad = async (req, res) => {
   }
 };
 
-exports.unirseARed = async (req, res) => {
+export const unirseARed = async (req, res) => {
   const redId = req.params.id;
   const userId = req.user.id;
 
   try {
     const existe = await UsuarioRed.findOne({ where: { usuarioId: userId, redId } });
-    if (existe) return res.status(400).json({ mensaje: 'Ya eres miembro' });
+    if (existe) return res.status(400).json({ mensaje: 'Ya eres miembro de esta red' });
 
     await UsuarioRed.create({ usuarioId: userId, redId });
-    res.status(201).json({ mensaje: 'Unido con éxito' });
+    res.status(201).json({ mensaje: 'Te uniste a la red con éxito' });
   } catch (error) {
-    res.status(500).json({ mensaje: 'Error al unirse', error });
+    res.status(500).json({ mensaje: 'Error al unirse a la red', error });
   }
 };
 
-exports.salirDeRed = async (req, res) => {
+export const salirDeRed = async (req, res) => {
   const redId = req.params.id;
   const userId = req.user.id;
 
   try {
     const relacion = await UsuarioRed.findOne({ where: { usuarioId: userId, redId } });
-    if (!relacion) return res.status(404).json({ mensaje: 'No estás en la red' });
+    if (!relacion) return res.status(404).json({ mensaje: 'No estás unido a esta red' });
 
     await relacion.destroy();
-    res.json({ mensaje: 'Saliste con éxito' });
+    res.json({ mensaje: 'Saliste de la red con éxito' });
   } catch (error) {
-    res.status(500).json({ mensaje: 'Error al salir', error });
+    res.status(500).json({ mensaje: 'Error al salir de la red', error });
   }
 };

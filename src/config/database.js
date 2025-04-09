@@ -6,9 +6,9 @@ dotenv.config();
 
 const config = {
   database: {
-    name: process.env.DB_NAME || 'qfinder_db',
+    name: process.env.DB_NAME || 'midqfinder',
     user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
+    password: process.env.DB_PASSWORD || 'Qfinder2024!',
     host: process.env.DB_HOST || 'localhost',
     port: process.env.DB_PORT || 3306
   },
