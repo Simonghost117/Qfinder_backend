@@ -1,4 +1,4 @@
-import Familiar from "../models/familiar.model.js";
+import {Familiar} from "../models/Familiar.js";
 
 export const createFamiliar = async (body) => {
   try {

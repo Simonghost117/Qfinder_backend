@@ -1,38 +1,43 @@
-// src/server.js
 import dotenv from 'dotenv';
 import app from './app.js';
-import sequelize from './config/db.js';
-// import configureSocket from './config/socket.js';
+import sequelize, { testConnection, safeSync } from './config/db.js';
 
-dotenv.config(); // Cargar variables de entorno
+dotenv.config();
 
 const PORT = process.env.PORT || 3000;
 
-// Verificar si sequelize está definido correctamente
 if (!sequelize) {
-  console.error('Error: La instancia de Sequelize no se cargó correctamente.');
-  process.exit(1); // Finalizar la ejecución si la base de datos no está configurada
+  console.error('❌ Error: La instancia de Sequelize no se cargó correctamente.');
+  process.exit(1);
 }
 
-// Iniciar el servidor
-const server = app.listen(PORT, async () => {
-  console.log(`Servidor corriendo en el puerto ${PORT}`);
-
+const startServer = async () => {
   try {
-    await sequelize.authenticate(); // Verificar conexión a la base de datos
-    await sequelize.sync(); // Sincronizar modelos con la base de datos
-    console.log('Base de datos conectada correctamente');
+    const isConnected = await testConnection();
+    
+    if (!isConnected) {
+      throw new Error('No se pudo conectar a la base de datos');
+    }
+
+    if (process.env.NODE_ENV === 'development') {
+      await safeSync();
+    }
+
+    const server = app.listen(PORT, () => {
+      console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+    });
+
+    process.on('SIGTERM', () => {
+      server.close(() => {
+        console.log('Servidor cerrado');
+        process.exit(0);
+      });
+    });
+
   } catch (error) {
-    console.error('Error al conectar la base de datos:', error);
-    process.exit(1); // Finalizar si hay un error en la conexión
+    console.error('❌ Error al iniciar la aplicación:', error);
+    process.exit(1);
   }
-});
-
-// Configurar Socket.IO
-// const io = configureSocket(server);
-// app.set('io', io); // Hacer disponible `io` en toda la aplicación
-console.log("DB_NAME:", process.env.DB_NAME);
-
-export { app
-    // server, io 
 };
+
+startServer();

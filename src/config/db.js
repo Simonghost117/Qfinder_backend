@@ -23,10 +23,10 @@ const sequelize = new Sequelize(
     dialect: 'mysql',
     logging: process.env.NODE_ENV === 'development' ? console.log : false,
     pool: {
-      max: 5, // Máximo de conexiones
-      min: 0, // Mínimo de conexiones
-      acquire: 30000, // Tiempo máximo en ms que intentará conectar antes de fallar
-      idle: 10000, // Tiempo máximo en ms que una conexión puede estar inactiva antes de ser liberada
+      max: 5,
+      min: 0,
+      acquire: 30000,
+      idle: 10000,
     },
   }
 );
@@ -35,12 +35,23 @@ const sequelize = new Sequelize(
 const testConnection = async () => {
   try {
     await sequelize.authenticate();
-    console.log('Conexión a la base de datos establecida correctamente.');
+    console.log('✅ Conexión a la base de datos establecida correctamente.');
+    return true;
   } catch (error) {
-    console.error('No se pudo conectar a la base de datos:', error);
+    console.error('❌ No se pudo conectar a la base de datos:', error);
+    return false;
   }
 };
 
-testConnection();
+// Sincronizar modelos de forma segura en desarrollo
+const safeSync = async () => {
+  try {
+    await sequelize.sync({ alter: true }); // o { force: true } según necesidad
+    console.log('📦 Modelos sincronizados correctamente.');
+  } catch (error) {
+    console.error('❌ Error al sincronizar modelos:', error);
+  }
+};
 
 export default sequelize;
+export { testConnection, safeSync };
