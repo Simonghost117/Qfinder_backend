@@ -1,5 +1,5 @@
 import { createFamiliar } from "../services/familiarService.js";
-import Familiar from "../models/familiar.model.js";
+import {Familiar} from "../models/Familiar.js";
 
 export const register = async (req, res) => {
   try {
