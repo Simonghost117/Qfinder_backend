@@ -80,11 +80,12 @@ EpisodioSalud,
 };
 
 // Sincronizar modelos con la base de datos
-export async function syncModels() {
+export const syncModels = async () => {
   try {
-    await sequelize.sync({ alter: true });
-    console.log('Modelos sincronizados correctamente');
+    await Red.sync({ alter: true });
+    await UsuarioRed.sync({ alter: true });
+    console.log('Modelos sincronizados correctamente.');
   } catch (error) {
     console.error('Error al sincronizar modelos:', error);
   }
-}
+};

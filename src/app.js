@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
  import usuarioRoutes from './routes/usuario.routes.js';
  import redesRoutes from './routes/redes.routes.js';
+ import { syncModels } from './models/index.js';
 //import { handleError } from './utils/errorHandler.js';
 
 import cookieParser from 'cookie-parser';
@@ -15,7 +16,7 @@ import  routerReport from './routes/reporteSalud.routes.js';
 
 
 const app = express();
-
+syncModels();
 // Asegúrate de usar cookie-parser antes de tus rutas
 app.use(cookieParser());
 
@@ -29,7 +30,9 @@ app.use(express.json());
 app.get('/test', (req, res) => {
     res.json({ message: 'El servidor está funcionando correctamente' });
 });
-
+app.listen(3000, () => {
+  console.log('Servidor corriendo en puerto 3000');
+});
 // Usar los routers
  app.use('/api/auth', usuarioRoutes);
  app.use('/api/episodios', router);
