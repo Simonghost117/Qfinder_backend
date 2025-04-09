@@ -38,6 +38,9 @@ Paciente.hasMany(EpisodioSalud, { foreignKey: 'id_paciente' });
 // Relaciones Familiar
 Familiar.belongsTo(Usuario, { foreignKey: 'id_usuario' });
 Familiar.belongsTo(Paciente, { foreignKey: 'id_paciente' });
+// src/models/index.js (donde defines las relaciones) ESTE CODIGO ES RECIENTE DE ALEJANDRO HASTA EL #43
+Usuario.belongsToMany(Red, { through: UsuarioRed, foreignKey: 'usuarioId' });
+Red.belongsToMany(Usuario, { through: UsuarioRed, foreignKey: 'redId' });
 
 // Relaciones Medico
 Medico.belongsTo(Usuario, { foreignKey: 'id_usuario' });
