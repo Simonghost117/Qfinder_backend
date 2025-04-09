@@ -6,17 +6,30 @@ export const listarPorEnfermedad = async (req, res) => {
 
   try {
     const redes = await Red.findAll({
-      where: enfermedad ? { enfermedad } : {},
+      attributes: ['nombre', 'descripcion', 'enfermedad'],
+      where: { enfermedad },
     });
-    res.status(200).json(redes);
+
+    res.json(redes);
   } catch (error) {
-    res.status(500).json({ mensaje: 'Error al obtener redes', error });
+    console.error(error);
+    res.status(500).json({
+      mensaje: "Error al obtener redes",
+      error,
+    });}
   }
-};
+//       where: enfermedad ? { enfermedad } : {},
+//     });
+//     res.status(200).json(redes);
+//   } catch (error) {
+//     res.status(500).json({ mensaje: 'Error al obtener redes', error });
+//   }
+// };
 
 export const unirseARed = async (req, res) => {
   const redId = req.params.id;
-  const userId = req.user.id;
+  const userId = 1; // Simula el mismo usuario con ID 1
+  // const userId = req.user.id;
 
   try {
     const existe = await UsuarioRed.findOne({ where: { usuarioId: userId, redId } });
@@ -31,7 +44,8 @@ export const unirseARed = async (req, res) => {
 
 export const salirDeRed = async (req, res) => {
   const redId = req.params.id;
-  const userId = req.user.id;
+  const userId = 1; // Simula un usuario con ID 1
+  // const userId = req.user.id;
 
   try {
     const relacion = await UsuarioRed.findOne({ where: { usuarioId: userId, redId } });
