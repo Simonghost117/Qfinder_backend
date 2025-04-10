@@ -8,6 +8,7 @@ import pacienteRoutes from './routes/pacienteRoutes.js';
 import familiarRoutes from "./routes/familiarRoutes.js";
  import usuarioRoutes from './routes/usuario.routes.js';
  import redesRoutes from './routes/redes.routes.js';
+ import RegSintomas from './routes/monitorerSintomasRouter.js';
 
 //import { handleError } from './utils/errorHandler.js';
 
@@ -45,6 +46,7 @@ app.use('/api/redes', redesRoutes);
 // app.use('/api', notaMedicaRoutes);
 app.use('/api/paciente', pacienteRoutes);
 app.use('/api/familiar', familiarRoutes);
+app.use('/api/regSintomas', RegSintomas)
 
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
