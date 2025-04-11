@@ -1,8 +1,8 @@
 {
   "name": "api_qfinder_2.0",
   "version": "1.0.0",
-  "main": "index.js",
   "type": "module",
+  "main": "index.js",
   "scripts": {
     "start": "cross-env NODE_ENV=development node src/server.js",
     "dev": "nodemon src/server.js",

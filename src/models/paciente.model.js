@@ -7,7 +7,7 @@ const Paciente = sequelize.define('Paciente', {
     type: DataTypes.INTEGER,
     autoIncrement: true,
     primaryKey: true,
-    field: 'id_paciente'
+    field: 'id_paciente',
   },
   id_usuario: {
     type: DataTypes.INTEGER,
@@ -16,41 +16,42 @@ const Paciente = sequelize.define('Paciente', {
       model: Usuario,
       key: 'id_usuario',
     },
+    field: 'id_usuario',
   },
   nombre: {
     type: DataTypes.STRING(100),
     allowNull: false,
-    field: 'nombre'
+    field: 'nombre',
   },
   apellido: {
     type: DataTypes.STRING(100),
     allowNull: false,
-    field: 'apellido'
+    field: 'apellido',
   },
   fecha_nacimiento: {
     type: DataTypes.DATE,
     allowNull: false,
-    field: 'fecha_nacimiento'
+    field: 'fecha_nacimiento',
   },
   sexo: {
     type: DataTypes.ENUM('masculino', 'femenino', 'otro', 'prefiero_no_decir'),
     allowNull: false,
-    field: 'sexo'
+    field: 'sexo',
   },
   diagnostico_principal: {
     type: DataTypes.STRING(100),
     allowNull: true,
-    field: 'diagnostico_principal'
+    field: 'diagnostico_principal',
   },
   nivel_autonomia: {
-    type: DataTypes.ENUM('alta', 'baja', 'media'),
+    type: DataTypes.ENUM('alta', 'media', 'baja'),
     allowNull: true,
-    field: 'nivel_autonomia'
-  }
+    field: 'nivel_autonomia',
+  },
 }, {
-  tableName: 'paciente',
-  timestamps: true,
-  freezeTableName: true
-})
+  tableName: 'paciente', // ✅ Aquí está el cambio clave
+  timestamps: false,
+  freezeTableName: true,
+});
 
 export default Paciente;

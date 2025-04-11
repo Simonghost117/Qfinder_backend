@@ -1,6 +1,4 @@
-import db from '../models/index.js';
-
-const { CuidadoPersonal } = db;
+import CuidadoPersonal from '../models/cuidado_personal.js'; // Ruta correcta
 
 // Registrar un nuevo cuidado personal
 export const registrarCuidadoPersonal = async (data) => {

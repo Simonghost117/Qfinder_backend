@@ -1,3 +1,4 @@
+import http from 'http';
 import dotenv from 'dotenv';
 import app from './app.js';
 import sequelize, { testConnection, safeSync } from './config/db.js';
@@ -12,6 +13,9 @@ if (!sequelize) {
   console.error('❌ Error: La instancia de Sequelize no se cargó correctamente.');
   process.exit(1);
 }
+
+// Crear servidor HTTP
+const server = http.createServer(app);
 
 const startServer = async () => {
   try {
@@ -30,7 +34,7 @@ const startServer = async () => {
     }
 
     // Iniciar servidor
-    const server = app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`🚀 Servidor escuchando en http://localhost:${PORT}`);
     });
 
