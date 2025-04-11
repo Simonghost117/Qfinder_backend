@@ -17,6 +17,7 @@ import redesRoutes from './routes/redes.routes.js';
 import router from './routes/episodioSalud.routes.js';
 import routerReport from './routes/reporteSalud.routes.js';
 import panelRoutes from './routes/panel.routes.js';
+import cuidadoPersonalRoutes from './routes/cuidadoPersonalRoutes.js';
 
 const app = express();
 
@@ -54,6 +55,7 @@ app.use('/api/redes', redesRoutes);
 app.use('/api/paciente', pacienteRoutes);
 app.use('/api/familiar', familiarRoutes);
 app.use('/api', panelRoutes);
+app.use('/api', cuidadoPersonalRoutes);
 
 // Manejo de errores (descomentar cuando esté listo)
 // app.use(errorHandler);
