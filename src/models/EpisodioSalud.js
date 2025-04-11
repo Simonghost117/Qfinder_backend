@@ -92,7 +92,10 @@ export const EpisodioSalud = sequelize.define('episodio_salud', {
     timestamps: true,
     tableName: 'episodio_salud',
     hooks: {
-        // afterCreate: async (episodio) => {
+       
+    }
+});
+ // afterCreate: async (episodio) => {
         //     const notificacionService = new NotificacionesService();
             
         //     if (episodio.origen === 'cuidador') {
@@ -101,7 +104,4 @@ export const EpisodioSalud = sequelize.define('episodio_salud', {
         //         await notificacionService.notificarUrgencia(episodio);
         //     }
         // }
-    }
-});
-
 // Relaciones
