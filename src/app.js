@@ -18,7 +18,8 @@ import router from './routes/episodioSalud.routes.js';
 import routerReport from './routes/reporteSalud.routes.js';
 import panelRoutes from './routes/panel.routes.js';
 import cuidadoPersonalRoutes from './routes/cuidadoPersonalRoutes.js';
-import actividadRouter from './routes/activity.router.js'; // Nueva ruta de origin/valen
+import actividadRouter from './routes/activity.router.js';
+import RegSintomas from './routes/monitorerSintomasRouter.js';
 
 const app = express();
 
@@ -57,9 +58,7 @@ app.use('/api/paciente', pacienteRoutes);
 app.use('/api/familiar', familiarRoutes);
 app.use('/api', panelRoutes);
 app.use('/api', cuidadoPersonalRoutes);
-app.use('/api/actividades', actividadRouter); // Nueva ruta agregada
-
-// Manejo de errores (descomentar cuando esté listo)
-// app.use(errorHandler);
+app.use('/api/actividades', actividadRouter);
+app.use('/api/regSintomas', RegSintomas);
 
 export default app;
