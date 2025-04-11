@@ -4,12 +4,13 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
+    "start": "cross-env NODE_ENV=development node src/server.js",
+    "dev": "nodemon src/server.js",
+    "migrate": "sequelize-cli db:migrate",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write .",
-    "start": "cross-env NODE_ENV=development node src/server.js",
-    "dev": "nodemon src/server.js"
+    "format": "prettier --write ."
   },
   "keywords": [],
   "author": "",
@@ -20,6 +21,7 @@
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
+    "cross-env": "^7.0.3",
     "dotenv": "^16.4.7",
     "express": "^5.1.0",
     "helmet": "^8.1.0",

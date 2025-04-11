@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 
 dotenv.config(); // Cargar variables de entorno
 
-// Verificación de variables de entorno
+// Verificación de variables de entorno (de HEAD)
 const requiredEnvVars = ['DB_NAME', 'DB_USER', 'DB_PASSWORD', 'DB_HOST', 'DB_PORT', 'NODE_ENV'];
 requiredEnvVars.forEach((envVar) => {
   if (!process.env[envVar]) {
@@ -12,17 +12,17 @@ requiredEnvVars.forEach((envVar) => {
   }
 });
 
-// Configuración de la conexión a la base de datos
+// Configuración de la conexión a la base de datos (combinando lo mejor de ambas)
 const sequelize = new Sequelize(
   process.env.DB_NAME,
   process.env.DB_USER,
   process.env.DB_PASSWORD,
   {
     host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
+    port: process.env.DB_PORT || 3306, // Valor por defecto de origin/Maicol
     dialect: 'mysql',
-    logging: process.env.NODE_ENV === 'development' ? console.log : false,
-    pool: {
+    logging: process.env.NODE_ENV === 'development' ? console.log : false, // De HEAD
+    pool: { // Configuración de pool de HEAD
       max: 5,
       min: 0,
       acquire: 30000,
@@ -31,7 +31,7 @@ const sequelize = new Sequelize(
   }
 );
 
-// Probar la conexión a la base de datos
+// Funciones útiles de HEAD
 const testConnection = async () => {
   try {
     await sequelize.authenticate();
@@ -43,7 +43,6 @@ const testConnection = async () => {
   }
 };
 
-// Sincronizar modelos de forma segura en desarrollo
 const safeSync = async () => {
   try {
     await sequelize.sync({ alter: true }); // o { force: true } según necesidad
