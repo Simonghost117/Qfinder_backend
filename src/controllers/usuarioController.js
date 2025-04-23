@@ -33,7 +33,8 @@ export const register = async (req, res) => {
         );
         
         const token = await createAccessToken({
-            id: usuario._id_usuario,
+            id: usuario.id_usuario,
+            rol: usuario.tipo_usuario,
         });
   
         res.cookie("token", token, {
