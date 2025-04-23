@@ -1,5 +1,5 @@
 import { Router } from "express";
-import * as activityController from "../controller/activity.controller.js";
+import * as activityController from "../controllers/activity.controller.js";
 import { validateCreateActivity } from "../middlewares/validate.Shema.js"; // Asegúrate de la ruta correcta
 
 const router = Router();
