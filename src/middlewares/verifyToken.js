@@ -18,6 +18,7 @@ export const verifyToken = async (req, res, next) => {
     // Decodificar el token
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret_key_por_defecto_solo_desarrollo');
     console.log('🧾 Token decodificado:', decoded);
+    req.usuario = decoded;
 
     // Buscar usuario por ID
     const usuario = await Usuario.findByPk(decoded.id, {

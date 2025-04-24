@@ -2,7 +2,7 @@ import express from 'express';
 import { register, listarPacientes } from '../controllers/pacienteController.js';
 import validateSchema from "../middlewares/validatoreSchema.js"
 import PacienteSchema from "../schema/pacienteSchema.js";
-import { verifyToken } from '../middlewares/validatoreToken.js';
+import { verifyToken } from '../middlewares/verifyToken.js';
 
 const router = express.Router();
 
