@@ -1,9 +1,7 @@
 import { z } from "zod";
 
 const PacienteSchema = z.object({
-  id_usuario: z.number({
-    required_error: "debe ingresar un valor para el id Usuario"
-  }).int("El valor debe ser un número entero"),
+  
   nombre: z.string()
     .min(2, {
       message: "El nombre del paciente debe tener al menos 2 carácteres"
