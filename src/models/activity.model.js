@@ -11,7 +11,7 @@ export const ActividadCuidado = sequelize.define("actividad_cuidado", {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
-      model: 'pacientes', // Asegúrate que este sea el nombre correcto de la tabla
+      model: 'paciente', // Asegúrate que este sea el nombre correcto de la tabla
       key: 'id_paciente'
     },
     onUpdate: 'CASCADE',
@@ -21,7 +21,7 @@ export const ActividadCuidado = sequelize.define("actividad_cuidado", {
     type: DataTypes.INTEGER,
     allowNull: true, // Cambiado de false a true para resolver el error
     references: {
-      model: 'usuarios', // Asegúrate que este sea el nombre correcto de la tabla
+      model: 'usuario', // Asegúrate que este sea el nombre correcto de la tabla
       key: 'id_usuario'
     },
     onUpdate: 'CASCADE',

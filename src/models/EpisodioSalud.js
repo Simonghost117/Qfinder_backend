@@ -67,7 +67,7 @@ export const EpisodioSalud = sequelize.define('episodio_salud', {
         allowNull: true,
     },
     registrado_por_role: {
-        type: DataTypes.ENUM('Medico', 'Familiar', 'Administrador', 'Sistema'),
+        type: DataTypes.ENUM('Medico', 'Familiar', 'Administrador', 'Usuario'),
         allowNull: false
     },
     estado: {
@@ -78,7 +78,7 @@ export const EpisodioSalud = sequelize.define('episodio_salud', {
             'cancelado',
             'confirmado'
         ),
-        defaultValue: 'pendiente_revision'
+        defaultValue: 'pendiente_revision' // Valor por defecto válido
     },
     origen: {
         type: DataTypes.ENUM('cuidador', 'medico', 'sistema', 'administrador'),

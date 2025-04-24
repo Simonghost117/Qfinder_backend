@@ -5,8 +5,9 @@ import { uploadEpisodio } from '../middlewares/uploadEpisodios.middleware.js';
 import { validateZodSchema } from '../middlewares/validateZod.middleware.js';
 import { episodioSchema, filtroSchema } from '../validators/episodioSalud.validator.js';
 import { verifyToken } from '../middlewares/verifyToken.js';
+import { injectPacienteId } from '../middlewares/injectPacienteId.middleware.js';
 
-const router = Router();
+const routerEpisodioSalud = Router();
 
 // Wrapper para mantener el contexto `this` de los métodos estáticos
 function wrap(method) {
@@ -14,18 +15,19 @@ function wrap(method) {
 }
 
 // Crear episodio
-router.post(
-  '/pacientes/:id_paciente/episodios',
+routerEpisodioSalud.post(
+  '/episodioSalud/:id_paciente',
   verifyToken,
-  checkEpisodioPermissions(['Medico', 'Familiar']),
+  checkEpisodioPermissions(['Medico', 'Usuario']),
   uploadEpisodio,
+  injectPacienteId,
   validateZodSchema(episodioSchema),
   wrap(EpisodioSaludController.crearEpisodio)
 );
 
 // Obtener todos los episodios de un paciente
-router.get(
-  '/pacientes/:id_paciente/episodios',
+routerEpisodioSalud.get(
+  '/episodioSalud/:id_paciente',
   verifyToken,
   checkEpisodioPermissions(['Medico', 'Familiar', 'Paciente']),
   validateZodSchema(filtroSchema, { source: 'query' }),
@@ -33,29 +35,29 @@ router.get(
 );
 
 // Obtener un episodio específico
-router.get(
-  '/episodios/:id_episodio',
+routerEpisodioSalud.get(
+  '/episodioSalud/:id_episodio',
   verifyToken,
   checkEpisodioPermissions(['Medico', 'Familiar', 'Paciente']),
   wrap(EpisodioSaludController.obtenerEpisodio)
 );
 
 // Actualizar episodio
-router.put(
-  '/episodios/:id_episodio',
+routerEpisodioSalud.put(
+  '/episodioSalud/:id_episodio',
   verifyToken,
   checkEpisodioPermissions(['Medico', 'Familiar']),
   uploadEpisodio,
-  validateZodSchema(episodioSchema.partial()),
+  validateZodSchema(episodioSchema),
   wrap(EpisodioSaludController.actualizarEpisodio)
 );
 
 // Eliminar episodio
-router.delete(
-  '/episodios/:id_episodio',
+routerEpisodioSalud.delete(
+  '/episodioSalud/:id_episodio',
   verifyToken,
   checkEpisodioPermissions(['Medico', 'Familiar']),
   wrap(EpisodioSaludController.eliminarEpisodio)
 );
 
-export default router;
+export default routerEpisodioSalud;

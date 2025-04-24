@@ -49,9 +49,17 @@ const Paciente = sequelize.define('Paciente', {
     field: 'nivel_autonomia',
   },
 }, {
-  tableName: 'paciente', // ✅ Aquí está el cambio clave
-  timestamps: false,
+  tableName: 'paciente',
+  timestamps: false, // Cambiado a true para tener createdAt/updatedAt
   freezeTableName: true,
 });
+
+// Relación con Familiar
+Paciente.associate = (models) => {
+  Paciente.hasMany(models.Familiar, {
+    foreignKey: 'id_paciente',
+    as: 'Familiares'
+  });
+};
 
 export default Paciente;

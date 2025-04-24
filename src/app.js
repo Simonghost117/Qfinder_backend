@@ -14,7 +14,7 @@ import usuarioRoutes from './routes/usuario.routes.js';
 import pacienteRoutes from './routes/pacienteRoutes.js';
 import familiarRoutes from './routes/familiarRoutes.js';
 import redesRoutes from './routes/redes.routes.js';
-import router from './routes/episodioSalud.routes.js';
+import routerEpisodioSalud from './routes/episodioSalud.routes.js';
 import routerReport from './routes/reporteSalud.routes.js';
 import panelRoutes from './routes/panel.routes.js';
 import cuidadoPersonalRoutes from './routes/cuidadoPersonalRoutes.js';
@@ -51,7 +51,7 @@ app.get('/test', (req, res) => {
 
 // Configuración de rutas
 app.use('/api/auth', usuarioRoutes);
-app.use('/api/episodios', router);
+app.use('/api/episodios', routerEpisodioSalud);
 app.use('/api/reportes', routerReport);
 app.use('/api/redes', redesRoutes);
 app.use('/api/paciente', pacienteRoutes);
