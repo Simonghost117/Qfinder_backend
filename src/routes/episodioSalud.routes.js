@@ -3,7 +3,7 @@ import { EpisodioSaludController } from '../controllers/episodioSalud.controller
 import { checkEpisodioPermissions } from '../middlewares/episodioPermissions.middleware.js';
 import { uploadEpisodio } from '../middlewares/uploadEpisodios.middleware.js';
 import { validateZodSchema } from '../middlewares/validateZod.middleware.js';
-import { episodioSchema, filtroSchema } from '../validators/episodioSalud.validator.js';
+import { episodioSchema, filtroSchema } from '../schema/episodioSalud.validator.js';
 import { verifyToken } from '../middlewares/verifyToken.js';
 import { injectPacienteId } from '../middlewares/injectPacienteId.middleware.js';
 

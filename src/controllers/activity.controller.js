@@ -1,4 +1,4 @@
-import { createActivitySchema } from "../validators/activity.validator.js";
+import { createActivitySchema } from "../schema/activity.validator.js";
 import * as activityService from "../services/activity.service.js";
 import { successResponse, errorResponse } from "../utils/response.js";
 

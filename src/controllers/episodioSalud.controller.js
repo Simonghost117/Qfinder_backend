@@ -6,7 +6,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { Familiar } from '../models/Familiar.js';
 import Paciente from '../models/paciente.model.js';
-import { episodioSchema } from '../validators/episodioSalud.validator.js';
+import { episodioSchema } from '../schema/episodioSalud.validator.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

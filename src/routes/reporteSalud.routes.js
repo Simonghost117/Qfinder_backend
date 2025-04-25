@@ -6,7 +6,7 @@ import { validateZodSchema } from '../middlewares/validateZod.middleware.js';
 import { 
   observacionSchema, 
   datosDispositivoSchema 
-} from '../validators/reporteSalud.validator.js';
+} from '../schema/reporteSalud.validator.js';
 
 const routerReport = Router();
 
