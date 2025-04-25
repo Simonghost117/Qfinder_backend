@@ -15,10 +15,11 @@ function wrap(method) {
 }
 
 // Crear episodio
+//El id_paciente no debe ser manualmente ingresado, sino que debe ser inyectado en el middleware
 routerEpisodioSalud.post(
   '/episodioSalud/:id_paciente',
   verifyToken,
-  checkEpisodioPermissions(['Medico', 'Usuario']),
+  checkEpisodioPermissions(['Medico', 'Usuario']),//Medico tiene error de permisos
   uploadEpisodio,
   injectPacienteId,
   validateZodSchema(episodioSchema),
@@ -26,11 +27,13 @@ routerEpisodioSalud.post(
 );
 
 // Obtener todos los episodios de un paciente
+//El usuario no puede ver los episodios
 routerEpisodioSalud.get(
   '/episodioSalud/:id_paciente',
   verifyToken,
-  checkEpisodioPermissions(['Medico', 'Familiar', 'Paciente']),
-  validateZodSchema(filtroSchema, { source: 'query' }),
+  checkEpisodioPermissions(['Medico', 'Familiar', 'Paciente', 'Usuario']),//Medico tiene error de permisos
+  //Paciente tiene permiso de visualizacion de los episodios?
+  // validateZodSchema(filtroSchema, { source: 'query' }),
   wrap(EpisodioSaludController.obtenerEpisodiosPaciente)
 );
 

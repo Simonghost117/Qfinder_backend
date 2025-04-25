@@ -1,5 +1,8 @@
-import Paciente from "../models/paciente.model.js";
-import { Familiar } from "../models/Familiar.js";
+// import Paciente from "../models/paciente.model.js";
+// import { Familiar } from "../models/Familiar.js";
+import { models } from "../models/index.js";
+const { Paciente, Familiar } = models;
+
 
 export const createPaciente = async ({
   id_usuario,
@@ -52,13 +55,27 @@ export const createPaciente = async ({
 };
 
 // Función adicional para obtener pacientes con sus relaciones
+// export const getPacientesByUsuario = async (id_usuario) => {
+//   return await Paciente.findAll({
+//     where: { id_usuario },
+//     include: [{
+//       model: Familiar,
+//       where: { id_usuario },
+//       required: false
+//     }]
+//   });
+// };
+
 export const getPacientesByUsuario = async (id_usuario) => {
-  return await Paciente.findAll({
+  const pacientes = await Paciente.findAll({
     where: { id_usuario },
     include: [{
       model: Familiar,
-      where: { id_usuario },
-      required: false
-    }]
+      as: "familiares", // Alias debe coincidir con el definido en la relación
+      required: false,
+    }],
   });
+
+  console.log("Pacientes encontrados:", pacientes);
+  return pacientes;
 };

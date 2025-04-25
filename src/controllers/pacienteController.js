@@ -1,5 +1,9 @@
 import { createPaciente, getPacientesByUsuario } from "../services/pacienteService.js";
 
+import { models } from "../models/index.js";
+const { Paciente, Familiar } = models;
+
+
 // Registrar un nuevo paciente
 export const register = async (req, res) => {
   try {
@@ -66,6 +70,7 @@ export const register = async (req, res) => {
 export const listarPacientes = async (req, res) => {
   try {
     const id_usuario = req.usuario.id;
+  
     const pacientes = await getPacientesByUsuario(id_usuario);
 
     const pacientesFormateados = pacientes.map(p => ({

@@ -52,17 +52,17 @@ export const Familiar = sequelize.define('Familiar', {
   ]
 });
 
-// Relaciones
-Familiar.associate = (models) => {
-  Familiar.belongsTo(models.Usuario, {
-    foreignKey: 'id_usuario',
-    as: 'Usuario'
-  });
+// // Relaciones
+// Familiar.associate = (models) => {
+//   Familiar.belongsTo(models.Usuario, {
+//     foreignKey: 'id_usuario',
+//     as: 'Usuario'
+//   });
   
-  Familiar.belongsTo(models.Paciente, {
-    foreignKey: 'id_paciente',
-    as: 'Paciente'
-  });
-};
+//   Familiar.belongsTo(models.Paciente, {
+//     foreignKey: 'id_paciente',
+//     as: 'Paciente'
+//   });
+// };
 
 export default Familiar;

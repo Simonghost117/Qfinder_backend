@@ -54,12 +54,12 @@ const Paciente = sequelize.define('Paciente', {
   freezeTableName: true,
 });
 
-// Relación con Familiar
-Paciente.associate = (models) => {
-  Paciente.hasMany(models.Familiar, {
-    foreignKey: 'id_paciente',
-    as: 'Familiares'
-  });
-};
+// // Relación con Familiar
+// Paciente.associate = (models) => {
+//   Paciente.hasMany(models.Familiar, {
+//     foreignKey: 'id_paciente',
+//     as: 'Familiares'
+//   });
+// };
 
 export default Paciente;
