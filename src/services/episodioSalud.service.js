@@ -18,7 +18,7 @@ export class EpisodioSaludService {
       }
 
       // Validar rol del registrador con valor por defecto
-      const rolesPermitidos = ['Medico', 'Familiar', 'Administrador'];
+      const rolesPermitidos = ['Familiar', 'Administrador'];
       if (!data.registrado_por_role || !rolesPermitidos.includes(data.registrado_por_role)) {
         // Asignar 'Familiar' como valor por defecto si no es válido
         data.registrado_por_role = 'Familiar';

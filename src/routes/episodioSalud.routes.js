@@ -16,10 +16,12 @@ function wrap(method) {
 
 // Crear episodio
 //El id_paciente no debe ser manualmente ingresado, sino que debe ser inyectado en el middleware
+// si son 5 pacientes, de que  manera vamos a saber a que paciente pertenece el episodio?
+//El usuario no puede crear episodios
 routerEpisodioSalud.post(
   '/episodioSalud/:id_paciente',
   verifyToken,
-  checkEpisodioPermissions(['Medico', 'Usuario']),//Medico tiene error de permisos
+  checkEpisodioPermissions(['Usuario']),//Medico tiene error de permisos
   uploadEpisodio,
   injectPacienteId,
   validateZodSchema(episodioSchema),
@@ -31,7 +33,7 @@ routerEpisodioSalud.post(
 routerEpisodioSalud.get(
   '/episodioSalud/:id_paciente',
   verifyToken,
-  checkEpisodioPermissions(['Medico', 'Familiar', 'Paciente', 'Usuario']),//Medico tiene error de permisos
+  checkEpisodioPermissions(['Familiar', 'Administrador', 'Usuario']),//Medico tiene error de permisos
   //Paciente tiene permiso de visualizacion de los episodios?
   // validateZodSchema(filtroSchema, { source: 'query' }),
   wrap(EpisodioSaludController.obtenerEpisodiosPaciente)
@@ -39,7 +41,7 @@ routerEpisodioSalud.get(
 
 // Obtener un episodio específico
 routerEpisodioSalud.get(
-  '/episodioSalud/:id_episodio',
+  '/episodiosSalud/:id_episodio',
   verifyToken,
   checkEpisodioPermissions(['Medico', 'Familiar', 'Paciente']),
   wrap(EpisodioSaludController.obtenerEpisodio)
@@ -49,7 +51,7 @@ routerEpisodioSalud.get(
 routerEpisodioSalud.put(
   '/episodioSalud/:id_episodio',
   verifyToken,
-  checkEpisodioPermissions(['Medico', 'Familiar']),
+  checkEpisodioPermissions(['Familiar']),
   uploadEpisodio,
   validateZodSchema(episodioSchema),
   wrap(EpisodioSaludController.actualizarEpisodio)
@@ -59,7 +61,7 @@ routerEpisodioSalud.put(
 routerEpisodioSalud.delete(
   '/episodioSalud/:id_episodio',
   verifyToken,
-  checkEpisodioPermissions(['Medico', 'Familiar']),
+  checkEpisodioPermissions(['Familiar']),
   wrap(EpisodioSaludController.eliminarEpisodio)
 );
 
