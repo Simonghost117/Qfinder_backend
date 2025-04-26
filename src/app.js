@@ -20,6 +20,7 @@ import panelRoutes from './routes/panel.routes.js';
 import cuidadoPersonalRoutes from './routes/cuidadoPersonalRoutes.js';
 import actividadRouter from './routes/activity.router.js';
 import RegSintomas from './routes/monitorerSintomasRouter.js';
+import medicoRoutes from './routes/medico.routes.js';
 
 const app = express();
 
@@ -51,6 +52,8 @@ app.get('/test', (req, res) => {
 
 // Configuración de rutas
 app.use('/api/auth', usuarioRoutes);
+app.use('/api/medicos', medicoRoutes);
+
 app.use('/api/episodios', routerEpisodioSalud);
 app.use('/api/reportes', routerReport);
 app.use('/api/redes', redesRoutes);
