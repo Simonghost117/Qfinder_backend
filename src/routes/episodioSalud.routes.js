@@ -39,29 +39,27 @@ routerEpisodioSalud.get(
   wrap(EpisodioSaludController.obtenerEpisodiosPaciente)
 );
 
-// Obtener un episodio específico
 routerEpisodioSalud.get(
-  '/episodiosSalud/:id_episodio',
+  '/pacientes/:id_paciente/episodioSalud/:id_episodio', 
   verifyToken,
-  checkEpisodioPermissions(['Medico', 'Familiar', 'Paciente']),
+  checkEpisodioPermissions(['Usuario', 'Familiar', 'Paciente']),
   wrap(EpisodioSaludController.obtenerEpisodio)
 );
 
 // Actualizar episodio
 routerEpisodioSalud.put(
-  '/episodioSalud/:id_episodio',
+  '/pacientes/:id_paciente/episodioSalud/:id_episodio', // <- ¡Nuevo parámetro!
   verifyToken,
-  checkEpisodioPermissions(['Familiar']),
+  checkEpisodioPermissions(['Familiar', 'Usuario']),
   uploadEpisodio,
-  validateZodSchema(episodioSchema),
+  validateZodSchema(episodioSchema), // Valida body
   wrap(EpisodioSaludController.actualizarEpisodio)
 );
-
 // Eliminar episodio
 routerEpisodioSalud.delete(
   '/episodioSalud/:id_episodio',
   verifyToken,
-  checkEpisodioPermissions(['Familiar']),
+  checkEpisodioPermissions(['Familiar','Usuario']),
   wrap(EpisodioSaludController.eliminarEpisodio)
 );
 
