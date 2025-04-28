@@ -28,6 +28,11 @@ const Paciente = sequelize.define('Paciente', {
     allowNull: false,
     field: 'apellido',
   },
+  identificacion: {
+    type: DataTypes.STRING(10),
+    allowNull: false,
+    field: 'identificacion',
+  },
   fecha_nacimiento: {
     type: DataTypes.DATE,
     allowNull: false,
