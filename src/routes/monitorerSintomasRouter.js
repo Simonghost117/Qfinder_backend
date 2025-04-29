@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { MonitoreoSintomasController } from '../controllers/monitoreoSintomasController.js';
 import { validateZodSchema } from '../middlewares/validateZod.middleware.js';
-import { sintomaSchema } from '../middlewares/monitoreoSintomas.validator.js';
+import { sintomaSchema } from '../schema/monitoreoSintomas.validator.js';
 
 const routerSintomas = Router();
 

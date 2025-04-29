@@ -1,4 +1,4 @@
-import { createActivitySchema } from "../validators/activity.validator.js"; // Asegúrate de la ruta correcta
+import { createActivitySchema } from "../schema/activity.validator.js"; // Asegúrate de la ruta correcta
 import { errorResponse } from "../utils/response.js";
 
 export const validateCreateActivity = (req, res, next) => {

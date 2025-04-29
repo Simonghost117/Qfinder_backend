@@ -3,10 +3,7 @@ import { ReporteSaludController } from '../controllers/reporteSalud.controller.j
 import { checkEpisodioPermissions } from '../middlewares/episodioPermissions.middleware.js';
 import { validateZodSchema } from '../middlewares/validateZod.middleware.js';
 // //import { authRequired } from '../middlewares/auth.middleware.js';
-import { 
-  observacionSchema, 
-  datosDispositivoSchema 
-} from '../validators/reporteSalud.validator.js';
+import { observacionSchema, datosDispositivoSchema } from '../schema/reporteSalud.validator.js';
 
 const routerReport = Router();
 

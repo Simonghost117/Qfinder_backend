@@ -6,9 +6,11 @@ import { z } from 'zod';
  * @param {Object} options
  * @param {'body'|'query'|'params'} [options.source='body'] - Fuente de datos
  * @param {boolean} [options.replaceOriginal=true] - Si reemplaza el objeto original
- */
+ */// En tu archivo de validación (ej: validators/episodio.validator.js)
+
 export const validateZodSchema = (schema, options = {}) => {
   const { source = 'body', replaceOriginal = true } = options;
+// En tu archivo de validación (ej: validators/episodio.validator.js)
 
   return async (req, res, next) => {
     try {

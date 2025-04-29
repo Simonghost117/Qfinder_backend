@@ -6,11 +6,15 @@ import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 dotenv.config();
 
+import { medicoSchema } from '../schema/medicoSchema.js';
+import Medico from '../models/Medico.js';
+
 export const register = async (req, res) => {
 
     try {
 
-        const { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, contrasena_usuario, tipo_usuario } = req.body;
+        const { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, contrasena_usuario, tipo_usuario, especialidad, licencia 
+        } = req.body;
     
         // Verificar si el usuario ya existe
         const usuarioExistente = await Usuario.findOne({ 
@@ -19,6 +23,13 @@ export const register = async (req, res) => {
           
         if (usuarioExistente) {
             return res.status(400).json({ error: "El correo ya está registrado" });
+        }
+
+        if (tipo_usuario === "Medico") {
+          const validacion = medicoSchema.safeParse({ especialidad, licencia });
+          if (!validacion.success) {
+            return res.status(400).json({ error: validacion.error.errors });
+          }
         }
 
         const usuario = await createUser(
@@ -31,6 +42,15 @@ export const register = async (req, res) => {
             contrasena_usuario,
             tipo_usuario
         );
+
+        if (tipo_usuario === "Medico") {
+          await Medico.create({
+            id_usuario: usuario.id_usuario,
+            especialidad,
+            licencia
+          });
+        }
+    
         
         const token = await createAccessToken({
             id: usuario.id_usuario,

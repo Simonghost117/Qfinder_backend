@@ -6,22 +6,22 @@ export class NotificacionesService {
      * Notifica solo a los cuidadores/familiares del paciente
      */
     async notificarCuidadores(episodio) {
-        try {
-            // Obtener lista de cuidadores del paciente
-            const cuidadores = await this._obtenerCuidadores(episodio.id_paciente);
+        // try {
+        //     // Obtener lista de cuidadores del paciente
+        //     const cuidadores = await this._obtenerCuidadores(episodio.id_paciente);
             
-            // Enviar notificación a cada cuidador
-            for (const cuidador of cuidadores) {
-                await this._enviarEmail(
-                    cuidador.correo_usuario,
-                    'Nueva alerta de salud',
-                    this._crearMensajeAlerta(episodio)
-                );
-            }
-        } catch (error) {
-            console.error('Error en notificación:', error);
-            // Puedes agregar aquí un sistema de reintentos o logging
-        }
+        //     // Enviar notificación a cada cuidador
+        //     for (const cuidador of cuidadores) {
+        //         await this._enviarEmail(
+        //             cuidador.correo_usuario,
+        //             'Nueva alerta de salud',
+        //             this._crearMensajeAlerta(episodio)
+        //         );
+        //     }
+        // } catch (error) {
+        //     console.error('Error en notificación:', error);
+        //     // Puedes agregar aquí un sistema de reintentos o logging
+        // }
     }
 
     // Métodos auxiliares privados

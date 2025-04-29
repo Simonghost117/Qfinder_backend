@@ -3,6 +3,11 @@ import dotenv from 'dotenv';
 import app from './app.js';
 import sequelize, { testConnection, safeSync } from './config/db.js';
 
+
+import { models } from "./models/index.js";
+
+
+
 // Configuración de entorno
 dotenv.config();
 
@@ -27,6 +32,12 @@ const startServer = async () => {
     }
 
     console.log('✅ Conexión a la base de datos establecida con éxito');
+
+    // Sincronizar la base de datos correctamente
+    await sequelize.sync({ alter: true });
+    console.log("📦 Base de datos sincronizada correctamente.");
+
+    
 
     // Sincronización en desarrollo
     if (process.env.NODE_ENV === 'development') {

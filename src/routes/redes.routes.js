@@ -7,8 +7,8 @@ import {
 
 const router = express.Router();
 
-router.get('/', listarPorEnfermedad);
-router.post('/:id/unirse', unirseARed);
-router.delete('/:id/salir', salirDeRed);
+router.get('/', listarPorEnfermedad);//No va
+router.post('/unirse/:id', unirseARed);
+router.delete('/salir/:id', salirDeRed);
 
 export default router;

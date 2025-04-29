@@ -3,12 +3,15 @@ import  sequelize  from '../config/db.js';
 
 const UsuarioRed = sequelize.define('UsuarioRed', {
   usuarioId: {
+    primaryKey: true,
     type: DataTypes.INTEGER,
-    allowNull: false
+    allowNull: false,
+    field: "id_usuario"
   },
-  redId: {
+  id_relacion: {
     type: DataTypes.INTEGER,
-    allowNull: false
+    allowNull: false,
+    field: "id_relacion"
   }
 }, {
   tableName: 'usuario_red',

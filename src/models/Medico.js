@@ -1,7 +1,7 @@
 import { DataTypes } from 'sequelize';
 import  sequelize  from '../config/db.js';
 
-export const Medico = sequelize.define('Medico', {
+const Medico = sequelize.define('Medico', {
   id_medico: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -20,3 +20,5 @@ export const Medico = sequelize.define('Medico', {
   tableName: 'medico',
   timestamps: true
 });
+
+export default Medico;

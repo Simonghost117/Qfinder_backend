@@ -14,12 +14,13 @@ import usuarioRoutes from './routes/usuario.routes.js';
 import pacienteRoutes from './routes/pacienteRoutes.js';
 import familiarRoutes from './routes/familiarRoutes.js';
 import redesRoutes from './routes/redes.routes.js';
-import router from './routes/episodioSalud.routes.js';
+import routerEpisodioSalud from './routes/episodioSalud.routes.js';
 import routerReport from './routes/reporteSalud.routes.js';
 import panelRoutes from './routes/panel.routes.js';
 import cuidadoPersonalRoutes from './routes/cuidadoPersonalRoutes.js';
 import actividadRouter from './routes/activity.router.js';
 import RegSintomas from './routes/monitorerSintomasRouter.js';
+import medicoRoutes from './routes/medico.routes.js';
 
 const app = express();
 
@@ -50,14 +51,15 @@ app.get('/test', (req, res) => {
 });
 
 // Configuración de rutas
-app.use('/api/auth', usuarioRoutes);
-app.use('/api/episodios', router);
-app.use('/api/reportes', routerReport);
+app.use('/api/auth', usuarioRoutes);//Completar rutas de autenticación
+app.use('/api/medicos', medicoRoutes);//Validaciones - crud
+app.use('/api/episodios', routerEpisodioSalud);//Completo
+//app.use('/api/reportes', routerReport);//Esta ruta no va a ser utilizada
 app.use('/api/redes', redesRoutes);
-app.use('/api/paciente', pacienteRoutes);
-app.use('/api/familiar', familiarRoutes);
-app.use('/api', panelRoutes);
-app.use('/api', cuidadoPersonalRoutes);
+app.use('/api/paciente', pacienteRoutes);//Completo
+app.use('/api/familiar', familiarRoutes);//No se necesita
+app.use('/api/panel', panelRoutes);
+app.use('/api/cuidado-personal', cuidadoPersonalRoutes);
 app.use('/api/actividades', actividadRouter);
 app.use('/api/regSintomas', RegSintomas);
 
