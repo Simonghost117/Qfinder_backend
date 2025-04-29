@@ -4,6 +4,7 @@ import validateSchema from "../middlewares/validatoreSchema.js"
 import {PacienteSchema, ActPacienteSchema} from "../schema/pacienteSchema.js";
 import { verifyToken } from '../middlewares/verifyToken.js';
 import { verificarRelacion } from '../middlewares/injectPacienteId.middleware.js';
+import { generarQRPaciente,actualizarPacienteQR } from "../controllers/pacienteController.js";
 
 const router = express.Router();
 
@@ -14,5 +15,7 @@ router.get('/listarPacientes/:id_paciente', verifyToken, getPacienteById);
 //Validaciones de quien puede modificar la informacion de un paciente
 router.put('/actualizarPaciente/:id_paciente', verifyToken, verificarRelacion, validateSchema(ActPacienteSchema), actualizarPaciente);
 router.delete('/eliminarPaciente/:id_paciente', verifyToken, verificarRelacion, eliminarPaciente);
+router.get('/qr/:id_paciente', generarQRPaciente);
+router.put('/:id_paciente', verifyToken, actualizarPacienteQR);
 
 export default router;

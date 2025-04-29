@@ -1,4 +1,5 @@
 import { createPaciente, getPacientesByUsuario } from "../services/pacienteService.js";
+import { generarCodigoQR } from "../utils/qrGenerator.js";
 
 import { models } from "../models/index.js";
 const { Paciente, Familiar } = models;
@@ -230,3 +231,105 @@ export const eliminarPaciente = async (req, res) => {
     });
   }
 }
+
+//Generar codigo QR del paciente
+export const generarQRPaciente = async (req, res) => {
+  try {
+    const { id_paciente } = req.params;
+
+    const paciente = await Paciente.findOne({
+      where: { id_paciente },
+      include: [{
+        model: Familiar,
+        as: 'familiares',
+        required: false
+      }]
+    });
+
+    if (!paciente) {
+      return res.status(404).json({
+        success: false,
+        message: "Paciente no encontrado."
+      });
+    }
+
+    // Solo se incluyen datos útiles para una emergencia
+    const datosParaQR = {
+      nombre: paciente.nombre,
+      apellido: paciente.apellido,
+      diagnostico: paciente.diagnostico_principal,
+      autonomia: paciente.nivel_autonomia,
+      contacto_emergencia: paciente.familiares?.[0]?.telefono || "No registrado"
+    };
+
+    const qr = await generarCodigoQR(datosParaQR); // DataURL base64
+
+    res.status(200).json({
+      success: true,
+      qr
+    });
+  } catch (error) {
+    console.error("Error generando el código QR:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al generar el código QR",
+      error: process.env.NODE_ENV === "development" ? error.message : null
+    });
+  }
+};
+
+//actualizar informaciuon
+
+export const actualizarPacienteQR = async (req, res) => {
+  try {
+    const { id_paciente } = req.params;
+    const {
+      nombre,
+      apellido,
+      diagnostico_principal,
+      nivel_autonomia
+    } = req.body;
+
+    const paciente = await Paciente.findByPk(id_paciente, {
+      include: [{
+        model: Familiar,
+        as: 'familiares',
+        required: false
+      }]
+    });
+
+    if (!paciente) {
+      return res.status(404).json({ message: "Paciente no encontrado" });
+    }
+
+    // Actualizar todos los campos relevantes
+    await paciente.update({
+      nombre,
+      apellido,
+      diagnostico_principal,
+      nivel_autonomia
+    });
+
+    // Generar nuevo QR con datos actualizados de emergencia
+    const datosParaQR = {
+      nombre: nombre,
+      apellido: apellido,
+      diagnostico: diagnostico_principal,
+      autonomia: nivel_autonomia,
+      contacto_emergencia: paciente.familiares?.[0]?.telefono || "No registrado"
+    };
+
+    const qr = await generarCodigoQR(datosParaQR); // DataURL base64
+
+    res.status(200).json({
+      message: "Paciente actualizado correctamente",
+      qr
+    });
+  } catch (error) {
+    console.error("Error al actualizar paciente:", error);
+    res.status(500).json({
+      message: "Error al actualizar paciente",
+      error: process.env.NODE_ENV === "development" ? error.message : null
+    });
+  }
+};
