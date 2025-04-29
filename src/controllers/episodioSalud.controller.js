@@ -30,6 +30,7 @@ export class EpisodioSaludController {
 
       this.responderExito(res, 201, 'Episodio creado exitosamente', {
         id: episodio.id_episodio,
+        id_paciente: episodio.id_paciente,
         tipo: episodio.tipo,
         severidad: episodio.severidad,
         estado: episodio.estado,

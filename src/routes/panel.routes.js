@@ -5,6 +5,6 @@ import verificarRol from '../middlewares/verificarRol.js';
 const router = express.Router();
 
 //router.get('/panel/:idPaciente', verificarRol('Medico'), getPanelPaciente);
-router.get('/panel/:idPaciente', getPanelPaciente);
+router.get('/:idPaciente', getPanelPaciente);
 
 export default router;

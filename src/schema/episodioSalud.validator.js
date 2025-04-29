@@ -6,7 +6,6 @@ const sintomas = [
 ];
 
 export const episodioSchema = z.object({
-  id_paciente: z.number().int().positive(),
   tipo: z.enum([
     'crisis_psiquiatrica',
     'crisis_epileptica',

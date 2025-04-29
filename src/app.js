@@ -51,16 +51,15 @@ app.get('/test', (req, res) => {
 });
 
 // Configuración de rutas
-app.use('/api/auth', usuarioRoutes);
-app.use('/api/medicos', medicoRoutes);
-
-app.use('/api/episodios', routerEpisodioSalud);
-app.use('/api/reportes', routerReport);
+app.use('/api/auth', usuarioRoutes);//Completar rutas de autenticación
+app.use('/api/medicos', medicoRoutes);//Validaciones - crud
+app.use('/api/episodios', routerEpisodioSalud);//Completo
+//app.use('/api/reportes', routerReport);//Esta ruta no va a ser utilizada
 app.use('/api/redes', redesRoutes);
-app.use('/api/paciente', pacienteRoutes);
-app.use('/api/familiar', familiarRoutes);
-app.use('/api', panelRoutes);
-app.use('/api', cuidadoPersonalRoutes);
+app.use('/api/paciente', pacienteRoutes);//Completo
+app.use('/api/familiar', familiarRoutes);//No se necesita
+app.use('/api/panel', panelRoutes);
+app.use('/api/cuidado-personal', cuidadoPersonalRoutes);
 app.use('/api/actividades', actividadRouter);
 app.use('/api/regSintomas', RegSintomas);
 
