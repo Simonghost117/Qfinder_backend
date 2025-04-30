@@ -8,7 +8,8 @@ const UsuarioRed = sequelize.define('UsuarioRed', {
     allowNull: false,
     field: "id_usuario"
   },
-  id_relacion: {
+  redId: {
+    primaryKey: true,
     type: DataTypes.INTEGER,
     allowNull: false,
     field: "id_relacion"
