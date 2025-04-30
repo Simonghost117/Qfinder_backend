@@ -1,7 +1,8 @@
 import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
 
-dotenv.config(); // Cargar variables de entorno
+// Cargar variables de entorno
+dotenv.config();
 
 // Verificación de variables de entorno
 const requiredEnvVars = ['DB_NAME', 'DB_USER', 'DB_PASSWORD', 'DB_HOST', 'DB_PORT', 'NODE_ENV'];
@@ -23,24 +24,38 @@ const sequelize = new Sequelize(
     dialect: 'mysql',
     logging: process.env.NODE_ENV === 'development' ? console.log : false,
     pool: {
-      max: 5, // Máximo de conexiones
-      min: 0, // Mínimo de conexiones
-      acquire: 30000, // Tiempo máximo en ms que intentará conectar antes de fallar
-      idle: 10000, // Tiempo máximo en ms que una conexión puede estar inactiva antes de ser liberada
+      max: 5,
+      min: 0,
+      acquire: 30000,
+      idle: 10000,
     },
+    define: {
+      timestamps: true,
+      underscored: true,
+    }
   }
 );
 
-// Probar la conexión a la base de datos
+// Funciones útiles
 const testConnection = async () => {
   try {
     await sequelize.authenticate();
-    console.log('Conexión a la base de datos establecida correctamente.');
+    console.log('✅ Conexión a la base de datos establecida correctamente.');
+    return true;
   } catch (error) {
-    console.error('No se pudo conectar a la base de datos:', error);
+    console.error('❌ No se pudo conectar a la base de datos:', error);
+    return false;
   }
 };
 
-testConnection();
+const safeSync = async () => {
+  try {
+    await sequelize.sync({ alter: process.env.NODE_ENV === 'development' });
+    console.log('📦 Modelos sincronizados correctamente.');
+  } catch (error) {
+    console.error('❌ Error al sincronizar modelos:', error);
+  }
+};
 
 export default sequelize;
+export { testConnection, safeSync };

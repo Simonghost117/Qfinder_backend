@@ -13,6 +13,10 @@ Seguridad
 •	helmet: Configuraciones de seguridad HTTP.
 •	cors: Control de acceso a la API.
 •	cookie-parser: Manejo de cookies.
+•	Multer: Para manejar la subida de archivos    
+    (multipart/form-data) en aplicaciones Express.
+•   Nodemailer: esencial para el envío de      correos electrónicos desde aplicaciones JavaScript.
+
 Desarrollo y Utilidades
 •	dotenv: Manejo de variables de entorno.
 •	nodemon: Recarga automática en desarrollo.
