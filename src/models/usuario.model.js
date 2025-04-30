@@ -54,6 +54,21 @@ const Usuario = sequelize.define('Usuario', {
     type: DataTypes.ENUM('Activo', 'Inactivo'),
     defaultValue: 'Activo',
     field: 'estado_usuario'
+  },
+  codigo_verificacion: {
+    type: DataTypes.STRING(4),
+    allowNull: true,
+    field: 'codigo_verificacion'
+  },
+  codigo_expiracion: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'codigo_expiracion'
+  },
+  verificado: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    field: 'verificado'
   }
 }, {
   tableName: 'usuario',

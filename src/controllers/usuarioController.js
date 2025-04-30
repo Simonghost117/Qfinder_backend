@@ -1,5 +1,4 @@
 import jwt from 'jsonwebtoken';
-import { createUser } from '../services/usuarioService.js';
 import Usuario from '../models/usuario.model.js';
 import { createAccessToken } from '../libs/jwt.js';
 import bcrypt from 'bcryptjs';
@@ -8,77 +7,117 @@ dotenv.config();
 
 import { medicoSchema } from '../schema/medicoSchema.js';
 import Medico from '../models/Medico.js';
+import { 
+  generateAndStoreCode, 
+  verifyCode,
+  sendVerificationEmail 
+} from '../services/usuarioService.js';
 
 export const register = async (req, res) => {
-
-    try {
-
-        const { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, contrasena_usuario, tipo_usuario, especialidad, licencia 
-        } = req.body;
+  try {
+    const { correo_usuario, ...userData } = req.body;
     
-        // Verificar si el usuario ya existe
-        const usuarioExistente = await Usuario.findOne({ 
-            where: { correo_usuario: correo_usuario } 
-          });
-          
-        if (usuarioExistente) {
-            return res.status(400).json({ error: "El correo ya está registrado" });
-        }
-
-        if (tipo_usuario === "Medico") {
-          const validacion = medicoSchema.safeParse({ especialidad, licencia });
-          if (!validacion.success) {
-            return res.status(400).json({ error: validacion.error.errors });
-          }
-        }
-
-        const usuario = await createUser(
-            nombre_usuario,
-            apellido_usuario,
-            identificacion_usuario,
-            direccion_usuario,
-            telefono_usuario,
-            correo_usuario,
-            contrasena_usuario,
-            tipo_usuario
-        );
-
-        if (tipo_usuario === "Medico") {
-          await Medico.create({
-            id_usuario: usuario.id_usuario,
-            especialidad,
-            licencia
-          });
-        }
+    // Verificar si el correo ya está registrado
+    const existingUser = await Usuario.findOne({ 
+      where: { correo_usuario } 
+    });
     
-        
-        const token = await createAccessToken({
-            id: usuario.id_usuario,
-            rol: usuario.tipo_usuario,
-        });
-  
-        res.cookie("token", token, {
-            httpOnly: process.env.NODE_ENV !== "development",
-            secure: true,
-            sameSite: "none",
-        });
-  
-        res.status(201).json({ message: 'Usuario registrado exitosamente', 
-            id: usuario._id_usuario,
-            nombre: usuario.nombre_usuario,
-            apellido : usuario.apellido_usuario,
-            identificacion: usuario.identificacion_usuario,
-            direccion: usuario.direccion_usuario,
-            telefono: usuario.telefono_usuario,
-            email: usuario.correo_usuario, 
-            tipo_usuario: usuario.tipo_usuario,
-            token: token,
-        });
-    } catch (error) {
-        res.status(500).json({ message: 'Error al registrar el usuario', error });
-
+    if (existingUser) {
+      return res.status(400).json({ error: 'El correo ya está registrado' });
     }
+    
+    // Validar datos de médico si aplica
+    if (userData.tipo_usuario === 'Medico') {
+      const validation = medicoSchema.safeParse({
+        especialidad: userData.especialidad,
+        licencia: userData.licencia
+      });
+      
+      if (!validation.success) {
+        return res.status(400).json({ error: validation.error.errors });
+      }
+    }
+    
+    // Crear usuario con estado no verificado
+    const usuario = await Usuario.create({
+      ...userData,
+      correo_usuario,
+      estado_usuario: 'Inactivo' // Cambiará a 'Activo' después de verificación
+    });
+    
+    // Generar y enviar código
+    const codigo = await generateAndStoreCode(correo_usuario);
+    await sendVerificationEmail(correo_usuario, codigo);
+    
+    res.status(200).json({ 
+      message: 'Código de verificación enviado',
+      nextStep: '/verify'
+    });
+    
+  } catch (error) {
+    res.status(500).json({ 
+      error: 'Error en registro inicial', 
+      details: error.message 
+    });
+  }
 };
+
+export const verifyUser = async (req, res) => {
+  try {
+    const { correo_usuario, codigo } = req.body;
+    
+    // Verificar el código
+    const { valid, message } = await verifyCode(correo_usuario, codigo);
+    
+    if (!valid) {
+      return res.status(400).json({ error: message });
+    }
+    
+    // Activar la cuenta
+    await Usuario.update(
+      { estado_usuario: 'Activo' },
+      { where: { correo_usuario } }
+    );
+    
+    // Obtener usuario para generar token
+    const usuario = await Usuario.findOne({ 
+      where: { correo_usuario } 
+    });
+    
+    // Si es médico, crear registro especial
+    if (usuario.tipo_usuario === 'Medico') {
+      await Medico.create({
+        id_usuario: usuario.id_usuario,
+        especialidad: req.body.especialidad,
+        licencia: req.body.licencia
+      });
+    }
+    
+    // Generar token JWT
+    const token = await createAccessToken({
+      id: usuario.id_usuario,
+      rol: usuario.tipo_usuario
+    });
+    
+    res.status(200).json({
+      message: 'Cuenta verificada exitosamente',
+      usuario: {
+        id: usuario.id_usuario,
+        nombre: usuario.nombre_usuario,
+        correo: usuario.correo_usuario,
+        tipo_usuario: usuario.tipo_usuario
+      },
+      token
+    });
+    
+  } catch (error) {
+    res.status(500).json({ 
+      error: 'Error en verificación', 
+      details: error.message 
+    });
+  }
+};
+
 
 export const login = async (req, res) => {
     try {
