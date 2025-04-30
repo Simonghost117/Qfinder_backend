@@ -1,9 +1,7 @@
 import express from 'express';
 import { login, logout, register, 
     listarUsers, actualizarUser, eliminarUser,
-    verifyUser
-    //  sendVerification 
-    } from '../controllers/usuarioController.js';
+    verifyUser } from '../controllers/usuarioController.js';
 import validateSchema from '../middlewares/validatoreSchema.js';
 import { loginSchema, registerSchema, updateSchema } from '../schema/usuarioSchema.js';
 import { verifyToken } from '../middlewares/verifyToken.js';

@@ -3,12 +3,12 @@ import  sequelize  from '../config/db.js';
 
 const UsuarioRed = sequelize.define('UsuarioRed', {
   usuarioId: {
-    primaryKey: true,
     type: DataTypes.INTEGER,
     allowNull: false,
     field: "id_usuario"
   },
   id_relacion: {
+    primaryKey: true,
     type: DataTypes.INTEGER,
     allowNull: false,
     field: "id_relacion"
