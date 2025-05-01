@@ -8,55 +8,36 @@ dotenv.config();
 import { medicoSchema } from '../schema/medicoSchema.js';
 import Medico from '../models/Medico.js';
 import { 
-  generateAndStoreCode, 
+  generateAndStoreCode,
   verifyCode,
-  sendVerificationEmail 
+  sendVerificationEmail,
+  clearPendingRegistration
 } from '../services/usuarioService.js';
 
 export const register = async (req, res) => {
   try {
     const { correo_usuario, ...userData } = req.body;
     
-    // Verificar si el correo ya está registrado
-    const existingUser = await Usuario.findOne({ 
-      where: { correo_usuario } 
-    });
-    
-    if (existingUser) {
+    // 1. Validar duplicados en BD (solo el correo)
+    const existe = await Usuario.findOne({ where: { correo_usuario } });
+    if (existe) {
       return res.status(400).json({ error: 'El correo ya está registrado' });
     }
     
-    // Validar datos de médico si aplica
-    if (userData.tipo_usuario === 'Medico') {
-      const validation = medicoSchema.safeParse({
-        especialidad: userData.especialidad,
-        licencia: userData.licencia
-      });
-      
-      if (!validation.success) {
-        return res.status(400).json({ error: validation.error.errors });
-      }
-    }
+    // 2. Generar y almacenar código temporalmente
+    const codigo = generateAndStoreCode(correo_usuario, userData);
     
-    // Crear usuario con estado no verificado
-    const usuario = await Usuario.create({
-      ...userData,
-      correo_usuario,
-      estado_usuario: 'Inactivo' // Cambiará a 'Activo' después de verificación
-    });
-    
-    // Generar y enviar código
-    const codigo = await generateAndStoreCode(correo_usuario);
+    // 3. Enviar email (usar tu función existente)
     await sendVerificationEmail(correo_usuario, codigo);
     
     res.status(200).json({ 
-      message: 'Código de verificación enviado',
+      message: 'Código enviado. Verifica tu correo.',
       nextStep: '/verify'
     });
     
   } catch (error) {
     res.status(500).json({ 
-      error: 'Error en registro inicial', 
+      error: 'Error en registro', 
       details: error.message 
     });
   }
@@ -66,54 +47,55 @@ export const verifyUser = async (req, res) => {
   try {
     const { correo_usuario, codigo } = req.body;
     
-    // Verificar el código
-    const { valid, message } = await verifyCode(correo_usuario, codigo);
-    
+    // 1. Verificar código
+    const { valid, message, userData } = verifyCode(correo_usuario, codigo);
     if (!valid) {
       return res.status(400).json({ error: message });
     }
     
-    // Activar la cuenta
-    await Usuario.update(
-      { estado_usuario: 'Activo' },
-      { where: { correo_usuario } }
-    );
-    
-    // Obtener usuario para generar token
-    const usuario = await Usuario.findOne({ 
-      where: { correo_usuario } 
+    // 2. Crear usuario
+    const hashedPassword = await bcrypt.hash(userData.contrasena_usuario, 10);
+    const usuario = await Usuario.create({
+      ...userData,
+      correo_usuario,
+      contrasena_usuario: hashedPassword,
+      estado_usuario: 'Activo'
     });
     
-    // Si es médico, crear registro especial
+    // 3. Perfil médico si aplica
     if (usuario.tipo_usuario === 'Medico') {
       await Medico.create({
         id_usuario: usuario.id_usuario,
-        especialidad: req.body.especialidad,
-        licencia: req.body.licencia
+        especialidad: userData.especialidad,
+        licencia: userData.licencia
       });
     }
     
-    // Generar token JWT
-    const token = await createAccessToken({
-      id: usuario.id_usuario,
-      rol: usuario.tipo_usuario
-    });
+    // 4. Generar token
+    const token = jwt.sign(
+      { id: usuario.id_usuario, rol: usuario.tipo_usuario },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+    console.log("Token generado:", token);
+
+    res.cookie('token', token);
     
-    res.status(200).json({
-      message: 'Cuenta verificada exitosamente',
+    res.status(201).json({
+      message: 'Registro completado exitosamente',
       usuario: {
         id: usuario.id_usuario,
         nombre: usuario.nombre_usuario,
         correo: usuario.correo_usuario,
-        tipo_usuario: usuario.tipo_usuario
+        tipo: usuario.tipo_usuario
       },
       token
     });
     
   } catch (error) {
     res.status(500).json({ 
-      error: 'Error en verificación', 
-      details: error.message 
+      error: 'Error en verificación',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };

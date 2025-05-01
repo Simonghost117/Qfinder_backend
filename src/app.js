@@ -23,6 +23,15 @@ import RegSintomas from './routes/monitorerSintomasRouter.js';
 import medicoRoutes from './routes/medico.routes.js';
 
 const app = express();
+import session from 'express-session';
+
+// Configuración de sesión
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'tu_secreto_super_seguro',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: false } // Cambia a true si usas HTTPS
+}));
 
 // Configuración de EventEmitter
 EventEmitter.defaultMaxListeners = 15; // Aumenta el límite

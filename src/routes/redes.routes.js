@@ -1,14 +1,15 @@
 import express from 'express';
 import {
-    listarPorEnfermedad,
-  unirseARed,
-  salirDeRed
+    
+    unirRedGlobal,
+  
 } from '../controllers/redes.controller.js';
+import { verifyToken } from '../middlewares/verifyToken.js';
 
 const router = express.Router();
 
-router.get('/', listarPorEnfermedad);//No va
-router.post('/unirse/:id', unirseARed);
-router.delete('/salir/:id', salirDeRed);
+
+router.post('/unirse/:id',verifyToken, unirRedGlobal);
+
 
 export default router;
