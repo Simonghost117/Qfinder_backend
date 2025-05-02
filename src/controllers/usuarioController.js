@@ -1,5 +1,4 @@
 import jwt from 'jsonwebtoken';
-import { createUser } from '../services/usuarioService.js';
 import Usuario from '../models/usuario.model.js';
 import { createAccessToken } from '../libs/jwt.js';
 import bcrypt from 'bcryptjs';
@@ -8,77 +7,99 @@ dotenv.config();
 
 import { medicoSchema } from '../schema/medicoSchema.js';
 import Medico from '../models/Medico.js';
+import { 
+  generateAndStoreCode,
+  verifyCode,
+  sendVerificationEmail,
+  clearPendingRegistration
+} from '../services/usuarioService.js';
 
 export const register = async (req, res) => {
-
-    try {
-
-        const { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, contrasena_usuario, tipo_usuario, especialidad, licencia 
-        } = req.body;
+  try {
+    const { correo_usuario, ...userData } = req.body;
     
-        // Verificar si el usuario ya existe
-        const usuarioExistente = await Usuario.findOne({ 
-            where: { correo_usuario: correo_usuario } 
-          });
-          
-        if (usuarioExistente) {
-            return res.status(400).json({ error: "El correo ya está registrado" });
-        }
-
-        if (tipo_usuario === "Medico") {
-          const validacion = medicoSchema.safeParse({ especialidad, licencia });
-          if (!validacion.success) {
-            return res.status(400).json({ error: validacion.error.errors });
-          }
-        }
-
-        const usuario = await createUser(
-            nombre_usuario,
-            apellido_usuario,
-            identificacion_usuario,
-            direccion_usuario,
-            telefono_usuario,
-            correo_usuario,
-            contrasena_usuario,
-            tipo_usuario
-        );
-
-        if (tipo_usuario === "Medico") {
-          await Medico.create({
-            id_usuario: usuario.id_usuario,
-            especialidad,
-            licencia
-          });
-        }
-    
-        
-        const token = await createAccessToken({
-            id: usuario.id_usuario,
-            rol: usuario.tipo_usuario,
-        });
-  
-        res.cookie("token", token, {
-            httpOnly: process.env.NODE_ENV !== "development",
-            secure: true,
-            sameSite: "none",
-        });
-  
-        res.status(201).json({ message: 'Usuario registrado exitosamente', 
-            id: usuario._id_usuario,
-            nombre: usuario.nombre_usuario,
-            apellido : usuario.apellido_usuario,
-            identificacion: usuario.identificacion_usuario,
-            direccion: usuario.direccion_usuario,
-            telefono: usuario.telefono_usuario,
-            email: usuario.correo_usuario, 
-            tipo_usuario: usuario.tipo_usuario,
-            token: token,
-        });
-    } catch (error) {
-        res.status(500).json({ message: 'Error al registrar el usuario', error });
-
+    // 1. Validar duplicados en BD (solo el correo)
+    const existe = await Usuario.findOne({ where: { correo_usuario } });
+    if (existe) {
+      return res.status(400).json({ error: 'El correo ya está registrado' });
     }
+    
+    // 2. Generar y almacenar código temporalmente
+    const codigo = generateAndStoreCode(correo_usuario, userData);
+    
+    // 3. Enviar email (usar tu función existente)
+    await sendVerificationEmail(correo_usuario, codigo);
+    
+    res.status(200).json({ 
+      message: 'Código enviado. Verifica tu correo.',
+      nextStep: '/verify'
+    });
+    
+  } catch (error) {
+    res.status(500).json({ 
+      error: 'Error en registro', 
+      details: error.message 
+    });
+  }
 };
+
+export const verifyUser = async (req, res) => {
+  try {
+    const { correo_usuario, codigo } = req.body;
+    
+    // 1. Verificar código
+    const { valid, message, userData } = verifyCode(correo_usuario, codigo);
+    if (!valid) {
+      return res.status(400).json({ error: message });
+    }
+    
+    // 2. Crear usuario
+    const hashedPassword = await bcrypt.hash(userData.contrasena_usuario, 10);
+    const usuario = await Usuario.create({
+      ...userData,
+      correo_usuario,
+      contrasena_usuario: hashedPassword,
+      estado_usuario: 'Activo'
+    });
+    
+    // 3. Perfil médico si aplica
+    if (usuario.tipo_usuario === 'Medico') {
+      await Medico.create({
+        id_usuario: usuario.id_usuario,
+        especialidad: userData.especialidad,
+        licencia: userData.licencia
+      });
+    }
+    
+    // 4. Generar token
+    const token = jwt.sign(
+      { id: usuario.id_usuario, rol: usuario.tipo_usuario },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+    console.log("Token generado:", token);
+
+    res.cookie('token', token);
+    
+    res.status(201).json({
+      message: 'Registro completado exitosamente',
+      usuario: {
+        id: usuario.id_usuario,
+        nombre: usuario.nombre_usuario,
+        correo: usuario.correo_usuario,
+        tipo: usuario.tipo_usuario
+      },
+      token
+    });
+    
+  } catch (error) {
+    res.status(500).json({ 
+      error: 'Error en verificación',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 
 export const login = async (req, res) => {
     try {
