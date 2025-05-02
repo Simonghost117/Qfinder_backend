@@ -32,7 +32,7 @@ export const createUser = async (userData) => {
  * Genera y almacena un código de verificación para el usuario
  */
 export const generateAndStoreCode = async (correo_usuario) => {
-  const codigo = crypto.randomInt(1000, 9999).toString();
+  const codigo = crypto.randomInt(10000, 99999).toString();
   const expiracion = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
   
   await Usuario.update({

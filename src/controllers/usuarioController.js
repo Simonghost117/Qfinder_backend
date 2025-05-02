@@ -38,6 +38,7 @@ export const register = async (req, res) => {
       }
     }*/
     
+    //return;
     // Crear usuario con estado no verificado
     const usuario = await Usuario.create({
       ...userData,
@@ -51,7 +52,10 @@ export const register = async (req, res) => {
     
     res.status(200).json({ 
       message: 'Código de verificación enviado',
-      nextStep: '/verify'
+      nextStep: '/verify',
+      user: {
+        correo: usuario.dataValues.correo_usuario
+      }
     });
     
   } catch (error) {
@@ -63,6 +67,7 @@ export const register = async (req, res) => {
 };
 
 export const verifyUser = async (req, res) => {
+  console.log(req.body)
   try {
     
     const { correo_usuario, codigo } = req.body;

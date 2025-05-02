@@ -20,9 +20,9 @@ export const registerSchema = z.object({
         .email({ message: "El correo electrónico debe tener un formato válido" }),
     contrasena_usuario: z.string()
         .min(8, { message: "La contraseña debe tener al menos 8 caracteres" }), 
-    tipo_usuario: z.enum(['Usuario', 'Medico', 'Administrador'], {
+    /*tipo_usuario: z.enum(['Usuario', 'Medico', 'Administrador'], {
         message: "El tipo de usuario debe ser 'Usuario', 'Medico' o 'Administrador'",
-    }),
+    }),*/
     estado_usuario: z.enum(['Activo', 'Inactivo']).optional(), // Opcional porque tiene un valor por defecto
     createdAt: z.date().optional(), 
     updatedAt: z.date().optional(),
