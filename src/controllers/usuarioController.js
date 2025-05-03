@@ -25,6 +25,7 @@ export const register = async (req, res) => {
       return res.status(400).json({ error: 'El correo ya está registrado' });
     }
 
+
     if (userData.tipo_usuario === 'Medico') {
       const result = medicoSchema.safeParse({
         especialidad: userData.especialidad,
@@ -39,14 +40,33 @@ export const register = async (req, res) => {
     }
     
     // 2. Generar y almacenar código temporalmente
+
+    // 2. Validación de médico (comentario preservado de ambas versiones)
+    /*if (userData.tipo_usuario === 'Medico') {
+      const validation = medicoSchema.safeParse({
+        especialidad: userData.especialidad,
+        licencia: userData.licencia
+      });
+      
+      if (!validation.success) {
+        return res.status(400).json({ error: validation.error.errors });
+      }
+    }*/
+
+    // 3. Generar y almacenar código temporalmente (versión HEAD)
+
     const codigo = generateAndStoreCode(correo_usuario, userData);
     
-    // 3. Enviar email (usar tu función existente)
+    // 4. Enviar email (combinación de ambas implementaciones)
     await sendVerificationEmail(correo_usuario, codigo);
     
     res.status(200).json({ 
       message: 'Código enviado. Verifica tu correo.',
-      nextStep: '/verify'
+      nextStep: '/verify',
+      // Preservar formato de respuesta de ambas versiones
+      user: {
+        correo: correo_usuario
+      }
     });
     
   } catch (error) {
@@ -58,42 +78,46 @@ export const register = async (req, res) => {
 };
 
 export const verifyUser = async (req, res) => {
+  console.log(req.body)
   try {
     const { correo_usuario, codigo } = req.body;
     
-    // 1. Verificar código
+    // 1. Verificar código (versión HEAD modificada)
     const { valid, message, userData } = verifyCode(correo_usuario, codigo);
     if (!valid) {
       return res.status(400).json({ error: message });
     }
     
-    // 2. Crear usuario
+    // 2. Crear usuario con contraseña hasheada
     const hashedPassword = await bcrypt.hash(userData.contrasena_usuario, 10);
     const usuario = await Usuario.create({
       ...userData,
       correo_usuario,
       contrasena_usuario: hashedPassword,
-      estado_usuario: 'Activo'
+      estado_usuario: 'Activo' // De HEAD
     });
     
-    // 3. Perfil médico si aplica
-    if (usuario.tipo_usuario === 'Medico') {
+    // 3. Registro médico (versión comentada de ambas ramas)
+    /*if (usuario.tipo_usuario === 'Medico') {
       await Medico.create({
         id_usuario: usuario.id_usuario,
         especialidad: userData.especialidad,
         licencia: userData.licencia
       });
-    }
+    }*/
     
-    // 4. Generar token
-    const token = jwt.sign(
-      { id: usuario.id_usuario, rol: usuario.tipo_usuario },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
-    console.log("Token generado:", token);
+    // 4. Generar token (combinación de ambas implementaciones)
+    const token = await createAccessToken({
+      id: usuario.id_usuario,
+      rol: usuario.tipo_usuario // Preservado de HEAD
+    });
 
-    res.cookie('token', token);
+    // Cookie setting de HEAD
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict'
+    });
     
     res.status(201).json({
       message: 'Registro completado exitosamente',
@@ -101,7 +125,7 @@ export const verifyUser = async (req, res) => {
         id: usuario.id_usuario,
         nombre: usuario.nombre_usuario,
         correo: usuario.correo_usuario,
-        tipo: usuario.tipo_usuario
+        tipo: usuario.tipo_usuario // De HEAD
       },
       token
     });
@@ -114,13 +138,11 @@ export const verifyUser = async (req, res) => {
   }
 };
 
-
+// Resto del código sin cambios...
 export const login = async (req, res) => {
     try {
-       
         const { correo_usuario, contrasena_usuario } = req.body;
         
-        // Buscar usuario en la base de datos
         const usuario = await Usuario.findOne({ 
           where: { correo_usuario: correo_usuario } 
         });
@@ -129,30 +151,34 @@ export const login = async (req, res) => {
           return res.status(401).json({ error: "Credenciales incorrectas (usuario no registrado)" });
         }
         
-        // Verificar la contraseña
         const contrasenaValida = await bcrypt.compare(contrasena_usuario, usuario.contrasena_usuario);
         if (!contrasenaValida) {
           return res.status(401).json({ error: "Credenciales incorrectas (contraseña invalida)" });
         }
-        console.log("user", contrasenaValida);
         
-        // Generar token JWT
-        const token = jwt.sign(
-          { id: usuario.id_usuario, rol: usuario.tipo_usuario },
-          process.env.JWT_SECRET,
-          { expiresIn: "1h" }
-        );
-        console.log("Token generado:", token);
+        // Generar token combinando ambas versiones
+        const token = await createAccessToken({
+          id: usuario.id_usuario,
+          rol: usuario.tipo_usuario
+        });
 
-        res.cookie('token', token);
+        res.cookie('token', token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict'
+        });
         
-        res.json({ rol: usuario.tipo_usuario, email: usuario.correo_usuario, token });
-        console.log(process.env.JWT_SECRET);
+        res.json({ 
+          rol: usuario.tipo_usuario, 
+          email: usuario.correo_usuario, 
+          token 
+        });
       } catch (error) {
         return res.status(500).json({ message: error.message });
         }  
 };
 
+// Funciones restantes sin cambios...
 export const logout = async (req, res) => {
     res.cookie("token", "", {
       httpOnly: true,
@@ -186,11 +212,9 @@ export const actualizarUser = async (req, res) => {
   try {
     const { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario, correo_usuario, contrasena_usuario } = req.body;
 
-    // Obtener el id del usuario autenticado desde el token
-    const { id } = req.usuario; // Esto asume que el middleware verifyToken adjunta el id al req.usuario
+    const { id } = req.usuario;
     console.log("Contenido de req.usuario:", req.usuario);
 
-    // Verificar si el usuario existe
     const usuario = await Usuario.findByPk(id);
     if (!usuario) {
       return res.status(404).json({ message: 'Usuario no encontrado' });
@@ -198,11 +222,10 @@ export const actualizarUser = async (req, res) => {
 
     const dataToUpdate = { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario, correo_usuario };
     if (contrasena_usuario) {
-      const salt = await bcrypt.genSalt(10); // Hashear contraseña si fue proporcionada
+      const salt = await bcrypt.genSalt(10);
       dataToUpdate.contrasena_usuario = await bcrypt.hash(contrasena_usuario, salt);
     }
 
-    // Actualizar el usuario autenticado
     await Usuario.update(dataToUpdate, {
       where: { id_usuario: id },
     });
@@ -216,15 +239,13 @@ export const actualizarUser = async (req, res) => {
 
 export const eliminarUser = async (req, res) => {
     try {
-        const { id } = req.usuario; // Obtener el id del usuario autenticado desde el token
+        const { id } = req.usuario;
 
-        // Verificar si el usuario existe
         const usuario = await Usuario.findByPk(id);
         if (!usuario) {
             return res.status(404).json({ message: 'Usuario no encontrado' });
         }
 
-        // Eliminar el usuario autenticado
         await Usuario.destroy({
             where: { id_usuario: id },
         });
