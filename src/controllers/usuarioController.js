@@ -13,6 +13,7 @@ import {
   sendVerificationEmail,
   clearPendingRegistration
 } from '../services/usuarioService.js';
+import validateSchema from '../middlewares/validatoreSchema.js';
 
 export const register = async (req, res) => {
   try {
@@ -22,6 +23,19 @@ export const register = async (req, res) => {
     const existe = await Usuario.findOne({ where: { correo_usuario } });
     if (existe) {
       return res.status(400).json({ error: 'El correo ya está registrado' });
+    }
+
+    if (userData.tipo_usuario === 'Medico') {
+      const result = medicoSchema.safeParse({
+        especialidad: userData.especialidad,
+        licencia: userData.licencia
+      });
+
+      if (!result.success) {
+        // Extraer el primer mensaje de error
+        const errorMessage = result.error.issues[0].message;
+        return res.status(400).json({ error: "Error en el registro del Medico, ingrese los datos requeridos", details: errorMessage });
+      }
     }
     
     // 2. Generar y almacenar código temporalmente
