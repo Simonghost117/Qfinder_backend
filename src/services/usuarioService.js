@@ -14,35 +14,50 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-/**
- * Crea un nuevo usuario en el sistema
- */
-// export const createUser = async (userData) => {
-//   const hashedPassword = await bcrypt.hash(userData.contrasena_usuario, 10);
-  
-//   return await Usuario.create({
-//     ...userData,
-//     contrasena_usuario: hashedPassword,
-//     estado_usuario: 'Inactivo',
-//     verificado: false
-//   });
-// };
-
 // Almacenamiento temporal en memoria
 const tempStorage = new Map();
 
-export const generateAndStoreCode = (correo_usuario, userData) => {
-  const codigo = crypto.randomInt(1000, 9999).toString();
+/**
+ * Crea un nuevo usuario en el sistema
+ */
+export const createUser = async (userData) => {
+  const hashedPassword = await bcrypt.hash(userData.contrasena_usuario, 10);
   
+  return await Usuario.create({
+    ...userData,
+    contrasena_usuario: hashedPassword,
+    estado_usuario: 'Inactivo',
+    verificado: false
+  });
+};
+
+/**
+ * Genera y almacena un código de verificación para el usuario
+ * Combinación de ambas versiones:
+ * - Recibe userData de HEAD
+ * - Genera código de 5 dígitos de moriones
+ * - Mantiene ambos sistemas de expiración
+ */
+export const generateAndStoreCode = (correo_usuario, userData) => {
+  // Versión moriones: código de 5 dígitos y expiración Date
+  const codigo = crypto.randomInt(10000, 99999).toString();
+  const expiracion = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
+  
+  // Versión HEAD: almacena userData y timestamp
   tempStorage.set(correo_usuario, {
     userData,
     codigo,
-    timestamp: Date.now()
+    expiracion,    // Nuevo de moriones
+    timestamp: Date.now() // Original de HEAD
   });
   
   return codigo;
 };
 
+/**
+ * Verifica el código de validación
+ * Combina verificación de ambas versiones
+ */
 export const verifyCode = (correo_usuario, codigo) => {
   const storedData = tempStorage.get(correo_usuario);
   
@@ -50,8 +65,11 @@ export const verifyCode = (correo_usuario, codigo) => {
     return { valid: false, message: 'Registro no encontrado' };
   }
   
-  // Limpiar códigos expirados (15 mins)
-  if ((Date.now() - storedData.timestamp) > 15 * 60 * 1000) {
+  // Verificar expiración con ambos métodos
+  const expiroPorTimestamp = (Date.now() - storedData.timestamp) > 15 * 60 * 1000;
+  const expiroPorFecha = new Date() > storedData.expiracion;
+  
+  if (expiroPorTimestamp || expiroPorFecha) {
     tempStorage.delete(correo_usuario);
     return { valid: false, message: 'Código expirado' };
   }
@@ -67,11 +85,9 @@ export const verifyCode = (correo_usuario, codigo) => {
   };
 };
 
-// export const cleanTempStorage = (correo_usuario) => {
-//   tempStorage.delete(correo_usuario);
-// };
 /**
  * Envía el código de verificación por email
+ * Versión actualizada con código de 5 dígitos
  */
 export const sendVerificationEmail = async (correo_usuario, codigo) => {
   // Modo testing
@@ -108,6 +124,7 @@ export const sendVerificationEmail = async (correo_usuario, codigo) => {
 
 /**
  * Autentica un usuario
+ * (Mantenido igual de HEAD)
  */
 export const authenticateUser = async (correo_usuario, contrasena_usuario) => {
   const usuario = await Usuario.findOne({ 
@@ -131,10 +148,19 @@ export const authenticateUser = async (correo_usuario, contrasena_usuario) => {
   return { success: true, usuario };
 };
 
-//Limpieza de almacenamiento temporal
+/**
+ * Limpieza de almacenamiento temporal
+ * (Conserva ambos nombres de función comentados)
+ */
+// export const cleanTempStorage = (correo_usuario) => {
+//   tempStorage.delete(correo_usuario);
+// };
+
 export const clearPendingRegistration = (correo_usuario) => {
   tempStorage.delete(correo_usuario);
 };
+
+// Sección de código comentado preservado
 // // Configuración del transporter (para Gmail)
 // const transporter = nodemailer.createTransport({
 //   service: 'gmail',
@@ -147,95 +173,4 @@ export const clearPendingRegistration = (correo_usuario) => {
 // // Almacenamiento temporal de códigos (en producción usa Redis)
 // const verificationCodes = new Map();
 
-// export const sendVerificationCode = async (email) => {
-//   // Si estamos en entorno de testing, no enviar correo real
-//   if (process.env.NODE_ENV === 'test') {
-//     const testCode = '9999';
-//     verificationCodes.set(email, {
-//       code: testCode,
-//       expirationTime: Date.now() + 15 * 60 * 1000 // 15 minutos
-//     });
-//     return { success: true, isTest: true };
-//   }
-
-//   // Generar código de 4 dígitos
-//   const code = crypto.randomInt(1000, 9999).toString();
-//   const expirationTime = Date.now() + 15 * 60 * 1000; // 15 minutos
-
-//   // Guardar código temporalmente
-//   verificationCodes.set(email, { code, expirationTime });
-
-//   // Configurar el correo electrónico
-//   const mailOptions = {
-//     from: `"Verificación" <${process.env.EMAIL}>`,
-//     to: email,
-//     subject: 'Tu código de verificación',
-//     html: `
-//       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-//         <h2 style="color: #2563eb;">Verificación de correo electrónico</h2>
-//         <p>Por favor utiliza el siguiente código para verificar tu correo:</p>
-//         <div style="background: #f3f4f6; padding: 16px; text-align: center; font-size: 24px; letter-spacing: 2px; margin: 24px 0;">
-//           ${code}
-//         </div>
-//         <p>Este código expirará en 15 minutos.</p>
-//         <p style="color: #6b7280; font-size: 14px;">Si no solicitaste este código, puedes ignorar este mensaje.</p>
-//       </div>
-//     `
-//   };
-
-//   try {
-//     await transporter.sendMail(mailOptions);
-//     return { success: true };
-//   } catch (error) {
-//     console.error('Error al enviar correo:', error);
-//     return { success: false, error: 'Error al enviar el código de verificación' };
-//   }
-// };
-
-// export const verifyCode = (email, code) => {
-//   const record = verificationCodes.get(email);
-  
-//   if (!record) {
-//     return { valid: false, message: 'No se encontró código para este email' };
-//   }
-  
-//   if (Date.now() > record.expirationTime) {
-//     verificationCodes.delete(email);
-//     return { valid: false, message: 'Código expirado' };
-//   }
-  
-//   if (record.code !== code) {
-//     return { valid: false, message: 'Código incorrecto' };
-//   }
-  
-//   // Código válido - eliminar de almacenamiento temporal
-//   verificationCodes.delete(email);
-//   return { valid: true };
-// };
-
-// export const createUser = async (
-//   nombre_usuario,
-//   apellido_usuario,
-//   identificacion_usuario,
-//   direccion_usuario,
-//   telefono_usuario,
-//   correo_usuario,
-//   contrasena_usuario,
-//   tipo_usuario
-// ) => {
-//   const salt = await bcrypt.genSalt(10);
-//   const hashedPassword = await bcrypt.hash(contrasena_usuario, salt);
-
-//   const usuario = await Usuario.create({
-//     nombre_usuario,
-//     apellido_usuario,
-//     identificacion_usuario,
-//     direccion_usuario,
-//     telefono_usuario,
-//     correo_usuario,
-//     contrasena_usuario: hashedPassword,
-//     tipo_usuario,
-//   });
-
-//   return usuario; // ✅ Esto está bien
-// };
+// ... (resto de código comentario preservado)
