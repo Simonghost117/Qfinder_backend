@@ -5,15 +5,15 @@ import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 dotenv.config();
 
-import { medicoSchema } from '../schema/medicoSchema.js';
-import Medico from '../models/Medico.js';
+// import { medicoSchema } from '../schema/medicoSchema.js';
+// import Medico from '../models/Medico.js';
 import { 
   generateAndStoreCode,
   verifyCode,
   sendVerificationEmail,
   clearPendingRegistration
 } from '../services/usuarioService.js';
-import validateSchema from '../middlewares/validatoreSchema.js';
+import UsuarioRed from '../models/Red.js';
 
 export const register = async (req, res) => {
   try {
@@ -26,18 +26,18 @@ export const register = async (req, res) => {
     }
 
 
-    if (userData.tipo_usuario === 'Medico') {
-      const result = medicoSchema.safeParse({
-        especialidad: userData.especialidad,
-        licencia: userData.licencia
-      });
+    // if (userData.tipo_usuario === 'Medico') {
+    //   const result = medicoSchema.safeParse({
+    //     especialidad: userData.especialidad,
+    //     licencia: userData.licencia
+    //   });
 
-      if (!result.success) {
-        // Extraer el primer mensaje de error
-        const errorMessage = result.error.issues[0].message;
-        return res.status(400).json({ error: "Error en el registro del Medico, ingrese los datos requeridos", details: errorMessage });
-      }
-    }
+    //   if (!result.success) {
+    //     // Extraer el primer mensaje de error
+    //     const errorMessage = result.error.issues[0].message;
+    //     return res.status(400).json({ error: "Error en el registro del Medico, ingrese los datos requeridos", details: errorMessage });
+    //   }
+    // }
     
     // 2. Generar y almacenar código temporalmente
 
@@ -96,6 +96,15 @@ export const verifyUser = async (req, res) => {
       contrasena_usuario: hashedPassword,
       estado_usuario: 'Activo' // De HEAD
     });
+
+    const usuarioRed = await UsuarioRed.create({
+      id_usuario: usuario.id_usuario,
+      estado: 'activo',
+      nombre_red: 'Red Global de Apoyo QfindeR',
+      descripcion_red: 'Comunidad principal para todos los usuarios registrados',
+      fecha_union: new Date()
+    });
+    console.log('UsuarioRed creado:', usuarioRed);
     
     // 3. Registro médico (versión comentada de ambas ramas)
     /*if (usuario.tipo_usuario === 'Medico') {
@@ -125,7 +134,13 @@ export const verifyUser = async (req, res) => {
         id: usuario.id_usuario,
         nombre: usuario.nombre_usuario,
         correo: usuario.correo_usuario,
-        tipo: usuario.tipo_usuario // De HEAD
+        tipo: usuario.tipo_usuario,
+        // Incluimos información de la red si es necesario
+        red_global: {
+          nombre: 'Red Global de Apoyo QfindeR',
+          estado: 'activo',
+          fecha_union: new Date().toISOString()
+        }
       },
       token
     });

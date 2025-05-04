@@ -15,24 +15,24 @@ const UsuarioRed = sequelize.define('UsuarioRed', {
     field: 'id_usuario'
   },
   estado: {
-    type: DataTypes.ENUM('activa', 'pendiente', 'rechazada'),
-    defaultValue: 'activa',
+    type: DataTypes.ENUM('activo', 'inactivo'),
+    defaultValue: 'activo',
     field: 'estado'
+  },
+  fecha_union: {
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW,
+    field: 'fecha_union'
   },
   nombre_red: {
     type: DataTypes.STRING(100),
-    defaultValue: 'Red Global de Apoyo',
+    defaultValue: 'Red Global de Apoyo QfindeR',
     field: 'nombre_red'
   },
   descripcion_red: {
     type: DataTypes.TEXT,
     defaultValue: 'Comunidad principal para todos los usuarios registrados',
     field: 'descripcion_red'
-  },
-  fecha_union: {
-    type: DataTypes.DATE,
-    defaultValue: DataTypes.NOW,
-    field: 'fecha_union'
   }
 }, {
   tableName: 'usuario_red',

@@ -1,4 +1,5 @@
-import UsuarioRed from '../models/UsuarioRed.js';
+import UsuarioRed from '../models/Red.js';
+import Usuario from '../models/usuario.model.js';
 
 export const unirRedGlobal = async (req, res) => {
   try {
@@ -27,9 +28,9 @@ export const unirRedGlobal = async (req, res) => {
 
 export const verificarMembresia = async (req, res) => {
   try {
-    const userId = req.userId;
+    const { id } = req.usuario; // ID del usuario autenticado
     const membresia = await UsuarioRed.findOne({
-      where: { id_usuario: userId }
+      where: { id_usuario: id }
     });
 
     res.json({ 
@@ -38,6 +39,48 @@ export const verificarMembresia = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+export const listarMiembrosRed = async (req, res) => {
+  try {
+    const miembros = await UsuarioRed.findAll({
+      where: { 
+        nombre_red: 'Red Global de Apoyo QfindeR',
+        estado: 'activo'
+      },
+      include: [{
+        model: Usuario,
+        as: 'usuario',
+        required: true,
+        attributes: ['id_usuario', 'nombre_usuario', 'correo_usuario'],
+        where: { estado_usuario: 'Activo' }
+      }],
+      attributes: ['id_relacion', 'estado', 'fecha_union'],
+      order: [['fecha_union', 'DESC']]
+    });
+    console.log('Miembros de la red:', miembros);
+
+    const resultado = miembros.map(miembro => ({
+      id_relacion: miembro.id_relacion,
+      id_usuario: miembro.usuario.id_usuario,
+      nombre: miembro.usuario.nombre_usuario,
+      correo: miembro.usuario.correo_usuario,
+      estado_membresia: miembro.estado,
+      fecha_union: miembro.fecha_union
+    }));
+
+    res.json({
+      total_miembros: resultado.length,
+      miembros: resultado
+    });
+
+  } catch (error) {
+    console.error('Error al listar miembros:', error);
+    res.status(500).json({ 
+      error: 'Error al obtener miembros de la red',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
