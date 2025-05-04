@@ -16,12 +16,3 @@ export const register = async (req, res) => {
   }
 }
 
-/*
-{
-  "id_usuario": 1,
-  "id_paciente": 1,
-  "parentesco": "abuelo",
-  "cuidador_principal": 1,
-  "notificado_emergencia": 1,
-}
-*/

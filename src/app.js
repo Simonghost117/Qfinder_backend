@@ -63,7 +63,6 @@ app.get('/test', (req, res) => {
 app.use('/api/auth', usuarioRoutes);//Completar rutas de autenticación
 app.use('/api/medicos', medicoRoutes);//Validaciones - crud
 app.use('/api/episodios', routerEpisodioSalud);//Completo
-//app.use('/api/reportes', routerReport);//Esta ruta no va a ser utilizada
 app.use('/api/redes', redesRoutes);
 app.use('/api/paciente', pacienteRoutes);//Completo
 app.use('/api/familiar', familiarRoutes);//No se necesita

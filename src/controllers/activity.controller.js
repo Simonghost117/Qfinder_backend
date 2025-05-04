@@ -2,8 +2,6 @@ import { createActivitySchema } from "../schema/activity.validator.js";
 import * as activityService from "../services/activity.service.js";
 import { successResponse, errorResponse } from "../utils/response.js";
 
-
-// Crear una actividad
 // Crear una actividad
 export const createActivity = async (req, res, next) => {
   try {

@@ -5,8 +5,6 @@ import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 dotenv.config();
 
-import { medicoSchema } from '../schema/medicoSchema.js';
-import Medico from '../models/Medico.js';
 import { 
   generateAndStoreCode,
   verifyCode,
@@ -23,18 +21,6 @@ export const register = async (req, res) => {
     if (existe) {
       return res.status(400).json({ error: 'El correo ya está registrado' });
     }
-
-    // 2. Validación de médico (comentario preservado de ambas versiones)
-    /*if (userData.tipo_usuario === 'Medico') {
-      const validation = medicoSchema.safeParse({
-        especialidad: userData.especialidad,
-        licencia: userData.licencia
-      });
-      
-      if (!validation.success) {
-        return res.status(400).json({ error: validation.error.errors });
-      }
-    }*/
 
     // 3. Generar y almacenar código temporalmente (versión HEAD)
     const codigo = generateAndStoreCode(correo_usuario, userData);
@@ -78,15 +64,6 @@ export const verifyUser = async (req, res) => {
       contrasena_usuario: hashedPassword,
       estado_usuario: 'Activo' // De HEAD
     });
-    
-    // 3. Registro médico (versión comentada de ambas ramas)
-    /*if (usuario.tipo_usuario === 'Medico') {
-      await Medico.create({
-        id_usuario: usuario.id_usuario,
-        especialidad: userData.especialidad,
-        licencia: userData.licencia
-      });
-    }*/
     
     // 4. Generar token (combinación de ambas implementaciones)
     const token = await createAccessToken({

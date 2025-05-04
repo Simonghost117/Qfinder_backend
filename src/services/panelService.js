@@ -2,7 +2,6 @@ import  Paciente  from '../models/paciente.model.js'; // Importa solo una vez
 import CitaMedica from '../models/cita_medica.js';
 import PanelPersonalizado from '../models/panel_personalizado.js';
 
-// ❌ No vuelvas a declarar Paciente desde otro objeto como "db"
 
 export const obtenerPanelMedico = async (idPaciente) => {
   return await Paciente.findOne({
