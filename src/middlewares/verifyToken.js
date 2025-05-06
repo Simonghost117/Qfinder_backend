@@ -23,7 +23,7 @@ export const verifyToken = async (req, res, next) => {
     // Buscar usuario por ID
     const usuario = await Usuario.findByPk(decoded.id, {
       attributes: ['id_usuario', 
-        // 'tipo_usuario', 
+        'tipo_usuario', 
         'estado_usuario']
     });
     console.log('👤 Usuario encontrado:', usuario?.dataValues || null);
@@ -37,11 +37,11 @@ export const verifyToken = async (req, res, next) => {
 
     req.user = {
       id_usuario: usuario.id_usuario,
-      // tipo_usuario: usuario.tipo_usuario
+      tipo_usuario: usuario.tipo_usuario
     };
     console.log('✅ Token válido. Usuario autorizado:', {
         id: usuario.id_usuario,
-        // tipo: usuario.tipo_usuario
+        tipo: usuario.tipo_usuario
       });
       
     next();

@@ -37,10 +37,10 @@ export const Familiar = sequelize.define('Familiar', {
     type: DataTypes.BOOLEAN,
     defaultValue: false
   },
-  fecha_registro: {
-    type: DataTypes.DATE,
-    defaultValue: DataTypes.NOW
-  }
+  // fecha_registro: {
+  //   type: DataTypes.DATE,
+  //   defaultValue: DataTypes.NOW
+  // }
 }, {
   tableName: 'familiar',
   timestamps: false,

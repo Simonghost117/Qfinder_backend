@@ -21,6 +21,7 @@ import cuidadoPersonalRoutes from './routes/cuidadoPersonalRoutes.js';
 import actividadRouter from './routes/activity.router.js';
 import RegSintomas from './routes/monitorerSintomasRouter.js';
 import medicoRoutes from './routes/medico.routes.js';
+import CitaMedica from './routes/citaMedica.routes.js';
 
 const app = express();
 import session from 'express-session';
@@ -71,5 +72,6 @@ app.use('/api/panel', panelRoutes);
 app.use('/api/cuidado-personal', cuidadoPersonalRoutes);
 app.use('/api/actividades', actividadRouter);
 app.use('/api/regSintomas', RegSintomas);
+app.use('/api/citaMedica', CitaMedica)
 
 export default app;
