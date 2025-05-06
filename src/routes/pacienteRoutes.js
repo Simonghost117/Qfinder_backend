@@ -13,7 +13,7 @@ router.get('/listarPacientes', verifyToken, listarPacientes);
 router.get('/listarPacientes/:id_paciente', verifyToken, getPacienteById);
 //Se puede actualizar la informacion de un paciente
 //Validaciones de quien puede modificar la informacion de un paciente
-router.put('/actualizarPaciente/:id_paciente', verifyToken, checkEpisodioPermissions(['Familiar', 'Usuario']), validateSchema(ActPacienteSchema), actualizarPaciente);
+router.put('/actualizarPaciente/:id_paciente', verifyToken, checkEpisodioPermissions(['Administrador', 'Usuario']), validateSchema(ActPacienteSchema), actualizarPaciente);
 router.delete('/eliminarPaciente/:id_paciente', verifyToken, verificarRelacion, eliminarPaciente);
 router.get('/qr/:id_paciente', generarQRPaciente);
 router.put('/:id_paciente', verifyToken, actualizarPacienteQR);
