@@ -3,7 +3,8 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import app from './app.js';
-import sequelize, { testConnection, safeSync } from './config/db.js';
+// server.js (corrección)
+import sequelize, { testConnection, syncModels } from './config/db.js';
 import { models } from "./models/index.js";
 
 // 1. Configuración de entorno (carga .env antes que cualquier otra dependencia)
@@ -45,7 +46,7 @@ const startServer = async () => {
 
     // 5. Sincronización segura por entorno
     if (process.env.NODE_ENV === 'development') {
-      await sequelize.sync({ alter: true });
+      await sequelize.sync();
       console.log("🛠 Base de datos sincronizada (modo desarrollo)");
     } else {
       // En producción, usa migraciones en lugar de sync()
