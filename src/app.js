@@ -21,6 +21,7 @@ import cuidadoPersonalRoutes from './routes/cuidadoPersonalRoutes.js';
 import actividadRouter from './routes/activity.router.js';
 import RegSintomas from './routes/monitorerSintomasRouter.js';
 import medicoRoutes from './routes/medico.routes.js';
+import CitaMedica from './routes/citaMedica.routes.js';
 
 const app = express();
 import session from 'express-session';
@@ -60,15 +61,18 @@ app.get('/test', (req, res) => {
 });
 
 // Configuración de rutas
-app.use('/api/auth', usuarioRoutes);//Completar rutas de autenticación
-app.use('/api/medicos', medicoRoutes);//Validaciones - crud
+app.use('/api/auth', usuarioRoutes);//Completar rutas de autenticación -falta recuperar contraseña
+app.use('/api/medicos', medicoRoutes);//Validaciones - crud YA NO SE NECESITA
 app.use('/api/episodios', routerEpisodioSalud);//Completo
-app.use('/api/redes', redesRoutes);
+//app.use('/api/reportes', routerReport);//Esta ruta no va a ser utilizada
+app.use('/api/redes', redesRoutes);//Completo
+
 app.use('/api/paciente', pacienteRoutes);//Completo
 app.use('/api/familiar', familiarRoutes);//No se necesita
 app.use('/api/panel', panelRoutes);
 app.use('/api/cuidado-personal', cuidadoPersonalRoutes);
 app.use('/api/actividades', actividadRouter);
 app.use('/api/regSintomas', RegSintomas);
+app.use('/api/citaMedica', CitaMedica)
 
 export default app;

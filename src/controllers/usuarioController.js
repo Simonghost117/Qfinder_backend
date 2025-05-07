@@ -5,12 +5,17 @@ import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 dotenv.config();
 
+
+// import { medicoSchema } from '../schema/medicoSchema.js';
+// import Medico from '../models/Medico.js';
+
 import { 
   generateAndStoreCode,
   verifyCode,
   sendVerificationEmail,
   clearPendingRegistration
 } from '../services/usuarioService.js';
+import UsuarioRed from '../models/Red.js';
 
 export const register = async (req, res) => {
   try {
@@ -22,7 +27,37 @@ export const register = async (req, res) => {
       return res.status(400).json({ error: 'El correo ya está registrado' });
     }
 
+
+    // if (userData.tipo_usuario === 'Medico') {
+    //   const result = medicoSchema.safeParse({
+    //     especialidad: userData.especialidad,
+    //     licencia: userData.licencia
+    //   });
+
+    //   if (!result.success) {
+    //     // Extraer el primer mensaje de error
+    //     const errorMessage = result.error.issues[0].message;
+    //     return res.status(400).json({ error: "Error en el registro del Medico, ingrese los datos requeridos", details: errorMessage });
+    //   }
+    // }
+    
+    // 2. Generar y almacenar código temporalmente
+
+    // 2. Validación de médico (comentario preservado de ambas versiones)
+    /*if (userData.tipo_usuario === 'Medico') {
+      const validation = medicoSchema.safeParse({
+        especialidad: userData.especialidad,
+        licencia: userData.licencia
+      });
+      
+      if (!validation.success) {
+        return res.status(400).json({ error: validation.error.errors });
+      }
+    }*/
+
+
     // 3. Generar y almacenar código temporalmente (versión HEAD)
+
     const codigo = generateAndStoreCode(correo_usuario, userData);
     
     // 4. Enviar email (combinación de ambas implementaciones)
@@ -64,6 +99,15 @@ export const verifyUser = async (req, res) => {
       contrasena_usuario: hashedPassword,
       estado_usuario: 'Activo' // De HEAD
     });
+
+    const usuarioRed = await UsuarioRed.create({
+      id_usuario: usuario.id_usuario,
+      estado: 'activo',
+      nombre_red: 'Red Global de Apoyo QfindeR',
+      descripcion_red: 'Comunidad principal para todos los usuarios registrados',
+      fecha_union: new Date()
+    });
+    console.log('UsuarioRed creado:', usuarioRed);
     
     // 4. Generar token (combinación de ambas implementaciones)
     const token = await createAccessToken({
@@ -84,7 +128,13 @@ export const verifyUser = async (req, res) => {
         id: usuario.id_usuario,
         nombre: usuario.nombre_usuario,
         correo: usuario.correo_usuario,
-        tipo: usuario.tipo_usuario // De HEAD
+        tipo: usuario.tipo_usuario,
+        // Incluimos información de la red si es necesario
+        red_global: {
+          nombre: 'Red Global de Apoyo QfindeR',
+          estado: 'activo',
+          fecha_union: new Date().toISOString()
+        }
       },
       token
     });

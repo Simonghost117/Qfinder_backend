@@ -11,4 +11,7 @@ export class MonitoreoSintomasService {
       order: [['fecha_sintoma', 'DESC']]
     });
   }
+  static async obtenerSintomaPorId(id_registro) {
+    return await RegistroSintoma.findByPk(id_registro);
+  }
 }
