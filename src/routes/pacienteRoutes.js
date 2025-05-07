@@ -8,7 +8,11 @@ import { generarQRPaciente,actualizarPacienteQR } from "../controllers/pacienteC
 import { checkEpisodioPermissions } from '../middlewares/episodioPermissions.middleware.js';
 const router = express.Router();
 
-router.post('/register',verifyToken, validateSchema(PacienteSchema), register);
+router.post('/register',
+    verifyToken, 
+    validateSchema(PacienteSchema), 
+    register
+);
 router.get('/listarPacientes', verifyToken, listarPacientes);
 router.get('/listarPacientes/:id_paciente', verifyToken, getPacienteById);
 //Se puede actualizar la informacion de un paciente

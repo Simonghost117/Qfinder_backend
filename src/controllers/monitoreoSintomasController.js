@@ -34,6 +34,11 @@ export class MonitoreoSintomasController {
       });
     } catch (error) {
       handleError(res, error);
+      res.status(500).json({
+        success: false,
+        message: 'Error al registrar el síntoma',
+        error: error.message
+      });
     }
   }
 
@@ -57,6 +62,11 @@ export class MonitoreoSintomasController {
         error: error.message
       });
       handleError(res, error);
+      res.status(500).json({
+        success: false,
+        message: 'Error al obtener los síntomas',
+        error: error.message
+      });
     }
   }
   static async obtenerSintomaPorId(req, res) {

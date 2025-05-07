@@ -70,8 +70,8 @@ app.use('/api/paciente', pacienteRoutes);//Completo
 app.use('/api/familiar', familiarRoutes);//No se necesita
 app.use('/api/panel', panelRoutes);
 app.use('/api/cuidado-personal', cuidadoPersonalRoutes);
-app.use('/api/actividades', actividadRouter); //
-app.use('/api/regSintomas', RegSintomas); //
+app.use('/api/actividades', actividadRouter); //Completo
+app.use('/api/regSintomas', RegSintomas); //+-
 app.use('/api/citaMedica', CitaMedica);//Completa
 
 export default app;

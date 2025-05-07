@@ -6,6 +6,7 @@ import Medico from './Medico.js';
 import UsuarioRed from './Red.js';
 import PanelPersonalizado from './panel_personalizado.js';
 import CitaMedica from './cita_medica.js';
+import { ActividadCuidado } from './activity.model.js';
 
 // Definir relaciones entre los modelos
 Paciente.hasMany(Familiar, { foreignKey: 'id_paciente', as: 'familiares' });
@@ -32,6 +33,13 @@ PanelPersonalizado.belongsTo(Paciente, { foreignKey: 'id_paciente' });
 Paciente.hasMany(CitaMedica, { foreignKey: 'id_paciente' });
 CitaMedica.belongsTo(Paciente, { foreignKey: 'id_paciente' });
 
+Paciente.hasMany(ActividadCuidado, { foreignKey: "id_paciente" });
+ActividadCuidado.belongsTo(Paciente, { foreignKey: "id_paciente" });
+
+Familiar.belongsTo(Paciente, { foreignKey: "id_paciente", as: "paciente_principal" });
+Paciente.hasMany(Familiar, { foreignKey: "id_paciente", as: "listarFamiliar" });
+
+
 // Exportar los modelos y la conexión de Sequelize
-const models = { Usuario, Paciente, Familiar, Medico, UsuarioRed, PanelPersonalizado, CitaMedica };
+const models = { Usuario, Paciente, Familiar, Medico, UsuarioRed, PanelPersonalizado, CitaMedica, ActividadCuidado };
 export { sequelize, models };

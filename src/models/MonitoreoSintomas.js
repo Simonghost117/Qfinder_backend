@@ -29,6 +29,6 @@ export const RegistroSintoma = sequelize.define('RegistroSintoma', {
     allowNull: false,
   },
 }, {
-  tableName: 'registro_sintomas',
+  tableName: 'monitoreo_sintomas',
   timestamps: false,
 });

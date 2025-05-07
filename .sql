@@ -2,7 +2,8 @@ DROP DATABASE IF EXISTS MidQfinder;
 CREATE DATABASE MidQfinder;
 USE MidQfinder;
 
--- Tabla de Usuarios (sin cambios)
+-- Tabla de Usuarios (sin cambios) 
+-- COMPLETO
 CREATE TABLE IF NOT EXISTS usuario (
   id_usuario INT AUTO_INCREMENT PRIMARY KEY,
   nombre_usuario VARCHAR(255) NOT NULL,
@@ -12,7 +13,7 @@ CREATE TABLE IF NOT EXISTS usuario (
   telefono_usuario VARCHAR(50) NOT NULL,
   correo_usuario VARCHAR(255) NOT NULL UNIQUE,
   contrasena_usuario VARCHAR(255) NOT NULL,
-  tipo_usuario ENUM('Usuario', 'Medico', 'Administrador') NOT NULL,
+  tipo_usuario ENUM('Usuario', 'Medico', 'Administrador') DEFAULT 'Usuario' ,
   estado_usuario ENUM('Activo', 'Inactivo', 'Pendiente') DEFAULT 'Pendiente',
   codigo_verificacion VARCHAR(4) NULL,
   codigo_expiracion DATETIME NULL,
@@ -22,6 +23,7 @@ CREATE TABLE IF NOT EXISTS usuario (
 ) ENGINE=InnoDB;
 
 -- Tabla de Pacientes (simplificada - eliminado feedback_familiar)
+-- COMPLETO
 CREATE TABLE IF NOT EXISTS paciente (
 id_paciente INT AUTO_INCREMENT PRIMARY KEY,
 id_usuario INT ,
@@ -37,6 +39,7 @@ FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- Tabla de Médicos (sin cambios)
+-- NO VA
 CREATE TABLE IF NOT EXISTS medico (
 id_medico INT AUTO_INCREMENT PRIMARY KEY,
 id_usuario INT UNIQUE,
@@ -46,6 +49,7 @@ FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- Tabla de Familiares (sin cambios)
+-- COMPLETO
 CREATE TABLE IF NOT EXISTS familiar (
 id_familiar INT AUTO_INCREMENT PRIMARY KEY,
 id_usuario INT,
@@ -58,6 +62,7 @@ FOREIGN KEY (id_paciente) REFERENCES paciente(id_paciente) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- Tabla de Panel Personalizado (simplificada - eliminados campos relacionados con feedback y gráficos)
+-- EN PROCESO
 CREATE TABLE IF NOT EXISTS panel_personalizado (
 id_panel INT AUTO_INCREMENT PRIMARY KEY,
 id_usuario INT,
@@ -69,6 +74,7 @@ FOREIGN KEY (id_paciente) REFERENCES paciente(id_paciente) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- Tabla de Medicamentos (simplificada - eliminados multimedia y QR)
+-- NO DEFINIDO
 CREATE TABLE IF NOT EXISTS medicamento (
 id_medicamento INT AUTO_INCREMENT PRIMARY KEY,
 nombre VARCHAR(100) NOT NULL,
@@ -78,6 +84,7 @@ tipo ENUM('psiquiatrico', 'neurologico', 'general', 'otro')
 ) ENGINE=InnoDB;
 
 -- Tabla de Relación Paciente-Medicamento (sin cambios)
+-- NO DEFINIDO
 CREATE TABLE IF NOT EXISTS paciente_medicamento (
 id_paciente INT,
 id_medicamento INT,
@@ -91,6 +98,7 @@ FOREIGN KEY (id_medicamento) REFERENCES medicamento(id_medicamento) ON DELETE CA
 ) ENGINE=InnoDB;
 
 -- Tabla de Actividad de Cuidado (simplificada - eliminada evidencia JSON)
+-- EN PROCESO
 CREATE TABLE IF NOT EXISTS actividad_cuidado (
 id_actividad INT AUTO_INCREMENT PRIMARY KEY,
 id_paciente INT,
@@ -106,19 +114,21 @@ FOREIGN KEY (id_usuario_registra) REFERENCES usuario(id_usuario) ON DELETE SET N
 ) ENGINE=InnoDB;
 
 -- Tabla de Citas Médicas (sin cambios)
+-- COMPLETO
 CREATE TABLE IF NOT EXISTS cita_medica (
 id_cita INT AUTO_INCREMENT PRIMARY KEY,
 id_paciente INT,
-id_medico INT,
+-- id_medico INT,
 fecha_cita DATETIME NOT NULL,
 motivo_cita TEXT NOT NULL,
 resultado_consulta TEXT,
 estado ENUM('programada', 'completada', 'cancelada') DEFAULT 'programada',
-FOREIGN KEY (id_paciente) REFERENCES paciente(id_paciente) ON DELETE CASCADE,
-FOREIGN KEY (id_medico) REFERENCES medico(id_medico) ON DELETE SET NULL
+FOREIGN KEY (id_paciente) REFERENCES paciente(id_paciente) ON DELETE CASCADE
+-- FOREIGN KEY (id_medico) REFERENCES medico(id_medico) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- Tabla de Monitoreo de Síntomas (sin cambios)
+-- EN PROCESO
 CREATE TABLE IF NOT EXISTS monitoreo_sintomas (
 id_registro INT AUTO_INCREMENT PRIMARY KEY,
 id_paciente INT,
@@ -130,18 +140,24 @@ FOREIGN KEY (id_paciente) REFERENCES paciente(id_paciente) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- Tabla de Actividad Física (simplificada - eliminadas calorías)
-CREATE TABLE IF NOT EXISTS actividad_fisica (
-id_actividad INT AUTO_INCREMENT PRIMARY KEY,
-id_paciente INT,
-fecha_actividad DATETIME DEFAULT CURRENT_TIMESTAMP,
-tipo_actividad ENUM('cardiovascular', 'fuerza', 'flexibilidad', 'equilibrio', 'otro'),
-duracion INT COMMENT 'Duración en minutos',
-intensidad ENUM('leve', 'moderada', 'alta'),
-observaciones TEXT,
-FOREIGN KEY (id_paciente) REFERENCES paciente(id_paciente) ON DELETE CASCADE
+-- EN PROCESO
+CREATE TABLE actividad_fisica (
+  id_actividad INT AUTO_INCREMENT PRIMARY KEY,
+  id_paciente INT NOT NULL,
+  fecha_actividad DATETIME NOT NULL,
+  duracion INT NOT NULL,
+  tipo_actividad ENUM('higiene', 'vestido', 'ejercicio', 'recreacion', 'medicacion', 'terapia', 'comida', 'otro') NOT NULL,
+  intensidad ENUM('leve', 'moderada', 'alta') NOT NULL,
+  descripcion TEXT NOT NULL,
+  estado ENUM('pendiente', 'en_progreso', 'completada', 'cancelada') NOT NULL,
+  observaciones TEXT NULL,
+  FOREIGN KEY (id_paciente) REFERENCES paciente(id_paciente) 
+    ON UPDATE CASCADE 
+    ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
 -- Tabla de Cuidado Personal (sin cambios)
+-- EN PROCESO
 CREATE TABLE IF NOT EXISTS cuidado_personal (
 id_registro INT AUTO_INCREMENT PRIMARY KEY,
 id_paciente INT,
@@ -154,6 +170,7 @@ FOREIGN KEY (id_paciente) REFERENCES paciente(id_paciente) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- Tabla de Episodios de Salud (sin cambios)
+-- COMPLETO
 CREATE TABLE IF NOT EXISTS episodio_salud (
 id_episodio INT AUTO_INCREMENT PRIMARY KEY,
 id_paciente INT,
@@ -169,6 +186,7 @@ FOREIGN KEY (registrado_por) REFERENCES usuario(id_usuario) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 -- Tabla de Alertas de Emergencia (sin cambios)
+-- NO DEFINIDO
 CREATE TABLE IF NOT EXISTS alerta_emergencia (
 id_alerta INT AUTO_INCREMENT PRIMARY KEY,
 id_paciente INT NOT NULL,
@@ -180,6 +198,7 @@ FOREIGN KEY (id_paciente) REFERENCES paciente(id_paciente) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- Tabla de Reclamación de Medicamentos (sin cambios)
+-- NO VA
 CREATE TABLE IF NOT EXISTS reclamacion_medicamento (
 id_reclamo INT AUTO_INCREMENT PRIMARY KEY,
 id_paciente INT,
@@ -217,6 +236,7 @@ AND ae.fecha_alerta >= DATE_SUB(NOW(), INTERVAL 30 DAY)
 GROUP BY p.id_paciente;
 
 -- Ejemplo de definición (si fuera necesaria):
+-- EN PROCESO
 CREATE TABLE IF NOT EXISTS usuario_red (
   id_relacion INT AUTO_INCREMENT PRIMARY KEY,
   id_usuario INT NOT NULL,
@@ -250,5 +270,3 @@ END //
 DELIMITER ;
 select * from usuario;
 USE MidQfinder;
-
-
