@@ -51,6 +51,39 @@ export class MonitoreoSintomasController {
         data: registros
       });
     } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error al obtener los síntomas',
+        error: error.message
+      });
+      handleError(res, error);
+    }
+  }
+  static async obtenerSintomaPorId(req, res) {
+    try {
+      const id_paciente = parseInt(req.params.id_paciente);
+      const id_registro = parseInt(req.params.id_registro);
+      const usuario = req.usuario; 
+      console.log("Datos del usuario autenticado:", req.usuario);
+
+      // Obtener el síntoma por ID
+      const sintoma = await MonitoreoSintomasService.obtenerSintomaPorId(id_registro, id_paciente);
+      console.log('sintoma', sintoma);
+
+      if (!sintoma) {
+        return res.status(404).json({
+          success: false,
+          message: 'Síntoma no encontrado'
+        });
+      }
+
+      // Responder con el síntoma
+      return res.status(200).json({
+        success: true,
+        message: 'Síntoma obtenido exitosamente',
+        data: sintoma
+      });
+    } catch (error) {
       handleError(res, error);
     }
   }

@@ -22,7 +22,9 @@ export const verifyToken = async (req, res, next) => {
 
     // Buscar usuario por ID
     const usuario = await Usuario.findByPk(decoded.id, {
-      attributes: ['id_usuario', 'tipo_usuario', 'estado_usuario']
+      attributes: ['id_usuario', 
+        'tipo_usuario', 
+        'estado_usuario']
     });
     console.log('👤 Usuario encontrado:', usuario?.dataValues || null);
 
