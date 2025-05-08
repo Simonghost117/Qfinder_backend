@@ -186,14 +186,24 @@ export const login = async (req, res) => {
 
 // Funciones restantes sin cambios...
 export const logout = async (req, res) => {
-    res.cookie("token", "", {
+  try {
+    res.clearCookie('token', {
       httpOnly: true,
-      secure: true,
-      expires: new Date(0),
+      secure: false, // ❗ en desarrollo sin HTTPS
+      sameSite: 'lax'
     });
-    return res.status(200).json({ message: "Logout exitoso" });
-  };
 
+    res.clearCookie('resetToken', {
+      httpOnly: true,
+      secure: false, // ❗ en desarrollo sin HTTPS
+      sameSite: 'lax'
+    });
+
+    return res.status(200).json({ message: "Logout exitoso" });
+  } catch (error) {
+    return res.status(500).json({ message: "Error al cerrar sesión", error: error.message });
+  }
+};
 export const listarUsers = async (req, res) => {
     try {
         const usuarios = await Usuario.findAll();
