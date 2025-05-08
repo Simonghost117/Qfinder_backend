@@ -55,7 +55,6 @@ const startServer = async () => {
 
     // 6. Inicio del servidor
     server.listen(PORT, () => {
-      console.log(`🚀 Servidor escuchando en http://localhost:${PORT}`);
       console.log(`Entorno: ${process.env.NODE_ENV}`);
     });
 

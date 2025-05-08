@@ -204,8 +204,6 @@ export const logout = async (req, res) => {
     return res.status(500).json({ message: "Error al cerrar sesión", error: error.message });
   }
 };
-
-
 export const listarUsers = async (req, res) => {
     try {
         const usuarios = await Usuario.findAll();
