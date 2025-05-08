@@ -1,7 +1,6 @@
-import { Sequelize } from 'sequelize';
+import postgres from 'postgres'
 
-export const sequelize = new Sequelize('midqfinder', 'root', 'Qfinder2024!', {
-  host: 'localhost',
-  dialect: 'mysql',
-  logging: false, // o true para ver las consultas
-});
+const connectionString = process.env.DATABASE_URL
+const sql = postgres(connectionString)
+
+export default sql

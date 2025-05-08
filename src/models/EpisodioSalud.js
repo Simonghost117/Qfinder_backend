@@ -58,10 +58,10 @@ export const EpisodioSalud = sequelize.define('episodio_salud', {
         type: DataTypes.TEXT,
         allowNull: true
     },
-    multimedia: {
-        type: DataTypes.STRING,
-        allowNull: true
-    },
+    // multimedia: {
+    //     type: DataTypes.STRING,
+    //     allowNull: true
+    // },
     registrado_por: {
         type: DataTypes.INTEGER,
         allowNull: true,

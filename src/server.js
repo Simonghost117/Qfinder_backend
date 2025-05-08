@@ -1,64 +1,73 @@
 import http from 'http';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import app from './app.js';
-import sequelize, { testConnection, safeSync } from './config/db.js';
-
-
+// server.js (corrección)
+import sequelize, { testConnection, syncModels } from './config/db.js';
 import { models } from "./models/index.js";
 
+// 1. Configuración de entorno (carga .env antes que cualquier otra dependencia)
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-
-// Configuración de entorno
-dotenv.config();
+// 2. Validación de variables críticas
+const requiredEnvVars = ['NODE_ENV', 'DB_HOST', 'DB_USER', 'DB_PASSWORD'];
+requiredEnvVars.forEach(varName => {
+  if (!process.env[varName]) {
+    console.error(`❌ Faltó la variable de entorno: ${varName}`);
+    process.exit(1);
+  }
+});
 
 const PORT = process.env.PORT || 3000;
 
-// Verificación de la instancia de Sequelize
-if (!sequelize) {
-  console.error('❌ Error: La instancia de Sequelize no se cargó correctamente.');
-  process.exit(1);
-}
+// 3. Configuración explícita de SSL para Supabase
+const dbConfig = {
+  dialect: 'postgres',
+  dialectOptions: {
+    ssl: {
+      require: true,
+      rejectUnauthorized: false // Solo para desarrollo, en producción usa un certificado válido
+    }
+  }
+};
 
-// Crear servidor HTTP
 const server = http.createServer(app);
 
 const startServer = async () => {
   try {
-    // Verificar conexión a la base de datos
+    // 4. Verificación de conexión
+    console.log("🔌 Intentando conectar a la base de datos...");
     const isConnected = await testConnection();
-    
-    if (!isConnected) {
-      throw new Error('No se pudo conectar a la base de datos');
-    }
+    if (!isConnected) throw new Error('Conexión fallida');
 
-    console.log('✅ Conexión a la base de datos establecida con éxito');
+    console.log('✅ Conexión a la base de datos establecida');
 
-    // Sincronizar la base de datos correctamente
-    await sequelize.sync({ alter: true });
-    console.log("📦 Base de datos sincronizada correctamente.");
-
-    
-
-    // Sincronización en desarrollo
+    // 5. Sincronización segura por entorno
     if (process.env.NODE_ENV === 'development') {
-      await safeSync();
+      await sequelize.sync();
+      console.log("🛠 Base de datos sincronizada (modo desarrollo)");
+    } else {
+      // En producción, usa migraciones en lugar de sync()
+      console.log("🚀 Modo producción: Usar migraciones en lugar de sync()");
     }
 
-    // Iniciar servidor
+    // 6. Inicio del servidor
     server.listen(PORT, () => {
-      console.log(`🚀 Servidor escuchando en http://localhost:${PORT}`);
+      console.log(`Entorno: ${process.env.NODE_ENV}`);
     });
 
-    // Manejo de cierre limpio
+    // 7. Manejo de cierre
     process.on('SIGTERM', () => {
       server.close(() => {
-        console.log('Servidor cerrado');
+        console.log('🛑 Servidor cerrado');
         process.exit(0);
       });
     });
 
   } catch (error) {
-    console.error('❌ Error al iniciar la aplicación:', error);
+    console.error('❌ Error crítico:', error.message);
     process.exit(1);
   }
 };

@@ -145,9 +145,9 @@ export class EpisodioSaludController {
       tipo: req.body.tipo,
       fecha_hora_inicio: req.body.fecha_hora_inicio || new Date(),
       severidad: parseInt(req.body.severidad || 3),
-      sintomas: this.parsearSintomas(req.body.sintomas),
+       sintomas: this.parsearSintomas(req.body.sintomas),
       descripcion: req.body.descripcion,
-      multimedia: this.obtenerRutaMultimedia(req.file),
+      // multimedia: this.obtenerRutaMultimedia(req.file),
       registrado_por: req.user.id_usuario,
       origen: req.body.origen || 'cuidador',
       intervenciones: req.body.intervenciones

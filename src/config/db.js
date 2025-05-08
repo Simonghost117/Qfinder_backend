@@ -8,12 +8,11 @@ dotenv.config();
 const requiredEnvVars = ['DB_NAME', 'DB_USER', 'DB_PASSWORD', 'DB_HOST', 'DB_PORT', 'NODE_ENV'];
 requiredEnvVars.forEach((envVar) => {
   if (!process.env[envVar]) {
-    console.error(`Falta la variable de entorno: ${envVar}`);
-    process.exit(1);
+    throw new Error(`Falta la variable de entorno: ${envVar}`);
   }
 });
 
-// Configuración de la conexión a la base de datos
+// Configuración para Supabase (PostgreSQL)
 const sequelize = new Sequelize(
   process.env.DB_NAME,
   process.env.DB_USER,
@@ -21,41 +20,53 @@ const sequelize = new Sequelize(
   {
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
-    dialect: 'mysql',
+    dialect: 'postgres',
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      }
+    },
     logging: process.env.NODE_ENV === 'development' ? console.log : false,
     pool: {
       max: 5,
       min: 0,
       acquire: 30000,
-      idle: 10000,
+      idle: 10000
     },
     define: {
       timestamps: true,
       underscored: true,
+      freezeTableName: true
     }
   }
 );
 
-// Funciones útiles
+// Test de conexión
 const testConnection = async () => {
   try {
     await sequelize.authenticate();
-    console.log('✅ Conexión a la base de datos establecida correctamente.');
+    console.log('✅ Conexión a Supabase establecida');
     return true;
   } catch (error) {
-    console.error('❌ No se pudo conectar a la base de datos:', error);
+    console.error('❌ Error de conexión:', error);
     return false;
   }
 };
 
-const safeSync = async () => {
+// Sincronización segura
+const syncModels = async () => {
   try {
-    await sequelize.sync({ alter: process.env.NODE_ENV === 'development' });
-    console.log('📦 Modelos sincronizados correctamente.');
+    await sequelize.sync(); // sincronización sin alter
+
+    console.log('📦 Modelos sincronizados');
   } catch (error) {
     console.error('❌ Error al sincronizar modelos:', error);
   }
 };
 
-export default sequelize;
-export { testConnection, safeSync };
+export { 
+  sequelize as default, 
+  testConnection, 
+  syncModels 
+};
