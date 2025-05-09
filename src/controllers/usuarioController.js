@@ -95,6 +95,7 @@ export const verifyUser = async (req, res) => {
     });
     
   } catch (error) {
+    console.log(error)
     res.status(500).json({ 
       error: 'Error en verificación',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
