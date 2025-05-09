@@ -1,4 +1,6 @@
-export default (sequelize, DataTypes) => {
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/db.js'; 
+
     const CuidadoPersonal = sequelize.define('CuidadoPersonal', {
       id_registro: { 
         type: DataTypes.INTEGER, 
@@ -32,7 +34,6 @@ export default (sequelize, DataTypes) => {
       tableName: 'cuidado_personal',
       timestamps: false
     });
-  
-    return CuidadoPersonal;
-  };
+
+  export default CuidadoPersonal;
   

@@ -22,6 +22,7 @@ import actividadRouter from './routes/activity.router.js';
 import RegSintomas from './routes/monitorerSintomasRouter.js';
 import medicoRoutes from './routes/medico.routes.js';
 import CitaMedica from './routes/citaMedica.routes.js';
+import codigoQr from './routes/codigoQr.routes.js';
 
 const app = express();
 import session from 'express-session';
@@ -69,9 +70,10 @@ app.use('/api/redes', redesRoutes);//Completo
 app.use('/api/paciente', pacienteRoutes);//Completo
 app.use('/api/familiar', familiarRoutes);//No se necesita
 app.use('/api/panel', panelRoutes);
-app.use('/api/cuidado-personal', cuidadoPersonalRoutes);
+app.use('/api/cuidadoPersonal', cuidadoPersonalRoutes);
 app.use('/api/actividades', actividadRouter); //Completo
 app.use('/api/regSintomas', RegSintomas); //+-
 app.use('/api/citaMedica', CitaMedica);//Completa
+app.use('/api/codigoQr', codigoQr)
 
 export default app;
