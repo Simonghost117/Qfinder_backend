@@ -72,19 +72,24 @@ export const verifyUser = async (req, res) => {
     });
 
     // Cookie setting de HEAD
-    res.cookie('token', token, {
+    /*res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict'
+    });*/
+    res.cookie("token", token, {
+      httpOnly: process.env.NODE_ENV !== "development",
+      secure: true,
+      sameSite: "none",
     });
     
     res.status(201).json({
       message: 'Registro completado exitosamente',
       usuario: {
         id: usuario.id_usuario,
+        correo: usuario.correo_usuario, 
         nombre: usuario.nombre_usuario,
-        correo: usuario.correo_usuario,
-        tipo: usuario.tipo_usuario // De HEAD
+        apellido: usuario.apellido_usuario,
       },
       token
     });
@@ -121,15 +126,18 @@ export const login = async (req, res) => {
           rol: usuario.tipo_usuario
         });
 
-        res.cookie('token', token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict'
+        res.cookie("token", token, {
+          httpOnly: process.env.NODE_ENV !== "development",
+          secure: true,
+          sameSite: "none",
         });
         
         res.json({ 
-          rol: usuario.tipo_usuario, 
+          id: usuario.id_usuario,
           email: usuario.correo_usuario, 
+          nombre: usuario.nombre_usuario,
+          apellido: usuario.apellido_usuario,
+          rol: usuario.tipo_usuario, 
           token 
         });
       } catch (error) {
