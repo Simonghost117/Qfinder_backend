@@ -5,6 +5,10 @@ import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 dotenv.config();
 
+
+// import { medicoSchema } from '../schema/medicoSchema.js';
+// import Medico from '../models/Medico.js';
+
 import { 
   generateAndStoreCode,
   verifyCode,
@@ -21,6 +25,34 @@ export const register = async (req, res) => {
     if (existe) {
       return res.status(400).json({ error: 'El correo ya está registrado' });
     }
+
+    // if (userData.tipo_usuario === 'Medico') {
+    //   const result = medicoSchema.safeParse({
+    //     especialidad: userData.especialidad,
+    //     licencia: userData.licencia
+    //   });
+
+    //   if (!result.success) {
+    //     // Extraer el primer mensaje de error
+    //     const errorMessage = result.error.issues[0].message;
+    //     return res.status(400).json({ error: "Error en el registro del Medico, ingrese los datos requeridos", details: errorMessage });
+    //   }
+    // }
+    
+    // 2. Generar y almacenar código temporalmente
+
+    // 2. Validación de médico (comentario preservado de ambas versiones)
+    /*if (userData.tipo_usuario === 'Medico') {
+      const validation = medicoSchema.safeParse({
+        especialidad: userData.especialidad,
+        licencia: userData.licencia
+      });
+      
+      if (!validation.success) {
+        return res.status(400).json({ error: validation.error.errors });
+      }
+    }*/
+
 
     // 3. Generar y almacenar código temporalmente (versión HEAD)
     const codigo = generateAndStoreCode(correo_usuario, userData);

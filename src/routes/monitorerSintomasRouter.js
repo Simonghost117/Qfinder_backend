@@ -7,18 +7,26 @@ import { checkEpisodioPermissions } from '../middlewares/episodioPermissions.mid
 
 const routerSintomas = Router();
 
+//gravedad: alta, media, baja
+//fecha: automatica o manual
+//se puede actualizar o eliminar el registro de sintomas
+
 routerSintomas.post(
-  '/pacientes/:id_paciente/sintomas',
+  '/crarSintoma/:id_paciente',
+  verifyToken,
+  checkEpisodioPermissions(['Usuario']),
   validateZodSchema(sintomaSchema),
   MonitoreoSintomasController.registrarSintoma
 );
 
 routerSintomas.get(
-  '/pacientes/:id_paciente/sintomas',
+  '/sintomas/:id_paciente',
+  verifyToken,
+  checkEpisodioPermissions(['Usuario']),
   MonitoreoSintomasController.obtenerSintomasPaciente
 );
 routerSintomas.get(
-  '/sintoma/:id_paciente/:id_registro',
+  '/sintomaId/:id_paciente/:id_registro',
   verifyToken, 
   checkEpisodioPermissions(['Usuario']),
   MonitoreoSintomasController.obtenerSintomaPorId

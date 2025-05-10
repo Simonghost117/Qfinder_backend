@@ -52,6 +52,7 @@ import actividadRouter from './routes/activity.router.js';
 import RegSintomas from './routes/monitorerSintomasRouter.js';
 import medicoRoutes from './routes/medico.routes.js';
 import CitaMedica from './routes/citaMedica.routes.js';
+import codigoQr from './routes/codigoQr.routes.js';
 
 // Endpoint raíz informativo
 app.get('/', (req, res) => {
@@ -79,19 +80,21 @@ app.get('/test', (req, res) => {
   res.json({ message: 'El servidor está funcionando correctamente' });
 });
 
-// Configuración de rutas API
-app.use('/api/auth', usuarioRoutes); // Autenticación (falta recuperar contraseña)
-app.use('/api/medicos', medicoRoutes); // Validaciones - CRUD (YA NO SE NECESITA pero conservado)
-app.use('/api/episodios', routerEpisodioSalud); // Completo
-// app.use('/api/reportes', routerReport); // No se va a usar (comentado pero conservado)
-app.use('/api/redes', redesRoutes); // Completo
-app.use('/api/paciente', pacienteRoutes); // Completo
-app.use('/api/familiar', familiarRoutes); // No se necesita pero conservado
+// Configuración de rutas
+app.use('/api/auth', usuarioRoutes);//Completar rutas de autenticación -falta recuperar contraseña
+app.use('/api/medicos', medicoRoutes);//Validaciones - crud YA NO SE NECESITA
+app.use('/api/episodios', routerEpisodioSalud);//Completo
+//app.use('/api/reportes', routerReport);//Esta ruta no va a ser utilizada
+app.use('/api/redes', redesRoutes);//Completo
+
+app.use('/api/paciente', pacienteRoutes);//Completo
+app.use('/api/familiar', familiarRoutes);//No se necesita
 app.use('/api/panel', panelRoutes);
-app.use('/api/cuidado-personal', cuidadoPersonalRoutes);
-app.use('/api/actividades', actividadRouter);
-app.use('/api/regSintomas', RegSintomas);
-app.use('/api/citaMedica', CitaMedica); // Completo
+app.use('/api/cuidadoPersonal', cuidadoPersonalRoutes);
+app.use('/api/actividades', actividadRouter); //Completo
+app.use('/api/regSintomas', RegSintomas); //+-
+app.use('/api/citaMedica', CitaMedica);//Completa
+app.use('/api/codigoQr', codigoQr)
 
 // Exportación de la app
 export default app;

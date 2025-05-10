@@ -6,52 +6,49 @@ export const ActividadCuidado = sequelize.define("actividad_cuidado", {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true,
+    field: "id_actividad",
   },
   id_paciente: {
     type: DataTypes.INTEGER,
     allowNull: false,
-    references: {
-      model: 'paciente', // Asegúrate que este sea el nombre correcto de la tabla
-      key: 'id_paciente'
-    },
-    onUpdate: 'CASCADE',
-    onDelete: 'RESTRICT'
+    field: "id_paciente",
   },
-  id_usuario_registra: {
+  fecha_actividad: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    field: "fecha_actividad",
+  },
+  duracion: {
     type: DataTypes.INTEGER,
-    allowNull: true, // Cambiado de false a true para resolver el error
-    references: {
-      model: 'usuario', // Asegúrate que este sea el nombre correcto de la tabla
-      key: 'id_usuario'
-    },
-    onUpdate: 'CASCADE',
-    onDelete: 'SET NULL' // Coherente con allowNull: true
+    allowNull: false,
+    field: "duracion",
   },
   tipo_actividad: {
     type: DataTypes.ENUM('higiene', 'vestido', 'ejercicio', 'recreacion', 'medicacion', 'terapia', 'comida', 'otro'),
     allowNull: false,
+    field: "tipo_actividad",
+  },
+  intensidad: {
+    type: DataTypes.ENUM('leve', 'moderada', 'alta'),
+    allowNull: false,
+    field: "intensidad",
   },
   descripcion: {
     type: DataTypes.TEXT,
     allowNull: false,
-  },
-  fecha_hora_inicio: {
-    type: DataTypes.DATE,
-    allowNull: false,
-  },
-  fecha_hora_fin: {
-    type: DataTypes.DATE,
-    allowNull: false,
+    field: "descripcion",
   },
   estado: {
     type: DataTypes.ENUM('pendiente', 'en_progreso', 'completada', 'cancelada'),
     allowNull: false,
+    field: "estado",
   },
   observaciones: {
     type: DataTypes.TEXT,
     allowNull: true,
+    field: "observaciones",
   },
 }, {
-  tableName: "actividad_cuidado",
+  tableName: "actividad_fisica",
   timestamps: false,
 });

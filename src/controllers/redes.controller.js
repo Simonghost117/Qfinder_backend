@@ -42,7 +42,6 @@ export const verificarMembresia = async (req, res) => {
   }
 };
 
-
 export const listarMiembrosRed = async (req, res) => {
   try {
     const miembros = await UsuarioRed.findAll({
