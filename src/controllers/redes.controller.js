@@ -42,6 +42,7 @@ export const verificarMembresia = async (req, res) => {
   }
 };
 
+
 export const listarMiembrosRed = async (req, res) => {
   try {
     const miembros = await UsuarioRed.findAll({
@@ -144,3 +145,4 @@ export const listarMiembrosRed = async (req, res) => {
 //     res.status(500).json({ mensaje: 'Error al salir de la red', error });
 //   }
 // };
+

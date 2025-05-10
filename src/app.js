@@ -53,6 +53,7 @@ import RegSintomas from './routes/monitorerSintomasRouter.js';
 import medicoRoutes from './routes/medico.routes.js';
 import CitaMedica from './routes/citaMedica.routes.js';
 import codigoQr from './routes/codigoQr.routes.js';
+import medicamentoRoutes from './routes/medicamento.routes.js';
 
 // Endpoint raíz informativo
 app.get('/', (req, res) => {
@@ -89,12 +90,22 @@ app.use('/api/redes', redesRoutes);//Completo
 
 app.use('/api/paciente', pacienteRoutes);//Completo
 app.use('/api/familiar', familiarRoutes);//No se necesita
+// Configuración de rutas API
+app.use('/api/auth', usuarioRoutes); // Autenticación (falta recuperar contraseña)
+app.use('/api/medicos', medicoRoutes); // Validaciones - CRUD (YA NO SE NECESITA pero conservado)
+app.use('/api/episodios', routerEpisodioSalud); // Completo
+// app.use('/api/reportes', routerReport); // No se va a usar (comentado pero conservado)
+app.use('/api/redes', redesRoutes); // Completo
+app.use('/api/paciente', pacienteRoutes); // Completo
+app.use('/api/familiar', familiarRoutes); // No se necesita pero conservado
 app.use('/api/panel', panelRoutes);
 app.use('/api/cuidadoPersonal', cuidadoPersonalRoutes);
 app.use('/api/actividades', actividadRouter); //Completo
 app.use('/api/regSintomas', RegSintomas); //+-
 app.use('/api/citaMedica', CitaMedica);//Completa
 app.use('/api/codigoQr', codigoQr)
+
+app.use('/api/medicamentos', medicamentoRoutes);
 
 // Exportación de la app
 export default app;
