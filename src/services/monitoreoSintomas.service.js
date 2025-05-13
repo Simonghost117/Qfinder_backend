@@ -11,7 +11,11 @@ export class MonitoreoSintomasService {
       order: [['fecha_sintoma', 'DESC']]
     });
   }
-  static async obtenerSintomaPorId(id_registro) {
-    return await RegistroSintoma.findByPk(id_registro);
-  }
-}
+static async obtenerSintomaPorId(id_paciente, id_registro) {
+  return await RegistroSintoma.findAll({
+    where: {
+      id_paciente: parseInt(id_paciente), // 💡 Asegura que es un número
+      id_registro: parseInt(id_registro)  // 💡 También convierte aquí
+    }
+  });
+}}

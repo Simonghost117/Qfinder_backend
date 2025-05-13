@@ -33,6 +33,7 @@
     "mysql2": "^3.14.0",
     "nodemailer": "^6.10.1",
     "pg": "^8.15.6",
+    "pg-hstore": "^2.3.4",
     "postgres": "^3.4.5",
     "qrcode": "^1.5.4",
     "sequelize": "^6.37.7",

@@ -5,8 +5,11 @@ import { checkEpisodioPermissions } from '../middlewares/episodioPermissions.mid
 
 
 const router = express.Router();
+//Extraer el qr
 
-
-router.put('/actualizarQr/:id_paciente', verifyToken, actualizarPacienteQR);
+router.put('/actualizarQr/:id_paciente', 
+    verifyToken,
+    checkEpisodioPermissions(['Usuario']), 
+    actualizarPacienteQR);
 
 export default router;

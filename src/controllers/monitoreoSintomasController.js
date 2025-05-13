@@ -77,10 +77,10 @@ export class MonitoreoSintomasController {
       console.log("Datos del usuario autenticado:", req.usuario);
 
       // Obtener el síntoma por ID
-      const sintoma = await MonitoreoSintomasService.obtenerSintomaPorId(id_registro, id_paciente);
+      const sintoma = await MonitoreoSintomasService.obtenerSintomaPorId(id_paciente, id_registro);
       console.log('sintoma', sintoma);
 
-      if (!sintoma) {
+      if (!sintoma || sintoma.length === 0) {
         return res.status(404).json({
           success: false,
           message: 'Síntoma no encontrado'
