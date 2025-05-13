@@ -20,6 +20,9 @@ export const crearCuidadoPersonal = async (req, res) => {
       nivel_asistencia,
       observaciones
     });
+    if (!nuevoRegistro) {
+      return res.status(400).json({ message: 'Error al registrar el cuidado personal' });
+    }
 
     res.status(201).json({ message: 'Registro guardado exitosamente', data: nuevoRegistro });
   } catch (error) {
@@ -68,7 +71,7 @@ export const getReporteCuidadoPersonal = async (req, res) => {
 
   export const updateCuidadoPersonal = async (req, res) => {
     try {
-        const { idCuidado } = req.params;
+        const { idPaciente, idCuidado } = req.params;
         const { tipo_cuidado, descripcion_cuidado, nivel_asistencia, observaciones } = req.body;
 
         // Validar que se haya proporcionado un ID de cuidado
@@ -77,14 +80,14 @@ export const getReporteCuidadoPersonal = async (req, res) => {
         }
 
         // Actualizar el registro de cuidado personal
-        const updatedRegistro = await actualizarCuidadoPersonal(idCuidado, {
+        const updatedRegistro = await actualizarCuidadoPersonal(idPaciente, idCuidado, {
             tipo_cuidado,
             descripcion_cuidado,
             nivel_asistencia,
             observaciones
         });
 
-        if (!updatedRegistro) {
+        if (!updatedRegistro || updatedRegistro[0] === 0) {
             return res.status(404).json({ message: 'Registro no encontrado' });
         }
 

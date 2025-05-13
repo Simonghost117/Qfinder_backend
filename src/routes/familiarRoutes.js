@@ -5,11 +5,15 @@ import FamiliarSchema from '../schema/familiarSchema.js';
 import { verifyToken } from '../middlewares/verifyToken.js';
 
 const router = express.Router();
-
-router.post('/register', validateSchema(FamiliarSchema), register);
+//⭕Establecer relacion con otros datos
+router.post('/register', 
+    validateSchema(FamiliarSchema), 
+    register
+);
 router.get('/listarFam', 
     verifyToken,
     listarFamiliares
 );
+//Listar por id
 
 export default router;

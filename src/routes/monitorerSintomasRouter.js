@@ -7,9 +7,9 @@ import { checkEpisodioPermissions } from '../middlewares/episodioPermissions.mid
 
 const routerSintomas = Router();
 
-//gravedad: alta, media, baja
-//fecha: automatica o manual
-//se puede actualizar o eliminar el registro de sintomas
+//⭕gravedad: alta, media, baja
+//⭕fecha: automatica o manual
+//⭕se puede actualizar o eliminar el registro de sintomas (completar CRUD)
 
 routerSintomas.post(
   '/crarSintoma/:id_paciente',

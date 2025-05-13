@@ -54,3 +54,8 @@ export const updateSchema = z.object({
         .min(8, { message: "La contraseña debe tener al menos 8 caracteres" })
         .max(255, { message: "La contraseña no puede exceder los 255 caracteres" }),
 });
+export const cambiarContrasenaSchema = z.object({
+    nuevaContrasena: z.string()
+        .min(8, { message: "La nueva contraseña debe tener al menos 8 caracteres" })
+        .max(20, { message: "La nueva contraseña no puede exceder los 255 caracteres" }),
+    })

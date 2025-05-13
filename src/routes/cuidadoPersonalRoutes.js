@@ -23,7 +23,7 @@ router.get('/listarCuidado/:idPaciente',
 router.get('/cuidadoId/:idPaciente/:idCuidado', 
     cuidadoId
 );
-
+//⭕Error bd fechas
 router.get('/reporte/:idPaciente', 
     getReporteCuidadoPersonal
 );

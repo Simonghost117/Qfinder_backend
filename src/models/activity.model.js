@@ -48,7 +48,8 @@ export const ActividadCuidado = sequelize.define("actividad_cuidado", {
     allowNull: true,
     field: "observaciones",
   },
-}, {
+}, 
+{
   tableName: "actividad_fisica",
   timestamps: false,
 });

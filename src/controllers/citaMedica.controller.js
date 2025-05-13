@@ -42,6 +42,9 @@ export const crearCitaMedica = async (req, res) => {
                 where: { id_paciente, id_cita },
                 order: [['fecha_cita', 'DESC']]
             });
+            if (citas.length === 0) {
+                return res.status(404).json({ message: 'Cita médica no encontrada' });
+            }
     
             res.status(200).json(citas);
         } catch (error) {
