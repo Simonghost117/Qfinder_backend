@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import { Usuario } from "../models/Usuario.js";
+import  Usuario  from "../models/usuario.model.js";
 import {
   generateAndStoreCode,
   verifyCode,
@@ -187,8 +187,46 @@ export const actualizarUser = async (req, res) => {
     console.error("Error al actualizar usuario:", error);
     res.status(500).json({ message: "Error al actualizar usuario" });
   }
-};
 
+};
+export const listarUsers = async (req, res) => {
+    try {
+        const usuarios = await Usuario.findAll();
+        res.status(200).json(usuarios.map(usuario => ({
+            id_usuario: usuario.id_usuario,
+            nombre_usuario: usuario.nombre_usuario,
+            apellido_usuario: usuario.apellido_usuario,
+            identificacion_usuario: usuario.identificacion_usuario,
+            direccion_usuario: usuario.direccion_usuario,
+            telefono_usuario: usuario.telefono_usuario,
+            correo_usuario: usuario.correo_usuario,
+            tipo_usuario: usuario.tipo_usuario,
+            estado_usuario: usuario.estado_usuario
+        })
+    ));
+    } catch (error) {
+        res.status(500).json({ message: 'Error al listar los usuarios', error });
+    }
+};
+export const eliminarUser = async (req, res) => {
+  try {
+      const { id } = req.usuario;
+
+      const usuario = await Usuario.findByPk(id);
+      if (!usuario) {
+          return res.status(404).json({ message: 'Usuario no encontrado' });
+      }
+
+      await Usuario.destroy({
+          where: { id_usuario: id },
+      });
+
+      res.status(200).json({ message: 'Usuario eliminado exitosamente' });
+  } catch (error) {
+      console.error('Error al eliminar el usuario:', error);
+      res.status(500).json({ message: 'Error al eliminar el usuario', error });
+  }
+};
 // import jwt from 'jsonwebtoken';
 // import Usuario from '../models/usuario.model.js';
 // import { createAccessToken } from '../libs/jwt.js';
