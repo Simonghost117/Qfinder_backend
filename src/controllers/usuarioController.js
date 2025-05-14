@@ -96,6 +96,7 @@ export const verifyUser = async (req, res) => {
       ...userData,
       correo_usuario,
       contrasena_usuario: hashedPassword,
+      tipo_usuario: userData.tipo_usuario || 'Usuario', // De HEAD
       estado_usuario: 'Activo' // De HEAD
     });
     
