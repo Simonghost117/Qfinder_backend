@@ -26,8 +26,9 @@ export const createUser = async (userData) => {
   return await Usuario.create({
     ...userData,
     contrasena_usuario: hashedPassword,
-    estado_usuario: 'Inactivo',
-    verificado: false
+    estado_usuario: 'Inactivo'
+    // ,
+    // verificado: false
   });
 };
 
