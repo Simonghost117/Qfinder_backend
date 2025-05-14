@@ -15,6 +15,7 @@ export const episodioSchema = z.object({
     'datos_dispositivo'
   ]),
   fecha_hora_inicio: z.coerce.date().max(new Date()),
+  fecha_hora_fin: z.coerce.date().optional().nullable(),
   severidad: z.number().int().min(1).max(10),
   sintomas: z.array(z.enum(sintomas)).min(1),
   descripcion: z.string().min(10).max(500),

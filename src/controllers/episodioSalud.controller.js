@@ -34,7 +34,9 @@ export class EpisodioSaludController {
         tipo: episodio.tipo,
         severidad: episodio.severidad,
         estado: episodio.estado,
-        fecha_hora_inicio: episodio.fecha_hora_inicio
+        fecha_hora_inicio: episodio.fecha_hora_inicio,
+        fecha_hora_fin: episodio.fecha_hora_fin,
+        sintomas: episodio.sintomas,
       });
     } catch (error) {
       this.manejarErrorCreacion(res, error, req.file);
@@ -63,8 +65,9 @@ export class EpisodioSaludController {
    * Obtiene un episodio específico
    */
   static async obtenerEpisodio(req, res) {
+    const {id_paciente, id_episodio} = req.params;
     try {
-      const episodio = await EpisodioSaludService.obtenerPorId(req.params.id_episodio);
+      const episodio = await EpisodioSaludService.obtenerPorId(id_paciente, id_episodio);
       
       if (!episodio) {
         throw { status: 404, message: 'Episodio no encontrado' };
@@ -81,8 +84,10 @@ export class EpisodioSaludController {
    */
   static async actualizarEpisodio(req, res) {
     try {
-      const { id_episodio } = req.params;
-      const episodioExistente = await EpisodioSaludService.obtenerPorId(id_episodio);
+      const { id_paciente, id_episodio } = req.params;
+      console.log('ID Paciente:', id_paciente);
+      console.log('ID Episodio:', id_episodio);
+      const episodioExistente = await EpisodioSaludService.obtenerPorId(id_paciente, id_episodio);
       
       if (!episodioExistente) {
         throw { status: 404, message: 'Episodio no encontrado' };
@@ -98,6 +103,7 @@ export class EpisodioSaludController {
       
       const datosActualizados = await this.prepararDatosActualizacion(req, episodioExistente);
       const episodioActualizado = await EpisodioSaludService.actualizarEpisodio(
+        id_paciente,
         id_episodio, 
         datosActualizados
       );
@@ -113,8 +119,8 @@ export class EpisodioSaludController {
    */
   static async eliminarEpisodio(req, res) {
     try {
-      const { id_episodio } = req.params;
-      const episodio = await EpisodioSaludService.obtenerPorId(id_episodio);
+      const { id_paciente, id_episodio } = req.params;
+      const episodio = await EpisodioSaludService.obtenerPorId(id_paciente, id_episodio);
       
       if (!episodio) {
         throw { status: 404, message: 'Episodio no encontrado' };
@@ -129,7 +135,7 @@ export class EpisodioSaludController {
       }
       
       await this.eliminarMultimedia(episodio);
-      await EpisodioSaludService.eliminarEpisodio(id_episodio);
+      await EpisodioSaludService.eliminarEpisodio(id_paciente, id_episodio);
       
       this.responderExito(res, 200, 'Episodio eliminado exitosamente');
     } catch (error) {
@@ -144,6 +150,7 @@ export class EpisodioSaludController {
       id_paciente,
       tipo: req.body.tipo,
       fecha_hora_inicio: req.body.fecha_hora_inicio || new Date(),
+      fecha_hora_fin: req.body.fecha_hora_fin || null,
       severidad: parseInt(req.body.severidad || 3),
        sintomas: this.parsearSintomas(req.body.sintomas),
       descripcion: req.body.descripcion,
