@@ -1,194 +1,193 @@
-import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";
-import  Usuario  from "../models/usuario.model.js";
-import {
+import jwt from 'jsonwebtoken';
+import Usuario from '../models/usuario.model.js';
+import { createAccessToken } from '../libs/jwt.js';
+import bcrypt from 'bcryptjs';
+import dotenv from 'dotenv';
+dotenv.config();
+
+
+// import { medicoSchema } from '../schema/medicoSchema.js';
+// import Medico from '../models/Medico.js';
+
+import { 
   generateAndStoreCode,
   verifyCode,
   sendVerificationEmail,
-} from "../services/usuarioService.js";
+  clearPendingRegistration
+} from '../services/usuarioService.js';
 
-// POST /auth/register
 export const register = async (req, res) => {
-  const { nombre_usuario, correo_usuario, contrasena_usuario } = req.body;
-
-  if (!correo_usuario || !contrasena_usuario || !nombre_usuario) {
-    return res.status(400).json({ error: 'Nombre, correo y contraseña son requeridos' });
-  }
-
   try {
-    // Validar si el usuario ya existe
-    const existingUser = await Usuario.findOne({
-      where: { correo_usuario },
-    });
-
-    if (existingUser) {
-      return res.status(400).json({ error: "El correo ya está registrado" });
+    const { correo_usuario, ...userData } = req.body;
+    
+    // 1. Validar duplicados en BD (solo el correo)
+    const existe = await Usuario.findOne({ where: { correo_usuario } });
+    if (existe) {
+      return res.status(400).json({ error: 'El correo ya está registrado' });
     }
 
-    // Generar código de verificación y almacenarlo temporalmente
-    const codigo = generateAndStoreCode(correo_usuario, {
-      nombre_usuario,
-      correo_usuario,
-      contrasena_usuario,
-    });
+    // if (userData.tipo_usuario === 'Medico') {
+    //   const result = medicoSchema.safeParse({
+    //     especialidad: userData.especialidad,
+    //     licencia: userData.licencia
+    //   });
 
-    // Enviar el correo de verificación
-    await sendVerificationEmail(correo_usuario, codigo).catch((err) => {
-      return res.status(500).json({ error: 'No se pudo enviar el correo', details: err.message });
-    });
+    //   if (!result.success) {
+    //     // Extraer el primer mensaje de error
+    //     const errorMessage = result.error.issues[0].message;
+    //     return res.status(400).json({ error: "Error en el registro del Medico, ingrese los datos requeridos", details: errorMessage });
+    //   }
+    // }
+    
+    // 2. Generar y almacenar código temporalmente
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`Usuario pendiente de verificación: ${correo_usuario}`);
-    }
+    // 2. Validación de médico (comentario preservado de ambas versiones)
+    /*if (userData.tipo_usuario === 'Medico') {
+      const validation = medicoSchema.safeParse({
+        especialidad: userData.especialidad,
+        licencia: userData.licencia
+      });
+      
+      if (!validation.success) {
+        return res.status(400).json({ error: validation.error.errors });
+      }
+    }*/
 
-    res.json({
-      message: "Correo de verificación enviado. Revisa tu bandeja de entrada.",
+
+    // 3. Generar y almacenar código temporalmente (versión HEAD)
+    const codigo = generateAndStoreCode(correo_usuario, userData);
+    
+    // 4. Enviar email (combinación de ambas implementaciones)
+    await sendVerificationEmail(correo_usuario, codigo);
+    
+    res.status(200).json({ 
+      message: 'Código enviado. Verifica tu correo.',
+      nextStep: '/verify',
+      // Preservar formato de respuesta de ambas versiones
+      user: {
+        correo: correo_usuario
+      }
     });
+    
   } catch (error) {
-    console.error("Error en registro:", error);
-    res.status(500).json({ error: "Error en el servidor" });
+    res.status(500).json({ 
+      error: 'Error en registro', 
+      details: error.message 
+    });
   }
 };
 
-// POST /auth/verify
 export const verifyUser = async (req, res) => {
-  const { correo_usuario, codigo } = req.body;
-
-  if (!correo_usuario || !codigo) {
-    return res.status(400).json({ error: 'Correo y código son requeridos' });
-  }
-
+  console.log(req.body)
   try {
-    const userData = verifyCode(correo_usuario, codigo);
-    if (!userData) {
-      return res.status(400).json({ error: "Código inválido o expirado" });
+    const { correo_usuario, codigo } = req.body;
+    
+    // 1. Verificar código (versión HEAD modificada)
+    const { valid, message, userData } = verifyCode(correo_usuario, codigo);
+    if (!valid) {
+      return res.status(400).json({ error: message });
     }
-
-    // Encriptar la contraseña antes de guardar
+    
+    // 2. Crear usuario con contraseña hasheada
     const hashedPassword = await bcrypt.hash(userData.contrasena_usuario, 10);
-
-    // Crear el nuevo usuario en la base de datos
-    const newUser = await Usuario.create({
-      nombre_usuario: userData.nombre_usuario,
-      correo_usuario: userData.correo_usuario,
+    const usuario = await Usuario.create({
+      ...userData,
+      correo_usuario,
       contrasena_usuario: hashedPassword,
+      estado_usuario: 'Activo' // De HEAD
+    });
+    
+    // 4. Generar token (combinación de ambas implementaciones)
+    const token = await createAccessToken({
+      id: usuario.id_usuario,
+      rol: usuario.tipo_usuario // Preservado de HEAD
     });
 
-    res.status(201).json({
-      message: "Usuario verificado y registrado correctamente",
-      usuario: {
-        id: newUser.id_usuario,
-        nombre: newUser.nombre_usuario,
-        correo: newUser.correo_usuario,
-      },
-    });
-  } catch (error) {
-    console.error("Error en verificación:", error);
-    res.status(500).json({ error: "Error en el servidor" });
-  }
-};
-
-// POST /auth/login
-export const login = async (req, res) => {
-  const { correo_usuario, contrasena_usuario } = req.body;
-
-  if (!correo_usuario || !contrasena_usuario) {
-    return res.status(400).json({ error: 'Correo y contraseña son requeridos' });
-  }
-
-  try {
-    const usuario = await Usuario.findOne({
-      where: { correo_usuario },
-    });
-
-    if (!usuario) {
-      return res.status(401).json({ error: "Credenciales inválidas" });
-    }
-
-    const isPasswordValid = await bcrypt.compare(
-      contrasena_usuario,
-      usuario.contrasena_usuario
-    );
-
-    if (!isPasswordValid) {
-      return res.status(401).json({ error: "Credenciales inválidas" });
-    }
-
-    const token = jwt.sign(
-      { id_usuario: usuario.id_usuario },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
-
+    // Cookie setting de HEAD
+    /*res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict'
+    });*/
     res.cookie("token", token, {
       httpOnly: process.env.NODE_ENV !== "development",
       secure: true,
       sameSite: "none",
-      path: '/',
     });
-
-    res.json({
-      message: "Inicio de sesión exitoso",
+    
+    res.status(201).json({
+      message: 'Registro completado exitosamente',
       usuario: {
         id: usuario.id_usuario,
+        correo: usuario.correo_usuario, 
         nombre: usuario.nombre_usuario,
-        correo: usuario.correo_usuario,
+        apellido: usuario.apellido_usuario,
       },
+      token
     });
+    
   } catch (error) {
-    console.error("Error en login:", error);
-    res.status(500).json({ error: "Error en el servidor" });
+    console.log(error)
+    res.status(500).json({ 
+      error: 'Error en verificación',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
-// POST /auth/logout
-export const logout = (req, res) => {
-  res.clearCookie("token", {
-    httpOnly: process.env.NODE_ENV !== "development",
-    secure: true,
-    sameSite: "none",
-    path: '/',
-  });
+// Resto del código sin cambios...
+export const login = async (req, res) => {
+    try {
+        const { correo_usuario, contrasena_usuario } = req.body;
+        
+        const usuario = await Usuario.findOne({ 
+          where: { correo_usuario: correo_usuario } 
+        });
+        
+        if (!usuario) {
+          return res.status(401).json({ error: "Credenciales incorrectas (usuario no registrado)" });
+        }
+        
+        const contrasenaValida = await bcrypt.compare(contrasena_usuario, usuario.contrasena_usuario);
+        if (!contrasenaValida) {
+          return res.status(401).json({ error: "Credenciales incorrectas (contraseña invalida)" });
+        }
+        
+        // Generar token combinando ambas versiones
+        const token = await createAccessToken({
+          id: usuario.id_usuario,
+          rol: usuario.tipo_usuario
+        });
 
-  res.json({ message: "Sesión cerrada exitosamente" });
+        res.cookie("token", token, {
+          httpOnly: process.env.NODE_ENV !== "development",
+          secure: true,
+          sameSite: "none",
+        });
+        
+        res.json({ 
+          id: usuario.id_usuario,
+          email: usuario.correo_usuario, 
+          nombre: usuario.nombre_usuario,
+          apellido: usuario.apellido_usuario,
+          rol: usuario.tipo_usuario, 
+          token 
+        });
+      } catch (error) {
+        return res.status(500).json({ message: error.message });
+        }  
 };
 
-// PUT /usuarios/:id
-export const actualizarUser = async (req, res) => {
-  const { id } = req.params;
-  const { nombre_usuario, correo_usuario, contrasena_usuario } = req.body;
-
-  const dataToUpdate = {
-    ...(nombre_usuario && { nombre_usuario }),
-    ...(correo_usuario && { correo_usuario }),
-    ...(contrasena_usuario && { contrasena_usuario }),
+// Funciones restantes sin cambios...
+export const logout = async (req, res) => {
+    res.cookie("token", "", {
+      httpOnly: true,
+      secure: true,
+      expires: new Date(0),
+    });
+    return res.status(200).json({ message: "Logout exitoso" });
   };
 
-  if (!Object.values(dataToUpdate).some(Boolean)) {
-    return res.status(400).json({ message: 'No hay datos para actualizar' });
-  }
-
-  try {
-    if (contrasena_usuario) {
-      const hashedPassword = await bcrypt.hash(contrasena_usuario, 10);
-      dataToUpdate.contrasena_usuario = hashedPassword;
-    }
-
-    const [updated] = await Usuario.update(dataToUpdate, {
-      where: { id_usuario: id },
-    });
-
-    if (updated) {
-      res.json({ message: "Usuario actualizado correctamente" });
-    } else {
-      res.status(404).json({ message: "Usuario no encontrado" });
-    }
-  } catch (error) {
-    console.error("Error al actualizar usuario:", error);
-    res.status(500).json({ message: "Error al actualizar usuario" });
-  }
-
-};
 export const listarUsers = async (req, res) => {
     try {
         const usuarios = await Usuario.findAll();
@@ -208,280 +207,52 @@ export const listarUsers = async (req, res) => {
         res.status(500).json({ message: 'Error al listar los usuarios', error });
     }
 };
-export const eliminarUser = async (req, res) => {
+
+export const actualizarUser = async (req, res) => {
   try {
-      const { id } = req.usuario;
+    const { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario, correo_usuario, contrasena_usuario } = req.body;
 
-      const usuario = await Usuario.findByPk(id);
-      if (!usuario) {
-          return res.status(404).json({ message: 'Usuario no encontrado' });
-      }
+    const { id } = req.usuario;
+    console.log("Contenido de req.usuario:", req.usuario);
 
-      await Usuario.destroy({
-          where: { id_usuario: id },
-      });
+    const usuario = await Usuario.findByPk(id);
+    if (!usuario) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
 
-      res.status(200).json({ message: 'Usuario eliminado exitosamente' });
+    const dataToUpdate = { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario, correo_usuario };
+    if (contrasena_usuario) {
+      const salt = await bcrypt.genSalt(10);
+      dataToUpdate.contrasena_usuario = await bcrypt.hash(contrasena_usuario, salt);
+    }
+
+    await Usuario.update(dataToUpdate, {
+      where: { id_usuario: id },
+    });
+
+    res.status(200).json({ message: 'Información del usuario actualizada exitosamente' });
   } catch (error) {
-      console.error('Error al eliminar el usuario:', error);
-      res.status(500).json({ message: 'Error al eliminar el usuario', error });
+    console.error('Error al actualizar el usuario:',  error);
+    res.status(500).json({ message: 'Error al actualizar el usuario', error });
   }
 };
-// import jwt from 'jsonwebtoken';
-// import Usuario from '../models/usuario.model.js';
-// import { createAccessToken } from '../libs/jwt.js';
-// import bcrypt from 'bcryptjs';
-// import dotenv from 'dotenv';
-// dotenv.config();
 
+export const eliminarUser = async (req, res) => {
+    try {
+        const { id } = req.usuario;
 
-// // import { medicoSchema } from '../schema/medicoSchema.js';
-// // import Medico from '../models/Medico.js';
+        const usuario = await Usuario.findByPk(id);
+        if (!usuario) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
 
-// import { 
-//   generateAndStoreCode,
-//   verifyCode,
-//   sendVerificationEmail,
-//   clearPendingRegistration
-// } from '../services/usuarioService.js';
+        await Usuario.destroy({
+            where: { id_usuario: id },
+        });
 
-// export const register = async (req, res) => {
-//   try {
-//     const { correo_usuario, ...userData } = req.body;
-    
-//     // 1. Validar duplicados en BD (solo el correo)
-//     const existe = await Usuario.findOne({ where: { correo_usuario } });
-//     if (existe) {
-//       return res.status(400).json({ error: 'El correo ya está registrado' });
-//     }
-
-//     // if (userData.tipo_usuario === 'Medico') {
-//     //   const result = medicoSchema.safeParse({
-//     //     especialidad: userData.especialidad,
-//     //     licencia: userData.licencia
-//     //   });
-
-//     //   if (!result.success) {
-//     //     // Extraer el primer mensaje de error
-//     //     const errorMessage = result.error.issues[0].message;
-//     //     return res.status(400).json({ error: "Error en el registro del Medico, ingrese los datos requeridos", details: errorMessage });
-//     //   }
-//     // }
-    
-//     // 2. Generar y almacenar código temporalmente
-
-//     // 2. Validación de médico (comentario preservado de ambas versiones)
-//     /*if (userData.tipo_usuario === 'Medico') {
-//       const validation = medicoSchema.safeParse({
-//         especialidad: userData.especialidad,
-//         licencia: userData.licencia
-//       });
-      
-//       if (!validation.success) {
-//         return res.status(400).json({ error: validation.error.errors });
-//       }
-//     }*/
-
-
-//     // 3. Generar y almacenar código temporalmente (versión HEAD)
-//     const codigo = generateAndStoreCode(correo_usuario, userData);
-    
-//     // 4. Enviar email (combinación de ambas implementaciones)
-//     await sendVerificationEmail(correo_usuario, codigo);
-    
-//     res.status(200).json({ 
-//       message: 'Código enviado. Verifica tu correo.',
-//       nextStep: '/verify',
-//       // Preservar formato de respuesta de ambas versiones
-//       user: {
-//         correo: correo_usuario
-//       }
-//     });
-    
-//   } catch (error) {
-//     res.status(500).json({ 
-//       error: 'Error en registro', 
-//       details: error.message 
-//     });
-//   }
-// };
-
-// export const verifyUser = async (req, res) => {
-//   console.log(req.body)
-//   try {
-//     const { correo_usuario, codigo } = req.body;
-    
-//     // 1. Verificar código (versión HEAD modificada)
-//     const { valid, message, userData } = verifyCode(correo_usuario, codigo);
-//     if (!valid) {
-//       return res.status(400).json({ error: message });
-//     }
-    
-//     // 2. Crear usuario con contraseña hasheada
-//     const hashedPassword = await bcrypt.hash(userData.contrasena_usuario, 10);
-//     const usuario = await Usuario.create({
-//       ...userData,
-//       correo_usuario,
-//       contrasena_usuario: hashedPassword,
-//       estado_usuario: 'Activo' // De HEAD
-//     });
-    
-//     // 4. Generar token (combinación de ambas implementaciones)
-//     const token = await createAccessToken({
-//       id: usuario.id_usuario,
-//       rol: usuario.tipo_usuario // Preservado de HEAD
-//     });
-
-//     // Cookie setting de HEAD
-//     /*res.cookie('token', token, {
-//       httpOnly: true,
-//       secure: process.env.NODE_ENV === 'production',
-//       sameSite: 'strict'
-//     });*/
-//     res.cookie("token", token, {
-//       httpOnly: process.env.NODE_ENV !== "development",
-//       secure: true,
-//       sameSite: "none",
-//     });
-    
-//     res.status(201).json({
-//       message: 'Registro completado exitosamente',
-//       usuario: {
-//         id: usuario.id_usuario,
-//         correo: usuario.correo_usuario, 
-//         nombre: usuario.nombre_usuario,
-//         apellido: usuario.apellido_usuario,
-//       },
-//       token
-//     });
-    
-//   } catch (error) {
-//     console.log(error)
-//     res.status(500).json({ 
-//       error: 'Error en verificación',
-//       details: process.env.NODE_ENV === 'development' ? error.message : undefined
-//     });
-//   }
-// };
-
-// // Resto del código sin cambios...
-// export const login = async (req, res) => {
-//     try {
-//         const { correo_usuario, contrasena_usuario } = req.body;
-        
-//         const usuario = await Usuario.findOne({ 
-//           where: { correo_usuario: correo_usuario } 
-//         });
-        
-//         if (!usuario) {
-//           return res.status(401).json({ error: "Credenciales incorrectas (usuario no registrado)" });
-//         }
-        
-//         const contrasenaValida = await bcrypt.compare(contrasena_usuario, usuario.contrasena_usuario);
-//         if (!contrasenaValida) {
-//           return res.status(401).json({ error: "Credenciales incorrectas (contraseña invalida)" });
-//         }
-        
-//         // Generar token combinando ambas versiones
-//         const token = await createAccessToken({
-//           id: usuario.id_usuario,
-//           rol: usuario.tipo_usuario
-//         });
-
-//         res.cookie("token", token, {
-//           httpOnly: process.env.NODE_ENV !== "development",
-//           secure: true,
-//           sameSite: "none",
-//         });
-        
-//         res.json({ 
-//           id: usuario.id_usuario,
-//           email: usuario.correo_usuario, 
-//           nombre: usuario.nombre_usuario,
-//           apellido: usuario.apellido_usuario,
-//           rol: usuario.tipo_usuario, 
-//           token 
-//         });
-//       } catch (error) {
-//         return res.status(500).json({ message: error.message });
-//         }  
-// };
-
-// // Funciones restantes sin cambios...
-// export const logout = async (req, res) => {
-//     res.cookie("token", "", {
-//       httpOnly: true,
-//       secure: true,
-//       expires: new Date(0),
-//     });
-//     return res.status(200).json({ message: "Logout exitoso" });
-//   };
-
-// export const listarUsers = async (req, res) => {
-//     try {
-//         const usuarios = await Usuario.findAll();
-//         res.status(200).json(usuarios.map(usuario => ({
-//             id_usuario: usuario.id_usuario,
-//             nombre_usuario: usuario.nombre_usuario,
-//             apellido_usuario: usuario.apellido_usuario,
-//             identificacion_usuario: usuario.identificacion_usuario,
-//             direccion_usuario: usuario.direccion_usuario,
-//             telefono_usuario: usuario.telefono_usuario,
-//             correo_usuario: usuario.correo_usuario,
-//             tipo_usuario: usuario.tipo_usuario,
-//             estado_usuario: usuario.estado_usuario
-//         })
-//     ));
-//     } catch (error) {
-//         res.status(500).json({ message: 'Error al listar los usuarios', error });
-//     }
-// };
-
-// export const actualizarUser = async (req, res) => {
-//   try {
-//     const { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario, correo_usuario, contrasena_usuario } = req.body;
-
-//     const { id } = req.usuario;
-//     console.log("Contenido de req.usuario:", req.usuario);
-
-//     const usuario = await Usuario.findByPk(id);
-//     if (!usuario) {
-//       return res.status(404).json({ message: 'Usuario no encontrado' });
-//     }
-
-//     const dataToUpdate = { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario, correo_usuario };
-//     if (contrasena_usuario) {
-//       const salt = await bcrypt.genSalt(10);
-//       dataToUpdate.contrasena_usuario = await bcrypt.hash(contrasena_usuario, salt);
-//     }
-
-//     await Usuario.update(dataToUpdate, {
-//       where: { id_usuario: id },
-//     });
-
-//     res.status(200).json({ message: 'Información del usuario actualizada exitosamente' });
-//   } catch (error) {
-//     console.error('Error al actualizar el usuario:',  error);
-//     res.status(500).json({ message: 'Error al actualizar el usuario', error });
-//   }
-// };
-
-// export const eliminarUser = async (req, res) => {
-//     try {
-//         const { id } = req.usuario;
-
-//         const usuario = await Usuario.findByPk(id);
-//         if (!usuario) {
-//             return res.status(404).json({ message: 'Usuario no encontrado' });
-//         }
-
-//         await Usuario.destroy({
-//             where: { id_usuario: id },
-//         });
-
-//         res.status(200).json({ message: 'Usuario eliminado exitosamente' });
-//     } catch (error) {
-//         console.error('Error al eliminar el usuario:', error);
-//         res.status(500).json({ message: 'Error al eliminar el usuario', error });
-//     }
-// };
+        res.status(200).json({ message: 'Usuario eliminado exitosamente' });
+    } catch (error) {
+        console.error('Error al eliminar el usuario:', error);
+        res.status(500).json({ message: 'Error al eliminar el usuario', error });
+    }
+};
