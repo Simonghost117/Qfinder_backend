@@ -87,6 +87,8 @@ export const verifyUser = async (req, res) => {
     if (!valid) {
       return res.status(400).json({ error: message });
     }
+
+    console.log("userdata: ", userData)
     
     // 2. Crear usuario con contraseña hasheada
     const hashedPassword = await bcrypt.hash(userData.contrasena_usuario, 10);
@@ -148,8 +150,10 @@ export const login = async (req, res) => {
         if (!usuario) {
           return res.status(401).json({ error: "Credenciales incorrectas (usuario no registrado)" });
         }
+
         
         const contrasenaValida = await bcrypt.compare(contrasena_usuario, usuario.contrasena_usuario);
+        console.log(contrasenaValida)
         if (!contrasenaValida) {
           return res.status(401).json({ error: "Credenciales incorrectas (contraseña invalida)" });
         }

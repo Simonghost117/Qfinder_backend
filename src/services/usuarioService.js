@@ -27,8 +27,8 @@ export const createUser = async (userData) => {
     ...userData,
     contrasena_usuario: hashedPassword,
     estado_usuario: 'Inactivo'
-    // ,
-    // verificado: false
+    ,
+    verificado: false
   });
 };
 
