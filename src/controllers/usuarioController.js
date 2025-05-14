@@ -88,7 +88,7 @@ export const verifyUser = async (req, res) => {
       return res.status(400).json({ error: message });
     }
 
-    console.log("userdata: ", userData)
+   
     
     // 2. Crear usuario con contraseña hasheada
     const hashedPassword = await bcrypt.hash(userData.contrasena_usuario, 10);
@@ -117,7 +117,18 @@ export const verifyUser = async (req, res) => {
       sameSite: "none",
     });
     
+    // res.status(201).json({
+    //   message: 'Registro completado exitosamente',
+    //   usuario: {
+    //     id: usuario.id_usuario,
+    //     correo: usuario.correo_usuario, 
+    //     nombre: usuario.nombre_usuario,
+    //     apellido: usuario.apellido_usuario,
+    //   },
+    //   token
+    // });
     res.status(201).json({
+      success: true,
       message: 'Registro completado exitosamente',
       usuario: {
         id: usuario.id_usuario,
@@ -127,6 +138,7 @@ export const verifyUser = async (req, res) => {
       },
       token
     });
+    
     
   } catch (error) {
     console.log(error)
