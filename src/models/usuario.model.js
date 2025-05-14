@@ -51,7 +51,7 @@ const Usuario = sequelize.define('Usuario', {
     field: 'tipo_usuario'
   },
   estado_usuario: {
-    type: DataTypes.ENUM('activo', 'Inactivo'),
+    type: DataTypes.ENUM('Activo', 'Inactivo'),
     defaultValue: 'Activo',
     field: 'estado_usuario'
   },

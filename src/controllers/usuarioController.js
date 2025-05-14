@@ -18,12 +18,17 @@ import {
 
 export const register = async (req, res) => {
   try {
-    const { correo_usuario, ...userData } = req.body;
+    const { correo_usuario, identificacion_usuario, ...userData } = req.body;
     
     // 1. Validar duplicados en BD (solo el correo)
     const existe = await Usuario.findOne({ where: { correo_usuario } });
     if (existe) {
       return res.status(400).json({ error: 'El correo ya está registrado' });
+    }
+    
+    const existeIdentificacion = await Usuario.findOne({ where: { identificacion_usuario } });
+    if (existeIdentificacion) {
+      return res.status(400).json({ error: 'La identificación ya está registrada' });
     }
 
     // if (userData.tipo_usuario === 'Medico') {
@@ -210,7 +215,7 @@ export const listarUsers = async (req, res) => {
 
 export const actualizarUser = async (req, res) => {
   try {
-    const { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario, correo_usuario, contrasena_usuario } = req.body;
+    const { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario } = req.body;
 
     const { id } = req.usuario;
     console.log("Contenido de req.usuario:", req.usuario);
@@ -220,11 +225,7 @@ export const actualizarUser = async (req, res) => {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
-    const dataToUpdate = { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario, correo_usuario };
-    if (contrasena_usuario) {
-      const salt = await bcrypt.genSalt(10);
-      dataToUpdate.contrasena_usuario = await bcrypt.hash(contrasena_usuario, salt);
-    }
+    const dataToUpdate = { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario };
 
     await Usuario.update(dataToUpdate, {
       where: { id_usuario: id },

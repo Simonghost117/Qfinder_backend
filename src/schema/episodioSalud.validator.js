@@ -1,25 +1,26 @@
 import { z } from 'zod';
 
-const sintomas = [
-  'fiebre', 'dolor', 'mareos', 'convulsiones',
-  'confusion', 'ansiedad', 'alucinaciones'
+const severidad = [
+  'baja',
+  'media',
+  'alta'
 ];
 
 export const episodioSchema = z.object({
-  tipo: z.enum([
-    'crisis_psiquiatrica',
-    'crisis_epileptica',
-    'recaida',
-    'hospitalizacion',
-    'observacion',
-    'datos_dispositivo'
-  ]),
+  tipo: z.string().min(3).max(50),
   fecha_hora_inicio: z.coerce.date().max(new Date()),
   fecha_hora_fin: z.coerce.date().optional().nullable(),
-  severidad: z.number().int().min(1).max(10),
-  sintomas: z.array(z.enum(sintomas)).min(1),
+  severidad: z.array(z.enum(severidad)).min(1).max(1),
   descripcion: z.string().min(10).max(500),
   intervenciones: z.string().optional()
+}).refine(data => {
+  if (data.fecha_hora_inicio && data.fecha_hora_fin) {
+    return data.fecha_hora_fin >= data.fecha_hora_inicio;
+  }
+  return true;
+}, {
+  message: 'Fecha final debe ser mayor o igual a la inicial',
+  path: ['fecha_hora_fin']
 });
 
 export const filtroSchema = z.object({

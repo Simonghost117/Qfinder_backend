@@ -81,17 +81,8 @@ app.get('/test', (req, res) => {
   res.json({ message: 'El servidor está funcionando correctamente' });
 });
 
-// Configuración de rutas
-// app.use('/api/auth', usuarioRoutes);//+-Completa
-// app.use('/api/medicos', medicoRoutes);//Validaciones - crud YA NO SE NECESITA
-// app.use('/api/episodios', routerEpisodioSalud);//Completo
-// //app.use('/api/reportes', routerReport);//Esta ruta no va a ser utilizada
-// app.use('/api/redes', redesRoutes);//Completo
-
-// app.use('/api/paciente', pacienteRoutes);//Completo
-// app.use('/api/familiar', familiarRoutes);//No se necesita
 // // Configuración de rutas API
-app.use('/api/auth', usuarioRoutes); //+-Completa
+app.use('/api/auth', usuarioRoutes); //Completa🟢
 app.use('/api/medicos', medicoRoutes); // Validaciones - CRUD (YA NO SE NECESITA pero conservado)
 app.use('/api/episodios', routerEpisodioSalud); // +-Completo🟢
 // app.use('/api/reportes', routerReport); // No se va a usar (comentado pero conservado)
@@ -105,7 +96,7 @@ app.use('/api/regSintomas', RegSintomas); //+-Completo
 app.use('/api/citaMedica', CitaMedica);//Completo🟢
 app.use('/api/codigoQr', codigoQr)//+-Completo
 
-app.use('/api/medicamentos', medicamentoRoutes);
+app.use('/api/medicamentos', medicamentoRoutes);//+-Completo
 
 // Exportación de la app
 export default app;
