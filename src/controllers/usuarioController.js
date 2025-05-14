@@ -139,6 +139,7 @@ export const verifyUser = async (req, res) => {
 export const login = async (req, res) => {
     try {
         const { correo_usuario, contrasena_usuario } = req.body;
+        console.log(req.body)
         
         const usuario = await Usuario.findOne({ 
           where: { correo_usuario: correo_usuario } 
