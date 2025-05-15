@@ -7,7 +7,9 @@ export const createActivity = async (id_paciente, data) => {
     console.log("📥 Datos recibidos para crear actividad:", data);
   
     try {
+      
       const newActivity = await ActividadCuidado.create({
+        intensidad: data.intensidad || "baja",
         ...data,
         id_paciente: id_paciente,
       });

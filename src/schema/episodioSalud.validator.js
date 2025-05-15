@@ -1,16 +1,10 @@
 import { z } from 'zod';
 
-const severidad = [
-  'baja',
-  'media',
-  'alta'
-];
-
 export const episodioSchema = z.object({
   tipo: z.string().min(3).max(50),
   fecha_hora_inicio: z.coerce.date().max(new Date()),
   fecha_hora_fin: z.coerce.date().optional().nullable(),
-  severidad: z.array(z.enum(severidad)).min(1).max(1),
+  severidad: z.enum(['baja', 'media', 'alta']).optional(), 
   descripcion: z.string().min(10).max(500),
   intervenciones: z.string().optional()
 }).refine(data => {

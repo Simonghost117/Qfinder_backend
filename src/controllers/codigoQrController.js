@@ -7,7 +7,7 @@ import { generarCodigoQR } from "../utils/qrGenerator.js"; // Asegúrate de que 
 
 import codigoQr from "../models/codigoQr.model.js"; // Modelo 
 
-export const generarQRPaciente = async (id_paciente, maxLength = 200) => {
+export const generarQRPaciente = async (id_paciente, maxLength = 100) => {
   try {
     
     const paciente = await Paciente.findOne({

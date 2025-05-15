@@ -24,12 +24,13 @@ export const ActividadCuidado = sequelize.define("actividad_cuidado", {
     field: "duracion",
   },
   tipo_actividad: {
-    type: DataTypes.ENUM('higiene', 'vestido', 'ejercicio', 'recreacion', 'medicacion', 'terapia', 'comida', 'otro'),
+    type: DataTypes.STRING,
     allowNull: false,
     field: "tipo_actividad",
   },
   intensidad: {
-    type: DataTypes.ENUM('leve', 'moderada', 'alta'),
+    type: DataTypes.ENUM('baja', 'media', 'alta'),
+    defaultValue: 'baja',
     allowNull: false,
     field: "intensidad",
   },
@@ -42,12 +43,7 @@ export const ActividadCuidado = sequelize.define("actividad_cuidado", {
     type: DataTypes.ENUM('pendiente', 'en_progreso', 'completada', 'cancelada'),
     allowNull: false,
     field: "estado",
-  },
-  observaciones: {
-    type: DataTypes.TEXT,
-    allowNull: true,
-    field: "observaciones",
-  },
+  }
 }, 
 {
   tableName: "actividad_fisica",

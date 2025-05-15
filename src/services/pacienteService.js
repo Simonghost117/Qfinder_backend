@@ -36,9 +36,9 @@ export const createPaciente = async ({
     await Familiar.create({
       id_usuario,
       id_paciente: paciente.id_paciente,
-      // parentesco: 'tutor', // O 'responsable' según tu necesidad
-      // cuidador_principal: true,
-      // notificado_emergencia: true
+      parentesco: 'tutor', // O 'responsable' según tu necesidad
+      cuidador_principal: true,
+      notificado_emergencia: true
     });
 
     return {

@@ -168,13 +168,13 @@ export class EpisodioSaludController {
       datosActualizados.multimedia = this.obtenerRutaMultimedia(req.file);
     }
 
-    if (datosActualizados.sintomas) {
-      datosActualizados.sintomas = this.parsearSintomas(datosActualizados.sintomas);
-    }
+    // if (datosActualizados.sintomas) {
+    //   datosActualizados.sintomas = this.parsearSintomas(datosActualizados.sintomas);
+    // }
 
-    if (datosActualizados.severidad) {
-      datosActualizados.severidad = parseInt(datosActualizados.severidad);
-    }
+    // if (datosActualizados.severidad) {
+    //   datosActualizados.severidad = episodioExistente.severidad;
+    // }
 
     return datosActualizados;
   }

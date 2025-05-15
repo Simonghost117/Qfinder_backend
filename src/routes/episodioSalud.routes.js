@@ -15,8 +15,6 @@ function wrap(method) {
 }
 
 // Crear episodio
-// si son 5 pacientes, de que  manera vamos a saber a que paciente pertenece el episodio?
-//⭕fecha_hora_fin campo no establecido🟢
 routerEpisodioSalud.post(
   '/episodioSalud/:id_paciente',
   verifyToken,
@@ -28,7 +26,6 @@ routerEpisodioSalud.post(
 );
 
 // Obtener todos los episodios de un paciente
-//El usuario no puede ver los episodios
 routerEpisodioSalud.get(
   '/episodioSalud/:id_paciente',
   verifyToken,
@@ -37,7 +34,7 @@ routerEpisodioSalud.get(
   // validateZodSchema(filtroSchema, { source: 'query' }),
   wrap(EpisodioSaludController.obtenerEpisodiosPaciente)
 );
-//⭕No cumple con las especificaciones: id_paciente🟢
+// Obtener episodios de un paciente por id
 routerEpisodioSalud.get(
   '/pacientes/:id_paciente/episodioSalud/:id_episodio', 
   verifyToken,
@@ -46,7 +43,6 @@ routerEpisodioSalud.get(
 );
 
 // Actualizar episodio
-//⭕No cumple con las especificaciones: id_paciente🟢
 routerEpisodioSalud.put(
   '/pacientes/:id_paciente/episodioSalud/:id_episodio', // <- ¡Nuevo parámetro!
   verifyToken,
@@ -56,7 +52,6 @@ routerEpisodioSalud.put(
   wrap(EpisodioSaludController.actualizarEpisodio)
 );
 // Eliminar episodio
-//⭕No cumple con las especificaciones se necesita: id_paciente🟢
 routerEpisodioSalud.delete(
   '/eliminarEpis/:id_paciente/:id_episodio',
   verifyToken,

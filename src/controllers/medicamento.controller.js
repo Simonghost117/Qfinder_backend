@@ -2,7 +2,17 @@ import Medicamento from '../models/medicamento.model.js';
 
 export const crearMedicamento = async (req, res) => {
   try {
-    const nuevo = await Medicamento.create(req.body);
+    const { id_usuario } = req.user;
+    console.log(id_usuario);
+
+    const { nombre, descripcion, tipo } = req.body;
+
+    const nuevo = await Medicamento.create({
+      // id_usuario,
+      nombre,
+      descripcion,
+      tipo
+    });
     res.status(201).json({ message: 'Medicamento creado exitosamente', data: nuevo });
   } catch (error) {
     res.status(500).json({ message: 'Error al crear medicamento', error: error.message });
@@ -17,6 +27,19 @@ export const listarMedicamentos = async (req, res) => {
     res.status(500).json({ message: 'Error al listar medicamentos', error: error.message });
   }
 };
+
+export const listarMedicamentosId = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const medicamento = await Medicamento.findByPk(id);
+    if (!medicamento) {
+      return res.status(404).json({ message: 'Medicamento no encontrado' });
+    }
+    res.status(200).json(medicamento);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al listar medicamento', error: error.message });
+  }
+}
 
 export const actualizarMedicamento = async (req, res) => {
   try {

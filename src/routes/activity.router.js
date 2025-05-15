@@ -1,7 +1,6 @@
 import { Router } from "express";
 import * as activityController from "../controllers/activity.controller.js";
 import { validateCreateActivity } from "../middlewares/validate.Shema.js"; // Asegúrate de la ruta correcta
-import { verify } from "crypto";
 import { verifyToken } from "../middlewares/verifyToken.js";
 import { checkEpisodioPermissions } from "../middlewares/episodioPermissions.middleware.js";
 
