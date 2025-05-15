@@ -13,7 +13,7 @@ export class MonitoreoSintomasController {
       const datos = {
         id_paciente,
         sintoma: req.body.sintoma,
-        gravedad: parseInt(req.body.gravedad || 3),
+        gravedad: req.body.gravedad || 'baja',
         observaciones: req.body.observaciones || null,
         fecha_sintoma: req.body.fecha_sintoma || new Date()
       };
@@ -112,7 +112,7 @@ export class MonitoreoSintomasController {
       // Preparar los datos a actualizar
       const datos = {
         sintoma: req.body.sintoma,
-        gravedad: parseInt(req.body.gravedad || 3),
+        gravedad: req.body.gravedad || 'baja',
         observaciones: req.body.observaciones || null,
         fecha_sintoma: req.body.fecha_sintoma || new Date()
       };

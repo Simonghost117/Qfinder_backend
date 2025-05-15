@@ -2,7 +2,13 @@ import { RegistroSintoma } from '../models/MonitoreoSintomas.js';
 
 export class MonitoreoSintomasService {
   static async registrarSintoma(datos) {
-    return await RegistroSintoma.create(datos);
+    const newRegristro =  RegistroSintoma.create(datos);
+
+    if (!newRegristro) {
+      throw new Error('Error al registrar el síntoma');
+    }
+
+    return newRegristro;
   }
 
   static async obtenerPorPaciente(id_paciente) {

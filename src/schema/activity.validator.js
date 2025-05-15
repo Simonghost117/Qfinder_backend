@@ -7,4 +7,5 @@ export const createActivitySchema = z.object({
   intensidad: z.enum(["baja", "media", "alta"]).optional(),
   descripcion: z.string().min(5, "La descripción debe tener al menos 5 caracteres"),
   estado: z.enum(["pendiente", "en_progreso", "completada", "cancelada"]),
+  observaciones: z.string().optional()
 });
