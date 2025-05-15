@@ -304,8 +304,7 @@ export const perfilUser = async (req, res) => {
       direccion_usuario: usuario.direccion_usuario,
       telefono_usuario: usuario.telefono_usuario,
       correo_usuario: usuario.correo_usuario,
-      tipo_usuario: usuario.tipo_usuario,
-      estado_usuario: usuario.estado_usuario
+   
     });
   } catch (error) {
     console.error('Error al obtener el perfil del usuario:', error);
