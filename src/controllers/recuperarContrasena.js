@@ -79,10 +79,10 @@ export const cambiarContrasena = async (req, res) => {
   
 export const verificarCodigo = async (req, res) => {
   const { correo, codigo } = req.body;
-
+console.log('verificarCodigo', correo, codigo);
   try {
     const usuario = await Usuario.findOne({ where: { correo_usuario: correo } });
-
+    console.log('usuario', usuario);
     if (!usuario) return res.status(404).json({ mensaje: 'Usuario no encontrado.' });
 
     if (!usuario.codigo_verificacion || !usuario.codigo_expiracion)
