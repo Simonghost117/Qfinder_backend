@@ -75,36 +75,46 @@ export const cambiarContrasena = async (req, res) => {
     return res.status(401).json({ mensaje: 'Token inválido o expirado.' });
   }
 };
-
-  
 export const verificarCodigo = async (req, res) => {
   const { correo, codigo } = req.body;
-console.log('verificarCodigo', correo, codigo);
-console.log('verificarCodigo', correo, codigo);
-console.log('verificarCodigo', correo, codigo);
+  console.log('verificarCodigo', correo, codigo);
+
   try {
-    const usuario = await Usuario.findOne({ where: { correo_usuario: correo } });
+    const usuario = await Usuario.findOne({
+      where: {
+        correo_usuario: {
+          [Op.eq]: correo.trim().toLowerCase()
+        }
+      }
+    });
+
     console.log('usuario', usuario);
-    if (!usuario) return res.status(404).json({ mensaje: 'Usuario no encontrado.' });
-  console.log('usuario', usuario);
-    console.log('usuario', usuario);
-    if (!usuario.codigo_verificacion || !usuario.codigo_expiracion)
+
+    if (!usuario) {
+      return res.status(404).json({ mensaje: 'Usuario no encontrado.' });
+    }
+
+    if (!usuario.codigo_verificacion || !usuario.codigo_expiracion) {
       return res.status(400).json({ mensaje: 'No se ha solicitado recuperación.' });
+    }
 
     const ahora = new Date();
-    if (usuario.codigo_verificacion !== codigo)
+
+    if (String(usuario.codigo_verificacion) !== String(codigo)) {
       return res.status(400).json({ mensaje: 'Código incorrecto.' });
+    }
 
-    if (ahora > new Date(usuario.codigo_expiracion))
+    if (ahora > new Date(usuario.codigo_expiracion)) {
       return res.status(400).json({ mensaje: 'Código expirado.' });
+    }
 
-    // ✅ Crear token JWT
-    const token = jwt.sign({ correo: usuario.correo_usuario }, process.env.JWT_SECRET, { expiresIn: '10m' });
+    const token = jwt.sign({ correo: usuario.correo_usuario }, process.env.JWT_SECRET, {
+      expiresIn: '10m'
+    });
 
-    // ✅ Establecer cookie HTTP-only
     res.cookie('resetToken', token, {
       httpOnly: true,
-      secure: false, // 🔴 IMPORTANTE para desarrollo local (debe ser false si no estás en HTTPS)
+      secure: false,
       sameSite: 'strict',
       maxAge: 10 * 60 * 1000
     });
@@ -115,3 +125,39 @@ console.log('verificarCodigo', correo, codigo);
     res.status(500).json({ mensaje: 'Error al verificar el código.' });
   }
 };
+
+  
+// export const verificarCodigo = async (req, res) => {
+//   const { correo, codigo } = req.body;
+// console.log('verificarCodigo', correo, codigo);
+//   try {
+//     const usuario = await Usuario.findOne({ where: { correo_usuario: correo } });
+//     console.log('usuario', usuario);
+//     if (!usuario) return res.status(404).json({ mensaje: 'Usuario no encontrado.' });
+//     if (!usuario.codigo_verificacion || !usuario.codigo_expiracion)
+//       return res.status(400).json({ mensaje: 'No se ha solicitado recuperación.' });
+
+//     const ahora = new Date();
+//     if (usuario.codigo_verificacion !== codigo)
+//       return res.status(400).json({ mensaje: 'Código incorrecto.' });
+
+//     if (ahora > new Date(usuario.codigo_expiracion))
+//       return res.status(400).json({ mensaje: 'Código expirado.' });
+
+//     // ✅ Crear token JWT
+//     const token = jwt.sign({ correo: usuario.correo_usuario }, process.env.JWT_SECRET, { expiresIn: '10m' });
+
+//     // ✅ Establecer cookie HTTP-only
+//     res.cookie('resetToken', token, {
+//       httpOnly: true,
+//       secure: false, // 🔴 IMPORTANTE para desarrollo local (debe ser false si no estás en HTTPS)
+//       sameSite: 'strict',
+//       maxAge: 10 * 60 * 1000
+//     });
+
+//     res.status(200).json({ mensaje: 'Código verificado correctamente.' });
+//   } catch (error) {
+//     console.error('Error al verificar código:', error);
+//     res.status(500).json({ mensaje: 'Error al verificar el código.' });
+//   }
+// };
