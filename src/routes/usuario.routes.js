@@ -1,7 +1,7 @@
 import express from 'express';
 import { login, logout, register, 
     listarUsers, actualizarUser, eliminarUser,
-    verifyUser } from '../controllers/usuarioController.js';
+    verifyUser, perfilUser } from '../controllers/usuarioController.js';
 import validateSchema from '../middlewares/validatoreSchema.js';
 import { loginSchema, registerSchema, updateSchema, cambiarContrasenaSchema } from '../schema/usuarioSchema.js';
 import { verifyToken } from '../middlewares/verifyToken.js';
@@ -48,5 +48,9 @@ router.post('/cambiar-password',
     validateSchema(cambiarContrasenaSchema),
     cambiarContrasena
 );
+router.get('/perfil',
+    verifyToken,
+    perfilUser
+)
 
 export default router;
