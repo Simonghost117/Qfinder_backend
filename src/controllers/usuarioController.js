@@ -26,6 +26,11 @@ export const register = async (req, res) => {
       return res.status(400).json({ error: 'El correo ya está registrado' });
     }
 
+    const idExiste = await Usuario.findOne({ where: { identificacion_usuario: userData.identificacion_usuario } });
+    if (idExiste) {
+      return res.status(400).json({ error: 'El número de identificación ya está registrado' });
+    }
+
     // if (userData.tipo_usuario === 'Medico') {
     //   const result = medicoSchema.safeParse({
     //     especialidad: userData.especialidad,

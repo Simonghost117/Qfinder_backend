@@ -13,8 +13,8 @@ CREATE TABLE IF NOT EXISTS usuario (
   telefono_usuario VARCHAR(50) NOT NULL,
   correo_usuario VARCHAR(255) NOT NULL UNIQUE,
   contrasena_usuario VARCHAR(255) NOT NULL,
-  tipo_usuario ENUM('Usuario', 'Medico', 'Administrador') DEFAULT 'Usuario' ,
-  estado_usuario ENUM('Activo', 'Inactivo', 'Pendiente') DEFAULT 'Pendiente',
+  tipo_usuario ENUM('usuario', 'medico', 'administrador') DEFAULT 'usuario' ,
+  estado_usuario ENUM('activo', 'inactivo', 'pendiente') DEFAULT 'pendiente',
   codigo_verificacion VARCHAR(4) NULL,
   codigo_expiracion DATETIME NULL,
   verificado TINYINT(1) DEFAULT 0,
@@ -62,7 +62,7 @@ FOREIGN KEY (id_paciente) REFERENCES paciente(id_paciente) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- Tabla de Panel Personalizado (simplificada - eliminados campos relacionados con feedback y gráficos)
--- EN PROCESO
+-- PENDIENTE
 CREATE TABLE IF NOT EXISTS panel_personalizado (
 id_panel INT AUTO_INCREMENT PRIMARY KEY,
 id_usuario INT,
@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS medicamento (
 id_medicamento INT AUTO_INCREMENT PRIMARY KEY,
 nombre VARCHAR(100) NOT NULL,
 descripcion TEXT,
-efectos_secundarios TEXT,
+-- efectos_secundarios TEXT,
 tipo ENUM('psiquiatrico', 'neurologico', 'general', 'otro')
 ) ENGINE=InnoDB;
 
@@ -91,19 +91,19 @@ id_medicamento INT,
 fecha_inicio DATE,
 fecha_fin DATE,
 dosis VARCHAR(100),
-frecuencia VARCHAR(100),
+frecuencia DATE,
 PRIMARY KEY (id_paciente, id_medicamento, fecha_inicio),
 FOREIGN KEY (id_paciente) REFERENCES paciente(id_paciente) ON DELETE CASCADE,
 FOREIGN KEY (id_medicamento) REFERENCES medicamento(id_medicamento) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- Tabla de Actividad de Cuidado (simplificada - eliminada evidencia JSON)
--- EN PROCESO
+-- EN PROCESO (Registro cuidados)
 CREATE TABLE IF NOT EXISTS actividad_cuidado (
 id_actividad INT AUTO_INCREMENT PRIMARY KEY,
 id_paciente INT,
 id_usuario_registra INT,
-tipo_actividad ENUM('higiene', 'vestido', 'ejercicio', 'recreacion', 'medicacion', 'terapia', 'comida', 'otro'),
+tipo_actividad VARCHAR (100),
 descripcion TEXT,
 fecha_hora_inicio DATETIME,
 fecha_hora_fin DATETIME,
@@ -128,13 +128,13 @@ FOREIGN KEY (id_paciente) REFERENCES paciente(id_paciente) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- Tabla de Monitoreo de Síntomas (sin cambios)
--- EN PROCESO
+-- COMPLETO
 CREATE TABLE IF NOT EXISTS monitoreo_sintomas (
 id_registro INT AUTO_INCREMENT PRIMARY KEY,
 id_paciente INT,
 fecha_sintoma DATETIME DEFAULT CURRENT_TIMESTAMP,
 sintoma VARCHAR(100) NOT NULL,
-gravedad INT CHECK (gravedad BETWEEN 1 AND 10),
+gravedad ENUM('baja','media', 'alta'),
 observaciones TEXT,
 FOREIGN KEY (id_paciente) REFERENCES paciente(id_paciente) ON DELETE CASCADE
 ) ENGINE=InnoDB;
@@ -146,8 +146,8 @@ CREATE TABLE actividad_fisica (
   id_paciente INT NOT NULL,
   fecha_actividad DATETIME NOT NULL,
   duracion INT NOT NULL,
-  tipo_actividad ENUM('higiene', 'vestido', 'ejercicio', 'recreacion', 'medicacion', 'terapia', 'comida', 'otro') NOT NULL,
-  intensidad ENUM('leve', 'moderada', 'alta') NOT NULL,
+  tipo_actividad VARCHAR(100),
+  intensidad ENUM('baja', 'media', 'alta') NOT NULL,
   descripcion TEXT NOT NULL,
   estado ENUM('pendiente', 'en_progreso', 'completada', 'cancelada') NOT NULL,
   observaciones TEXT NULL,
@@ -162,10 +162,8 @@ CREATE TABLE IF NOT EXISTS cuidado_personal (
 id_registro INT AUTO_INCREMENT PRIMARY KEY,
 id_paciente INT,
 fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
-tipo_cuidado ENUM('higiene', 'vestido', 'aseo', 'movilidad', 'otro'),
 descripcion_cuidado TEXT,
 nivel_asistencia ENUM('independiente', 'supervisado', 'asistido', 'dependiente'),
-observaciones TEXT,
 FOREIGN KEY (id_paciente) REFERENCES paciente(id_paciente) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
@@ -174,16 +172,17 @@ FOREIGN KEY (id_paciente) REFERENCES paciente(id_paciente) ON DELETE CASCADE
 CREATE TABLE IF NOT EXISTS episodio_salud (
 id_episodio INT AUTO_INCREMENT PRIMARY KEY,
 id_paciente INT,
-tipo ENUM('crisis_psiquiatrica', 'crisis_epileptica', 'recaida', 'hospitalizacion', 'otro'),
+tipo VARCHAR(100),
 fecha_hora_inicio DATETIME,
 fecha_hora_fin DATETIME,
-severidad INT CHECK (severidad BETWEEN 1 AND 10),
+severidad ENUM('baja','media', 'alta'),
 descripcion TEXT,
 intervenciones TEXT,
 registrado_por INT,
 FOREIGN KEY (id_paciente) REFERENCES paciente(id_paciente) ON DELETE CASCADE,
 FOREIGN KEY (registrado_por) REFERENCES usuario(id_usuario) ON DELETE SET NULL
 ) ENGINE=InnoDB;
+
 
 -- Tabla de Alertas de Emergencia (sin cambios)
 -- NO DEFINIDO
@@ -240,12 +239,20 @@ GROUP BY p.id_paciente;
 CREATE TABLE IF NOT EXISTS usuario_red (
   id_relacion INT AUTO_INCREMENT PRIMARY KEY,
   id_usuario INT NOT NULL,
-  estado ENUM('activo', 'inactivo') DEFAULT 'activo',
   fecha_union TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   nombre_red VARCHAR(100) DEFAULT 'Red Global de Apoyo QfindeR',
   descripcion_red VARCHAR(255) DEFAULT 'Comunidad principal para todos los usuarios', -- ✅ Ahora se permite el DEFAULT
   FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE,
   UNIQUE KEY (id_usuario) -- Cada usuario solo puede estar una vez
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS codigoQr (
+id_qr INT AUTO_INCREMENT PRIMARY KEY,
+id_paciente INT,
+codigo VARCHAR(100) NOT NULL,
+FOREIGN KEY (id_paciente) REFERENCES paciente(id_paciente) ON DELETE CASCADE,
+createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
 
@@ -270,3 +277,7 @@ END //
 DELIMITER ;
 select * from usuario;
 USE MidQfinder;
+
+USE midqfinder;
+SELECT * FROM codigo_qr;
+SELECT * FROM monitoreo_sintomas;

@@ -48,11 +48,8 @@ export const updateSchema = z.object({
     telefono_usuario: z.string()
         .min(1, { message: "El teléfono es obligatorio" })
         .max(50, { message: "El teléfono no puede exceder los 50 caracteres" }),
-    correo_usuario: z.string()
-        .email({ message: "El correo electrónico debe tener un formato válido" }),
-    contrasena_usuario: z.string()
-        .min(8, { message: "La contraseña debe tener al menos 8 caracteres" })
-        .max(255, { message: "La contraseña no puede exceder los 255 caracteres" }),
+    // correo_usuario: z.string()
+    //     .email({ message: "El correo electrónico debe tener un formato válido" }),
 });
 export const cambiarContrasenaSchema = z.object({
     nuevaContrasena: z.string()

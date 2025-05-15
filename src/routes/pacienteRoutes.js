@@ -19,8 +19,6 @@ router.get('/listarPacientes/:id_paciente',
      verifyToken, 
      getPacienteById
     );
-//⭕Se puede actualizar la informacion de un paciente
-//Validaciones de quien puede modificar la informacion de un paciente
 router.put('/actualizarPaciente/:id_paciente', 
     verifyToken, 
     checkEpisodioPermissions(['Administrador', 'Usuario']), 

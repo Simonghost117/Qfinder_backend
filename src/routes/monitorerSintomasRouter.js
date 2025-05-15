@@ -9,7 +9,7 @@ const routerSintomas = Router();
 
 //⭕gravedad: alta, media, baja
 //⭕fecha: automatica o manual
-//⭕se puede actualizar o eliminar el registro de sintomas (completar CRUD)
+//⭕se puede actualizar o eliminar el registro de sintomas (completar CRUD)🟢
 
 routerSintomas.post(
   '/crarSintoma/:id_paciente',
@@ -18,7 +18,6 @@ routerSintomas.post(
   validateZodSchema(sintomaSchema),
   MonitoreoSintomasController.registrarSintoma
 );
-
 routerSintomas.get(
   '/sintomas/:id_paciente',
   verifyToken,
@@ -31,5 +30,16 @@ routerSintomas.get(
   checkEpisodioPermissions(['Usuario']),
   MonitoreoSintomasController.obtenerSintomaPorId
 );
+routerSintomas.put('/actSintoma/:id_paciente/:id_registro',
+  verifyToken,
+  checkEpisodioPermissions(['Usuario']),
+  validateZodSchema(sintomaSchema),
+  MonitoreoSintomasController.actualizarSintoma
+);
+routerSintomas.delete('/eliminarSintoma/:id_paciente/:id_registro',
+  verifyToken,
+  checkEpisodioPermissions(['Usuario']),
+  MonitoreoSintomasController.eliminarSintoma
+)
 
 export default routerSintomas;
