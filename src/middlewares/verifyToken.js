@@ -3,7 +3,7 @@ import  Usuario  from '../models/usuario.model.js';
 
 export const verifyToken = async (req, res, next) => {
   try {
-    const token = req.cookies.token;
+    const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
 
     console.log('🔐 Cookie token:', token);
     console.log('📦 Todas las cookies:', req.cookies);
