@@ -80,11 +80,14 @@ export const cambiarContrasena = async (req, res) => {
 export const verificarCodigo = async (req, res) => {
   const { correo, codigo } = req.body;
 console.log('verificarCodigo', correo, codigo);
+console.log('verificarCodigo', correo, codigo);
+console.log('verificarCodigo', correo, codigo);
   try {
     const usuario = await Usuario.findOne({ where: { correo_usuario: correo } });
     console.log('usuario', usuario);
     if (!usuario) return res.status(404).json({ mensaje: 'Usuario no encontrado.' });
-
+  console.log('usuario', usuario);
+    console.log('usuario', usuario);
     if (!usuario.codigo_verificacion || !usuario.codigo_expiracion)
       return res.status(400).json({ mensaje: 'No se ha solicitado recuperación.' });
 
