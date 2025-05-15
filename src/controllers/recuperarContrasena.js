@@ -105,6 +105,8 @@ export const verificarCodigo = async (req, res) => {
       sameSite: 'strict',
       maxAge: 10 * 60 * 1000
     });
+    // Enviar el token en la cabecera Authorization
+      res.setHeader("Authorization", `Bearer ${token}`);
 
     res.status(200).json({ mensaje: 'Código verificado correctamente.' });
   } catch (error) {
