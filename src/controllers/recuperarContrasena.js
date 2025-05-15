@@ -44,7 +44,10 @@ export const recuperarContrasena = async (req, res) => {
 export const cambiarContrasena = async (req, res) => {
   const { nuevaContrasena } = req.body;
   // const token = req.cookies.resetToken;
-const token = req.cookies.resetToken || req.headers['x-reset-token'];
+const token = req.cookies.resetToken || 
+              req.headers['authorization']?.replace('Bearer ', '') || 
+              req.headers['x-reset-token'];
+
 
   try {
     if (!token) {
