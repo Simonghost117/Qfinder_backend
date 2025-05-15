@@ -119,6 +119,9 @@ export const verifyUser = async (req, res) => {
       secure: true,
       sameSite: "none",
     });
+    // Enviar el token en la cabecera Authorization
+      res.setHeader("Authorization", `Bearer ${token}`);
+
     
     res.status(201).json({
       message: 'Registro completado exitosamente',
@@ -169,6 +172,8 @@ export const login = async (req, res) => {
           secure: true,
           sameSite: "none",
         });
+        // Enviar el token en la cabecera Authorization
+        res.setHeader("Authorization", `Bearer ${token}`);
         
         res.json({ 
           id: usuario.id_usuario,
