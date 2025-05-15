@@ -285,3 +285,29 @@ export const eliminarUser = async (req, res) => {
         res.status(500).json({ message: 'Error al eliminar el usuario', error });
     }
 };
+
+export const perfilUser = async (req, res) => {
+  try {
+    const { id_usuario } = req.user;
+    console.log("Contenido de req.usuario:", req.usuario);
+
+    const usuario = await Usuario.findByPk(id_usuario);
+    if (!usuario) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
+
+    res.status(200).json({
+      id_usuario: usuario.id_usuario,
+      nombre_usuario: usuario.nombre_usuario,
+      apellido_usuario: usuario.apellido_usuario,
+      identificacion_usuario: usuario.identificacion_usuario,
+      direccion_usuario: usuario.direccion_usuario,
+      telefono_usuario: usuario.telefono_usuario,
+      correo_usuario: usuario.correo_usuario,
+   
+    });
+  } catch (error) {
+    console.error('Error al obtener el perfil del usuario:', error);
+    res.status(500).json({ message: 'Error al obtener el perfil del usuario', error });
+  }
+}
