@@ -1,7 +1,7 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../config/db.js";
 
-export const ActividadCuidado = sequelize.define("actividad_cuidado", {
+export const ActividadCuidado = sequelize.define("actividad_fisica", {
   id_actividad: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -43,7 +43,12 @@ export const ActividadCuidado = sequelize.define("actividad_cuidado", {
     type: DataTypes.ENUM('pendiente', 'en_progreso', 'completada', 'cancelada'),
     allowNull: false,
     field: "estado",
-  }
+  },
+  observaciones: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: "observaciones",
+  },
 }, 
 {
   tableName: "actividad_fisica",

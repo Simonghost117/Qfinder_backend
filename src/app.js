@@ -82,21 +82,21 @@ app.get('/test', (req, res) => {
 });
 
 // // Configuración de rutas API
-app.use('/api/auth', usuarioRoutes); //Completa🟢 usuario
-app.use('/api/medicos', medicoRoutes); // Validaciones - CRUD (YA NO SE NECESITA pero conservado)
-app.use('/api/episodios', routerEpisodioSalud); //Completo🟢
-// app.use('/api/reportes', routerReport); // No se va a usar (comentado pero conservado)
-app.use('/api/redes', redesRoutes); //Establecer multiples redes
-app.use('/api/paciente', pacienteRoutes); //Completo🟢 paciente
-app.use('/api/familiar', familiarRoutes); //+-Completo familiar
-app.use('/api/panel', panelRoutes);
-app.use('/api/cuidadoPersonal', cuidadoPersonalRoutes);//+-Completo
-app.use('/api/actividades', actividadRouter); //Completo🟢 actividad fisica
-app.use('/api/regSintomas', RegSintomas); //+-Completo monitoreo sintomas
-app.use('/api/citaMedica', CitaMedica);//Completo🟢 cita medica
-app.use('/api/codigoQr', codigoQr)//+-Completo
+app.use('/api/auth', usuarioRoutes); //🟢 usuario
+app.use('/api/episodios', routerEpisodioSalud); //🟢 episodio salud
+app.use('/api/redes', redesRoutes); //🔴 Redes
+app.use('/api/paciente', pacienteRoutes); //🟢 paciente
+app.use('/api/familiar', familiarRoutes); //🟢 familiar
+app.use('/api/cuidadoPersonal', cuidadoPersonalRoutes);// 🟢 Cuidado personal
+app.use('/api/actividades', actividadRouter); //🟢 actividad fisica
+app.use('/api/regSintomas', RegSintomas); //🟢 monitoreo sintomas
+app.use('/api/citaMedica', CitaMedica);//🟢 cita medica
+app.use('/api/codigoQr', codigoQr)//🟢 codigo qr
+app.use('/api/medicamentos', medicamentoRoutes);//🟢 medicamento
 
-app.use('/api/medicamentos', medicamentoRoutes);//+-Completo medicamento
+// app.use('/api/medicos', medicoRoutes); // Validaciones - CRUD (YA NO SE NECESITA pero conservado)
+// app.use('/api/reportes', routerReport); // No se va a usar (comentado pero conservado)
+// app.use('/api/panel', panelRoutes);
 
 // Exportación de la app
 export default app;
