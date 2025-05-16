@@ -21,11 +21,19 @@ export const verifyToken = async (req, res, next) => {
     req.usuario = decoded;
 
     // Buscar usuario por ID
-    const usuario = await Usuario.findByPk(decoded.id, {
-      attributes: ['id_usuario', 
-        'tipo_usuario', 
-        'estado_usuario']
-    });
+let usuario;
+
+if (decoded.id) {
+  usuario = await Usuario.findByPk(decoded.id, {
+    attributes: ['id_usuario', 'tipo_usuario', 'estado_usuario']
+  });
+} else if (decoded.correo) {
+  usuario = await Usuario.findOne({
+    where: { correo_usuario: decoded.correo },
+    attributes: ['id_usuario', 'tipo_usuario', 'estado_usuario']
+  });
+}
+
     console.log('👤 Usuario encontrado:', usuario?.dataValues || null);
 
     if (!usuario || usuario.estado_usuario !== 'Activo') {
