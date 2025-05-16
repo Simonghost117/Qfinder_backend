@@ -43,13 +43,25 @@ export const recuperarContrasena = async (req, res) => {
 
 export const cambiarContrasena = async (req, res) => {
   const { nuevaContrasena } = req.body;
-  const token = req.cookies.resetToken;
+
+  // 🔍 Leer token desde la cabecera o cookies
+  let token = null;
+
+  // 1. Verificar si viene en cabecera Authorization: Bearer ...
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+    token = req.headers.authorization.split(' ')[1];
+  }
+
+  // 2. Si no hay header, buscar en cookies
+  if (!token && req.cookies && req.cookies.resetToken) {
+    token = req.cookies.resetToken;
+  }
+
+  if (!token) {
+    return res.status(401).json({ mensaje: 'Token no proporcionado.' });
+  }
 
   try {
-    if (!token) {
-      return res.status(401).json({ mensaje: 'Token no encontrado en cookies.' });
-    }
-
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const correo = decoded.correo;
 
@@ -66,7 +78,7 @@ export const cambiarContrasena = async (req, res) => {
 
     await usuario.save();
 
-    // ✅ Eliminar cookie después de uso
+    // ✅ Borrar cookie si existía
     res.clearCookie('resetToken');
 
     res.status(200).json({ mensaje: 'Contraseña actualizada correctamente.' });
@@ -75,6 +87,41 @@ export const cambiarContrasena = async (req, res) => {
     return res.status(401).json({ mensaje: 'Token inválido o expirado.' });
   }
 };
+
+// export const cambiarContrasena = async (req, res) => {
+//   const { nuevaContrasena } = req.body;
+//   const token = req.cookies.resetToken;
+
+//   try {
+//     if (!token) {
+//       return res.status(401).json({ mensaje: 'Token no encontrado en cookies.' });
+//     }
+
+//     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+//     const correo = decoded.correo;
+
+//     const usuario = await Usuario.findOne({ where: { correo_usuario: correo } });
+
+//     if (!usuario) {
+//       return res.status(404).json({ mensaje: 'Usuario no encontrado.' });
+//     }
+
+//     const hash = await bcrypt.hash(nuevaContrasena, 10);
+//     usuario.contrasena_usuario = hash;
+//     usuario.codigo_verificacion = null;
+//     usuario.codigo_expiracion = null;
+
+//     await usuario.save();
+
+//     // ✅ Eliminar cookie después de uso
+//     res.clearCookie('resetToken');
+
+//     res.status(200).json({ mensaje: 'Contraseña actualizada correctamente.' });
+//   } catch (error) {
+//     console.error('Error al cambiar contraseña:', error);
+//     return res.status(401).json({ mensaje: 'Token inválido o expirado.' });
+//   }
+// };
 
   
 export const verificarCodigo = async (req, res) => {
