@@ -111,11 +111,11 @@ export const cambiarContrasena = async (req, res) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const correo = decoded.correo;
+const correo = decoded.correo.trim().toLowerCase();
+const usuario = await Usuario.findOne({
+  where: { correo_usuario: correo }
+});
 
-    const usuario = await Usuario.findOne({
-      where: { correo_usuario: correo }
-    });
 
     if (!usuario) {
       return res.status(404).json({ mensaje: 'Usuario no encontrado.' });
