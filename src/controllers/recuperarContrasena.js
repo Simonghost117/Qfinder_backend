@@ -19,6 +19,7 @@ export const recuperarContrasena = async (req, res) => {
     });
 
     if (!usuario) {
+            console.warn('⚠️ Usuario no encontrado con el correo:', correo_usuario);
       return res.status(404).json({ mensaje: 'Usuario no encontrado con ese correo.' });
     }
 
@@ -30,7 +31,7 @@ export const recuperarContrasena = async (req, res) => {
     usuario.codigo_verificacion = codigo;
     usuario.codigo_expiracion = expiracion;
     await usuario.save();
-
+    console.log('✅ Código generado y guardado:', codigo, 'Expira en:', expiracion);
     // Enviar correo
     await sendRecoveryEmail(correo_usuario, codigo);
 
@@ -47,10 +48,11 @@ export const cambiarContrasena = async (req, res) => {
 const token = req.cookies.resetToken || 
               req.headers['authorization']?.replace('Bearer ', '') || 
               req.headers['x-reset-token'];
-
+  console.log('🔒 Token recibido en cambiarContrasena:', token);
 
   try {
     if (!token) {
+      console.warn('⚠️ Token no encontrado en cookies o headers');
       return res.status(401).json({ mensaje: 'Token no encontrado en cookies.' });
     }
 
@@ -91,8 +93,7 @@ export const verificarCodigo = async (req, res) => {
         }
       }
     });
-
-    console.log('usuario', usuario);
+    console.log('👤 Usuario encontrado:', usuario?.correo_usuario);
 
     if (!usuario) {
       return res.status(404).json({ mensaje: 'Usuario no encontrado.' });
@@ -103,19 +104,20 @@ export const verificarCodigo = async (req, res) => {
     }
 
     const ahora = new Date();
-
+  
     if (String(usuario.codigo_verificacion) !== String(codigo)) {
       return res.status(400).json({ mensaje: 'Código incorrecto.' });
     }
 
     if (ahora > new Date(usuario.codigo_expiracion)) {
+      console.warn('⏰ Código expirado:', usuario.codigo_expiracion);
       return res.status(400).json({ mensaje: 'Código expirado.' });
     }
 
     const token = jwt.sign({ correo: usuario.correo_usuario }, process.env.JWT_SECRET, {
       expiresIn: '10m'
     });
-
+    console.log('🔐 Token generado:', token);
     res.cookie('resetToken', token, {
       httpOnly: true,
       secure: false,
