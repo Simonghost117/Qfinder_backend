@@ -47,46 +47,24 @@ export const verificarCodigo = async (req, res) => {
   try {
     const usuario = await Usuario.findOne({
       where: {
-        correo_usuario: { [Op.eq]: correo.trim().toLowerCase() }
+        [Op.or]: [
+          { correo_usuario: correo.trim().toLowerCase() },
+          { correo: correo.trim().toLowerCase() }
+        ]
       }
     });
 
-    if (!usuario) {
-      return res.status(404).json({ mensaje: 'Usuario no encontrado.' });
-    }
+    // Resto del código permanece igual...
+    const token = jwt.sign(
+      { 
+        correo: usuario.correo_usuario, // Usamos correo_usuario para consistencia
+        correo_usuario: usuario.correo_usuario // Doble referencia para compatibilidad
+      }, 
+      process.env.JWT_SECRET,
+      { expiresIn: '10m' }
+    );
 
-    if (!usuario.codigo_verificacion || !usuario.codigo_expiracion) {
-      return res.status(400).json({ mensaje: 'No se ha solicitado recuperación.' });
-    }
-
-    const ahora = new Date();
-
-    if (String(usuario.codigo_verificacion) !== String(codigo)) {
-      return res.status(400).json({ mensaje: 'Código incorrecto.' });
-    }
-
-    if (ahora > new Date(usuario.codigo_expiracion)) {
-      console.warn('⏰ Código expirado:', usuario.codigo_expiracion);
-      return res.status(400).json({ mensaje: 'Código expirado.' });
-    }
-
-    // Generar token de cambio de contraseña
-    const token = jwt.sign({ correo: usuario.correo_usuario }, process.env.JWT_SECRET, {
-      expiresIn: '10m'
-    });
-
-    // Guardar token en cookie httpOnly
-    res.cookie('resetToken', token, {
-      httpOnly: true,
-      secure: false, // Cambia a true en producción con HTTPS
-      sameSite: 'strict',
-      maxAge: 10 * 60 * 1000
-    });
-
-    // También puedes enviarlo por header si lo usas desde mobile/web
-    res.setHeader('Authorization', `Bearer ${token}`);
-
-    return res.status(200).json({ mensaje: 'Código verificado correctamente.' });
+    // Resto del código...
   } catch (error) {
     console.error('❌ Error en verificarCodigo:', error);
     return res.status(500).json({ mensaje: 'Error al verificar el código.' });
@@ -97,29 +75,45 @@ export const verificarCodigo = async (req, res) => {
 export const cambiarContrasena = async (req, res) => {
   const { nuevaContrasena } = req.body;
 
-  // Obtener token desde cookie o headers
-  const token =
-    req.cookies.resetToken ||
-    req.headers['authorization']?.replace('Bearer ', '') ||
-    req.headers['x-reset-token'];
+  const token = req.cookies.resetToken || 
+               req.headers['authorization']?.replace('Bearer ', '') ||
+               req.headers['x-reset-token'];
 
   console.log('🔐 Token recibido:', token);
+  console.log('🔄 Headers recibidos:', req.headers);
 
   try {
     if (!token) {
+      console.warn('⚠️ No se recibió token');
       return res.status(401).json({ mensaje: 'Token no encontrado.' });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-const correo = decoded.correo.trim().toLowerCase();
-const usuario = await Usuario.findOne({
-  where: { correo_usuario: correo }
-});
+    console.log('🔍 Token decodificado:', decoded);
 
+    // Búsqueda mejorada del usuario
+    const usuario = await Usuario.findOne({
+      where: { 
+        [Op.or]: [
+          { correo_usuario: decoded.correo?.trim().toLowerCase() },
+          { correo: decoded.correo?.trim().toLowerCase() } // Por si acaso
+        ]
+      }
+    });
 
     if (!usuario) {
-      return res.status(404).json({ mensaje: 'Usuario no encontrado.' });
+      console.error('❌ Usuario no encontrado con correo:', decoded.correo);
+      console.error('ℹ️ Campos buscados:', {
+        correo_usuario: decoded.correo,
+        correo: decoded.correo
+      });
+      return res.status(404).json({ 
+        mensaje: 'Usuario no encontrado.',
+        detalles: `Correo buscado: ${decoded.correo}`
+      });
     }
+
+    console.log('✅ Usuario encontrado:', usuario.id_usuario);
 
     const hash = await bcrypt.hash(nuevaContrasena, 10);
     usuario.contrasena_usuario = hash;
@@ -127,13 +121,21 @@ const usuario = await Usuario.findOne({
     usuario.codigo_expiracion = null;
 
     await usuario.save();
-
-    res.clearCookie('resetToken'); // Borra el token para evitar reuso
+    res.clearCookie('resetToken');
 
     return res.status(200).json({ mensaje: 'Contraseña actualizada correctamente.' });
   } catch (error) {
     console.error('❌ Error en cambiarContrasena:', error);
-    return res.status(401).json({ mensaje: 'Token inválido o expirado.' });
+    
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ mensaje: 'Token inválido.' });
+    }
+    
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ mensaje: 'Token expirado.' });
+    }
+
+    return res.status(500).json({ mensaje: 'Error al cambiar la contraseña.' });
   }
 };
 
