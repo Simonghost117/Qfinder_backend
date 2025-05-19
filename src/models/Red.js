@@ -1,58 +1,39 @@
-// models/UsuarioRed.js
+// models/Red.js
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
 
-const UsuarioRed = sequelize.define('UsuarioRed', {
-  id_relacion: {
+const Red = sequelize.define('red', {
+  id_red: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true,
-    field: 'id_relacion'
+    field: 'id_red'
   },
   id_usuario: {
     type: DataTypes.INTEGER,
     allowNull: false,
     field: 'id_usuario'
   },
-  estado: {
-    type: DataTypes.ENUM('activo', 'inactivo'),
-    defaultValue: 'activo',
-    field: 'estado'
-  },
-  fecha_union: {
-    type: DataTypes.DATE,
-    defaultValue: DataTypes.NOW,
-    field: 'fecha_union'
-  },
   nombre_red: {
     type: DataTypes.STRING(100),
-    defaultValue: 'Red Global de Apoyo QfindeR',
+    allowNull: false,
     field: 'nombre_red'
   },
   descripcion_red: {
-    type: DataTypes.TEXT,
-    defaultValue: 'Comunidad principal para todos los usuarios registrados',
+    type: DataTypes.STRING(255),
+    allowNull: true,
     field: 'descripcion_red'
+  },
+  fecha_creacion: {
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW,
+    allowNull: true,
+    field: 'fecha_creacion'
   }
 }, {
-  tableName: 'usuario_red',
-  timestamps: false, // Desactivamos timestamps automáticos ya que usamos fecha_union
-  freezeTableName: true,
-  indexes: [
-    // {
-    //   unique: true,
-    //   fields: ['id_usuario'] // Garantiza un único registro por usuario
-    // }
-  ]
+  tableName: 'red',
+  timestamps: false,
+  freezeTableName: true
 });
 
-// Relación con el modelo Usuario (asumiendo que existe)
-UsuarioRed.associate = function(models) {
-  UsuarioRed.belongsTo(models.Usuario, {
-    foreignKey: 'id_usuario',
-    targetKey: 'id_usuario',
-    as: 'usuario'
-  });
-};
-
-export default UsuarioRed;
+export default Red;
