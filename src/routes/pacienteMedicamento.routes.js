@@ -16,7 +16,7 @@ const router = Router();
 
 // 👉 Asignar un medicamento a un paciente
 router.post(
-  '/',
+  '/crear',
   verifyToken,
   validateSchema(asignarMedicamentoSchema),
   asignarMedicamento
