@@ -54,6 +54,7 @@ import medicoRoutes from './routes/medico.routes.js';
 import CitaMedica from './routes/citaMedica.routes.js';
 import codigoQr from './routes/codigoQr.routes.js';
 import medicamentoRoutes from './routes/medicamento.routes.js';
+import membresiaRoutes from './routes/membresiaRed.routes.js'
 
 // Endpoint raíz informativo
 app.get('/', (req, res) => {
@@ -85,6 +86,7 @@ app.get('/test', (req, res) => {
 app.use('/api/auth', usuarioRoutes); //🟢 usuario
 app.use('/api/episodios', routerEpisodioSalud); //🟢 episodio salud
 app.use('/api/redes', redesRoutes); //🔴 Redes
+app.use('/api/membresiaRed', membresiaRoutes); // 🟢 usuario_red
 app.use('/api/paciente', pacienteRoutes); //🟢 paciente
 app.use('/api/familiar', familiarRoutes); //🟢 familiar
 app.use('/api/cuidadoPersonal', cuidadoPersonalRoutes);// 🟢 Cuidado personal

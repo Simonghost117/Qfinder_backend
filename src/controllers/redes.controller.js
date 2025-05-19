@@ -1,148 +1,113 @@
-import UsuarioRed from '../models/Red.js';
-import Usuario from '../models/usuario.model.js';
+import { creacionRed, actualiza, buscarRedPorNombre } from '../services/redes.service.js';
+import  Red  from '../models/Red.js';
 
-export const unirRedGlobal = async (req, res) => {
+
+export const crearRed = async (req, res) => {
   try {
-    // El ID viene del middleware de autenticación
-    const userId = req.userId; 
+    const { id_usuario } = req.user;
 
-    const [relacion, created] = await UsuarioRed.findOrCreate({
-      where: { id_usuario: userId },
-      defaults: {
-        estado: 'activa'
-      }
-    });
+    const { nombre_red, descripcion_red } = req.body;
 
-    if (!created) {
-      await relacion.update({ estado: 'activa' });
+    const nuevaRed = await creacionRed(id_usuario, nombre_red, descripcion_red);
+
+    if (!nuevaRed || nuevaRed.length === 0) {
+      return res.status(400).json({ message: 'No se pudo crear la red' });
+    }
+    res.status(201).json({ message: 'Red creada exitosamente', data: nuevaRed });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al crear red', error: error.message });
+  }
+};
+
+export const listarRedes = async (req, res) => {
+  try {
+    const redes = await Red.findAll();
+
+    if (!redes || redes.length === 0) {
+      return res.status(404).json({ message: 'No se encontraron redes' });
+    }
+
+    res.status(200).json({ message: 'Redes encontradas', data: redes });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al listar redes', error: error.message });
+  }
+}
+
+export const listarRedId = async (req, res) => {
+  try {
+    const { id_red } = req.params;
+
+    const red = await Red.findOne({ where: { id_red } });
+
+    if (!red) {
+      return res.status(404).json({ message: 'Red no encontrada' });
+    }
+
+    res.status(200).json({ message: 'Red encontrada', data: red });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al listar red', error: error.message });
+  }
+}
+
+export const actualizarRed = async (req, res) => {
+  try {
+    const { id_red } = req.params;
+    const { nombre_red, descripcion_red } = req.body;
+
+    const redActualizada = await actualiza(id_red, nombre_red, descripcion_red);
+
+    if (!redActualizada) {
+      return res.status(400).json({ message: 'No se pudo actualizar la red' });
+    }
+
+    const datosActualizados = await Red.findOne({ where: { id_red } });
+
+    if (!datosActualizados) {
+      return res.status(404).json({ message: 'Red no encontrada' });
     }
 
     res.status(200).json({ 
-      message: 'Unido a la red global exitosamente',
-      data: relacion
-    });
+      success: true,
+      message: 'Red actualizada exitosamente', 
+      data: {
+        nombre_red: datosActualizados.nombre_red,
+        descripcion_red: datosActualizados.descripcion_red,
+      }
+     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
+    res.status(500).json({ message: 'Error al actualizar red', error: error.message });
+  } 
+}
 
-export const verificarMembresia = async (req, res) => {
+export const eliminarRed = async (req, res) => {
   try {
-    const { id } = req.usuario; // ID del usuario autenticado
-    const membresia = await UsuarioRed.findOne({
-      where: { id_usuario: id }
-    });
+    const { id_red } = req.params;
 
-    res.json({ 
-      esMiembro: !!membresia,
-      estado: membresia?.estado || 'no_registrado'
-    });
+    const redEliminada = await Red.destroy({ where: { id_red } });
+
+    if (!redEliminada) {
+      return res.status(404).json({ message: 'Red no encontrada' });
+    }
+
+    res.status(200).json({ message: 'Red eliminada exitosamente' });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: 'Error al eliminar red', error: error.message });
   }
 };
 
-
-export const listarMiembrosRed = async (req, res) => {
+export const redNombre = async (req, res) => {
   try {
-    const miembros = await UsuarioRed.findAll({
-      where: { 
-        nombre_red: 'Red Global de Apoyo QfindeR',
-        estado: 'activo'
-      },
-      include: [{
-        model: Usuario,
-        as: 'usuario',
-        required: true,
-        attributes: ['id_usuario', 'nombre_usuario', 'correo_usuario'],
-        where: { estado_usuario: 'Activo' }
-      }],
-      attributes: ['id_relacion', 'estado', 'fecha_union'],
-      order: [['fecha_union', 'DESC']]
-    });
-    console.log('Miembros de la red:', miembros);
+    // const { nombre_red } = req.params;
+    const { nombre_red} = req.body;
 
-    const resultado = miembros.map(miembro => ({
-      id_relacion: miembro.id_relacion,
-      id_usuario: miembro.usuario.id_usuario,
-      nombre: miembro.usuario.nombre_usuario,
-      correo: miembro.usuario.correo_usuario,
-      estado_membresia: miembro.estado,
-      fecha_union: miembro.fecha_union
-    }));
+    const red = await buscarRedPorNombre(nombre_red);
 
-    res.json({
-      total_miembros: resultado.length,
-      miembros: resultado
-    });
+    if (!red) {
+      return res.status(404).json({ message: "Red no encontrada" });
+    }
 
+    res.status(200).json({ message: "Red encontrada", data: red });
   } catch (error) {
-    console.error('Error al listar miembros:', error);
-    res.status(500).json({ 
-      error: 'Error al obtener miembros de la red',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    res.status(500).json({ message: "Error al listar red", error: error.message });
   }
 };
-
-// // src/controllers/redes.controller.js
-// import  Red  from '../models/Red.js';
-// import  UsuarioRed  from '../models/UsuarioRed.js';//No se necesita.
-
-// export const listarPorEnfermedad = async (req, res) => {
-//   const { enfermedad } = req.query;
-
-//   try {
-//     const redes = await Red.findAll({
-//       attributes: ['nombre', 'descripcion', 'enfermedad'],
-//       where: { enfermedad },
-//     });
-
-//     res.json(redes);
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({
-//       mensaje: "Error al obtener redes",
-//       error,
-//     });}
-//   }
-// //       where: enfermedad ? { enfermedad } : {},
-// //     });
-// //     res.status(200).json(redes);
-// //   } catch (error) {
-// //     res.status(500).json({ mensaje: 'Error al obtener redes', error });
-// //   }
-// // };
-
-// export const unirseARed = async (req, res) => {
-//   const redId = req.params.id;
-//   const userId = 1; // Simula el mismo usuario con ID 1
-//   // const userId = req.user.id;
-
-//   try {
-//     const existe = await UsuarioRed.findOne({ where: { usuarioId: userId, redId } });
-//     if (existe) return res.status(400).json({ mensaje: 'Ya eres miembro de esta red' });
-
-//     await UsuarioRed.create({ usuarioId: userId, redId });
-//     res.status(201).json({ mensaje: 'Te uniste a la red con éxito' });
-//   } catch (error) {
-//     res.status(500).json({ mensaje: 'Error al unirse a la red', error });
-//   }
-// };
-
-// export const salirDeRed = async (req, res) => {
-//   const redId = req.params.id;
-//   const userId = 1; // Simula un usuario con ID 1
-//   // const userId = req.user.id;
-
-//   try {
-//     const relacion = await UsuarioRed.findOne({ where: { usuarioId: userId, redId } });
-//     if (!relacion) return res.status(404).json({ mensaje: 'No estás unido a esta red' });
-
-//     await relacion.destroy();
-//     res.json({ mensaje: 'Saliste de la red con éxito' });
-//   } catch (error) {
-//     res.status(500).json({ mensaje: 'Error al salir de la red', error });
-//   }
-// };
-
