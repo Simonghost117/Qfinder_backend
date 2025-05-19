@@ -8,7 +8,7 @@ export const crearMedicamento = async (req, res) => {
     const { nombre, descripcion, tipo } = req.body;
 
     const nuevo = await Medicamento.create({
-      // id_usuario,
+      id_usuario,
       nombre,
       descripcion,
       tipo
