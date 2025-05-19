@@ -39,10 +39,10 @@ const UsuarioRed = sequelize.define('UsuarioRed', {
   timestamps: false, // Desactivamos timestamps automáticos ya que usamos fecha_union
   freezeTableName: true,
   indexes: [
-    {
-      unique: true,
-      fields: ['id_usuario'] // Garantiza un único registro por usuario
-    }
+    // {
+    //   unique: true,
+    //   fields: ['id_usuario'] // Garantiza un único registro por usuario
+    // }
   ]
 });
 

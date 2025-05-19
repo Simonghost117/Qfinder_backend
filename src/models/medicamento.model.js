@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js'; 
+import Usuario from './usuario.model.js';
 
 const Medicamento = sequelize.define('Medicamento', {
   id_medicamento: {
@@ -7,14 +8,14 @@ const Medicamento = sequelize.define('Medicamento', {
     primaryKey: true,
     autoIncrement: true
   },
-  // id_usuario: {
-  //   type: DataTypes.INTEGER,
-  //   allowNull: false,
-  //   references: {
-  //     model: 'usuario',
-  //     key: 'id_usuario'
-  //   }
-  // },
+  id_usuario: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: Usuario,
+      key: 'id_usuario'
+    }
+  },
   nombre: {
     type: DataTypes.STRING(100),
     allowNull: false

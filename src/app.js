@@ -54,6 +54,7 @@ import medicoRoutes from './routes/medico.routes.js';
 import CitaMedica from './routes/citaMedica.routes.js';
 import codigoQr from './routes/codigoQr.routes.js';
 import medicamentoRoutes from './routes/medicamento.routes.js';
+import pacienteMedicamentoRoutes from './routes/pacienteMedicamento.routes.js';
 
 // Endpoint raíz informativo
 app.get('/', (req, res) => {
@@ -93,6 +94,7 @@ app.use('/api/regSintomas', RegSintomas); //🟢 monitoreo sintomas
 app.use('/api/citaMedica', CitaMedica);//🟢 cita medica
 app.use('/api/codigoQr', codigoQr)//🟢 codigo qr
 app.use('/api/medicamentos', medicamentoRoutes);//🟢 medicamento
+app.use('/api/paciente-medicamento', pacienteMedicamentoRoutes);
 
 // app.use('/api/medicos', medicoRoutes); // Validaciones - CRUD (YA NO SE NECESITA pero conservado)
 // app.use('/api/reportes', routerReport); // No se va a usar (comentado pero conservado)

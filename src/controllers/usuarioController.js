@@ -187,7 +187,7 @@ export const login = async (req, res) => {
 
         res.cookie("token", token, {
           httpOnly: process.env.NODE_ENV !== "development",
-          secure: true,
+          secure: false,
           sameSite: "none",
         });
         // Enviar el token en la cabecera Authorization
