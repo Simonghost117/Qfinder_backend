@@ -1,4 +1,3 @@
-import jwt from 'jsonwebtoken';
 import { createUser } from '../services/usuario.service.js';
 import { Usuario } from '../models/index.js';
 
