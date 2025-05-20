@@ -3,14 +3,15 @@ import CitaMedica from '../models/cita_medica.js';
 export const crearCitaMedica = async (req, res) => {
     try {
         const { id_paciente } = req.params; 
-        const { fecha_cita, motivo_cita, resultado_consulta, estado_cita } = req.body;
+        const { fecha_cita, titulo, estado_cita,descripcion, fecha_recordatorio } = req.body;
     
         const nuevaCita = await CitaMedica.create({
         id_paciente,
         fecha_cita,
-        motivo_cita,
-        resultado_consulta,
-        estado_cita
+        titulo,
+        estado_cita,
+        descripcion,
+        fecha_recordatorio
         });
     
         res.status(201).json(nuevaCita);
@@ -58,10 +59,10 @@ export const crearCitaMedica = async (req, res) => {
     export const actualizarCitaMedica = async (req, res) => {  
         try {
             const { id_paciente, id_cita } = req.params; 
-            const { fecha_cita, motivo_cita, resultado_consulta, estado_cita } = req.body;
+            const { fecha_cita, titulo, estado_cita, descripcion } = req.body;
     
             const [actualizada] = await CitaMedica.update(
-                { fecha_cita, motivo_cita, resultado_consulta, estado_cita },
+                { fecha_cita, titulo, estado_cita, descripcion },
                 { where: { id_paciente, id_cita } }
             );
     
