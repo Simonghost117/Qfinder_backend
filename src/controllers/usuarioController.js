@@ -70,6 +70,7 @@ export const register = async (req, res) => {
     });
     
   } catch (error) {
+    console.error("Errrrrrrorrrrrrrrrrrrrr:::::  ", error)
     res.status(500).json({ 
       error: 'Error en registro', 
       details: error.message 
