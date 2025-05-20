@@ -205,3 +205,45 @@ export const asignarAdmin = async (req, res) => {
         });
     }
 };
+
+export const eliminarMiembro = async (req, res) => {
+    try {
+         const { id_red, id_miembro } = req.params;
+         if(!id_red || ! id_miembro) {
+            return res.status(400).json({ error: "Datos requeridos"})
+         }
+         const red = await buscarRed(id_red);
+         if(!red) {
+            return res.status(404).json({ error: "Red no encontrada"})
+         }
+         const miembro = await UsuarioRed.findOne({
+            where: {
+                id_usuario: id_miembro,
+                id_red: id_red
+            }
+         })
+         if(!miembro) {
+            return res.status(404).json({ error: "El usuario no es miembro de sta red"})
+         }
+            await UsuarioRed.destroy({
+                where: {
+                    id_usuario: id_miembro,
+                    id_red: id_red
+                }
+            })
+        return res.status(200).json({
+            success: true,
+            message: "Miembro eliminado de la red"
+        })
+
+    } catch (error) {
+        console.error('Error interno al eliminar miembro', error);
+        return res.status(500).json({
+            error: "Error interno al eliinar miembro"
+        })
+    }
+   
+
+
+
+}

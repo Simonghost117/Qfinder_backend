@@ -57,3 +57,14 @@ export const deleteActivity = async (id_paciente, id_actividad) => {
     id_paciente: id_paciente, 
     id_actividad: id_actividad } });
 };
+
+export const todasActividades = async (id_usuario) => {
+  try { 
+    return await ActividadCuidado.findAll({
+      where: { id_usuario },
+
+    })
+  } catch (error) {
+    throw error;
+  }
+}

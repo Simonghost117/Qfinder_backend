@@ -5,7 +5,8 @@ import {
     redesPertenecientes,
     unirseRed,
     abandonarRed,
-    asignarAdmin
+    asignarAdmin, 
+    eliminarMiembro
  } from '../controllers/usuarioRedControllers.js';
 import { esAdministradorRed } from '../middlewares/validacionesRed.js';
 
@@ -34,6 +35,11 @@ router.put('/administradoresRed/:id_red/:id_miembro',
     verifyToken,
     esAdministradorRed,
     asignarAdmin
+)
+router.delete('/eliminarMiembro/:id_red/:id_miembro',
+    verifyToken,
+    esAdministradorRed,
+    eliminarMiembro
 )
 
 export default router;
