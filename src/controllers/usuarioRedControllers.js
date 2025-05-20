@@ -1,5 +1,13 @@
-import { buscarRed, unirmeRed, listarRedesPorUsuario } from "../services/usuarioRedService.js";
+import { 
+    buscarRed, 
+    unirmeRed, 
+    listarRedesPorUsuario, 
+    listarMembresia 
+} from "../services/usuarioRedService.js";
 import UsuarioRed from "../models/UsuarioRed.js";
+import { where } from "sequelize";
+import Usuario from "../models/usuario.model.js";
+
 
 export const unirseRed = async (req, res) => {
     try {
@@ -44,7 +52,7 @@ export const unirseRed = async (req, res) => {
     }
 };
 
-export const listarMembresiaRed = async (req, res) => {
+export const redesPertenecientes = async (req, res) => {
     try {
         const { id_usuario } = req.user;
         if (!id_usuario) {
@@ -63,3 +71,179 @@ export const listarMembresiaRed = async (req, res) => {
         return res.status(500).json({ msg: "Error interno al listar redes" });
     }
 };
+
+export const listarMembresiaRed = async (req, res) => {
+    try {
+        const { id_red } = req.params;
+        if (!id_red) {
+            return res.status(400).json({ error: "Id_red requerida"})
+        }
+        const red = await buscarRed(id_red);
+        if(!red) {
+            return res.status(404).json({ error: "Red no encontrada"})
+        }
+        const membresia = await listarMembresia(id_red);
+        if(!membresia || membresia.length === 0){
+            return res.status(404).json({ error: "Esta red no tiene usuarios"})
+        }
+        return res.status(200).json({ 
+            success: true,
+            message: "Lista de usuarios",
+            data: membresia
+        })
+
+    } catch (error){
+        console.error("Error al listar la membresia", error)
+        return res.status(500).json({ error: "Error interno al listar la membresia", error: error.message })
+    }
+}
+
+export const abandonarRed = async (req, res) => {
+    try {
+        const { id_red } = req.params;
+        const { id_usuario } = req.user;
+
+        if(!id_red || !id_usuario) {
+            return res.status(400).json({ error: "Datos requeridos"})
+        }
+        const red = await buscarRed(id_red);
+        if(!red) {
+            return res.status(404).json({ error: "Red no encontrada"})
+        }
+        const usuario = await UsuarioRed.findOne({
+            where: { id_usuario }
+        })
+        if(!usuario) {
+            return res.status(404).json({ error: "El usuario no pertence a la red"})
+        }
+        await UsuarioRed.destroy({
+            where: { id_usuario, id_red }
+        })
+
+        return res.status(200).json({
+            success: true,
+            message: "Uusario eliminado de la red"
+        })
+    } catch (error) {
+        console.error('Error al abandonar red');
+        return res.status(500).json({ error: "Error interno al abandonar red"})
+    }
+}
+
+export const asignarAdmin = async (req, res) => {
+    try {
+        const { id_red, id_miembro } = req.params;
+
+        if (!id_red || !id_miembro) {
+            return res.status(400).json({ 
+                success: false,
+                error: "Se requieren ID de red y ID de miembro" 
+            });
+        }
+
+        const membresia = await UsuarioRed.findOne({
+            where: {
+                id_usuario: id_miembro,
+                id_red: id_red
+            }
+        });
+
+        if (!membresia) {
+            return res.status(404).json({ 
+                success: false,
+                error: "El usuario no es miembro de esta red" 
+            });
+        }
+
+        // Actualizar el rol
+        const [updated] = await UsuarioRed.update(
+            { rol: 'administrador' },
+            {
+                where: {
+                    id_usuario: id_miembro,
+                    id_red: id_red
+                },
+                returning: true // Para PostgreSQL
+            }
+        );
+
+        if (updated === 0) {
+            return res.status(404).json({
+                success: false,
+                error: "No se pudo actualizar el rol"
+            });
+        }
+
+        // Obtener datos actualizados para la respuesta
+        const resultado = await UsuarioRed.findOne({
+            where: {
+                id_usuario: id_miembro,
+                id_red: id_red
+            },
+            attributes: ['id_usuario', 'id_red', 'rol', 'fecha_union'],
+            include: [
+                {
+                    model: Usuario,
+                    as: "usuario",
+                    attributes: ['nombre_usuario', 'apellido_usuario']
+                }
+            ]
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Usuario promovido a administrador correctamente",
+            data: resultado
+        });
+
+    } catch (error) {
+        console.error('Error en asignarAdmin:', error);
+        return res.status(500).json({ 
+            success: false,
+            error: "Error interno del servidor",
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
+export const eliminarMiembro = async (req, res) => {
+    try {
+         const { id_red, id_miembro } = req.params;
+         if(!id_red || ! id_miembro) {
+            return res.status(400).json({ error: "Datos requeridos"})
+         }
+         const red = await buscarRed(id_red);
+         if(!red) {
+            return res.status(404).json({ error: "Red no encontrada"})
+         }
+         const miembro = await UsuarioRed.findOne({
+            where: {
+                id_usuario: id_miembro,
+                id_red: id_red
+            }
+         })
+         if(!miembro) {
+            return res.status(404).json({ error: "El usuario no es miembro de sta red"})
+         }
+            await UsuarioRed.destroy({
+                where: {
+                    id_usuario: id_miembro,
+                    id_red: id_red
+                }
+            })
+        return res.status(200).json({
+            success: true,
+            message: "Miembro eliminado de la red"
+        })
+
+    } catch (error) {
+        console.error('Error interno al eliminar miembro', error);
+        return res.status(500).json({
+            error: "Error interno al eliinar miembro"
+        })
+    }
+   
+
+
+
+}

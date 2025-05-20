@@ -87,13 +87,13 @@ app.get('/test', (req, res) => {
 // // Configuración de rutas API
 app.use('/api/auth', usuarioRoutes); //🟢 usuario
 app.use('/api/episodios', routerEpisodioSalud); //🟢 episodio salud
-app.use('/api/redes', redesRoutes); //🔴 Redes
+app.use('/api/redes', redesRoutes); //🟢 Redes
 app.use('/api/membresiaRed', membresiaRoutes); // 🟢 usuario_red
 app.use('/api/paciente', pacienteRoutes); //🟢 paciente
 app.use('/api/familiar', familiarRoutes); //🟢 familiar
 app.use('/api/cuidadoPersonal', cuidadoPersonalRoutes);// 🟢 Cuidado personal
-app.use('/api/actividades', actividadRouter); //🟢 actividad fisica
-app.use('/api/regSintomas', RegSintomas); //🟢 monitoreo sintomas
+app.use('/api/actividades', actividadRouter); //🟢 actividad fisica 🔴
+app.use('/api/regSintomas', RegSintomas); //🟢 monitoreo sintomas 🔴
 app.use('/api/citaMedica', CitaMedica);//🟢 cita medica
 app.use('/api/codigoQr', codigoQr)//🟢 codigo qr
 app.use('/api/medicamentos', medicamentoRoutes);//🟢 medicamento

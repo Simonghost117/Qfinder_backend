@@ -1,4 +1,3 @@
-import { where } from 'sequelize';
 import { models } from '../models/index.js';
 const { Red, UsuarioRed, Usuario } = models;
 
@@ -31,7 +30,7 @@ export const unirmeRed = async ( id_usuario, id_red) => {
     }
 }
 
-export const listarRedesPorUsuario = async ( id_usuario, id_red ) => {
+export const listarRedesPorUsuario = async ( id_usuario ) => {
     try {
         const redesUsuario = await Usuario.findAll({
     where: { id_usuario },
@@ -45,5 +44,21 @@ export const listarRedesPorUsuario = async ( id_usuario, id_red ) => {
         throw new Error("Error al obtener las redes");
 
     }
-
 }
+
+export const listarMembresia = async ( id_red ) => {
+    try { UsuarioRed.findAll({
+            where: {id_red},
+            include: [
+                {
+                    model: Usuario,
+                    as: "usuario",
+                    attributes: ["id_usuario", "nombre_usuario", "apellido_usuario"]
+                }
+            ]
+        })
+    } catch (error) {
+        console.error("Error al listar membresia", error);
+        throw new Error("Error al listar membresia")
+    }
+} 

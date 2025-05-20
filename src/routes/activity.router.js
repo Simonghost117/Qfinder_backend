@@ -42,4 +42,9 @@ router.delete("/eliminarAct/:id_paciente/:id_actividad",
     activityController.deleteActivity
 );
 
+router.get("/listarActividades/:id_usuario",
+    verifyToken,
+    activityController.todasActividades
+)
+
 export default router;

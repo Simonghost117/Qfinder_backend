@@ -55,6 +55,9 @@ Red.belongsToMany(Usuario, { through: UsuarioRed, foreignKey: "id_red" });
 
 Usuario.belongsToMany(Red, { through: UsuarioRed, foreignKey: "id_usuario" });
 Red.belongsToMany(Usuario, { through: UsuarioRed, foreignKey: "id_red" });
+
+UsuarioRed.belongsTo(Usuario, { foreignKey: "id_usuario", as: "usuario" });
+UsuarioRed.belongsTo(Red, { foreignKey: "id_red" });
   
 
 // Exportar los modelos y la conexión de Sequelize
