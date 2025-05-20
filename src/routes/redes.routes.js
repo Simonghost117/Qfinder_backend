@@ -10,6 +10,7 @@ import {
 import { verifyToken } from '../middlewares/verifyToken.js';
 import validateSchema from '../middlewares/validatoreSchema.js';
 import { redesSchema } from '../schema/redesSchema.js';
+import { esAdministradorRed } from '../middlewares/validacionesRed.js';
 
 const router = express.Router();
 
@@ -28,11 +29,13 @@ router.get('/listarRed/:id_red',
 )
 router.put('/actualizarRed/:id_red',
     verifyToken,
+    esAdministradorRed,
     validateSchema(redesSchema),
     actualizarRed
 )
 router.delete('/eliminarRed/:id_red',
     verifyToken,
+    esAdministradorRed,
     eliminarRed
 )
 
