@@ -23,12 +23,54 @@ export const createActivity = async (id_paciente, data) => {
 
 // Obtener todas las actividades
 export const getAllActivities = async (id_paciente) => {
-  return await ActividadCuidado.findAll({
-    where: { id_paciente },
-    order: [["fecha_actividad", "DESC"]], 
-  });
-};
+  console.log('🔍 [getAllActivities] Solicitando actividades para paciente ID:', id_paciente);
+  
+  if (!id_paciente) {
+    console.error('🚨 ID de paciente no proporcionado');
+    throw new Error('Se requiere ID de paciente');
+  }
 
+  try {
+    console.time('⏱️ Tiempo de consulta getAllActivities');
+    
+    const actividades = await ActividadCuidado.findAll({
+      where: { id_paciente },
+      order: [["fecha_actividad", "DESC"]],
+      raw: true
+    });
+
+    console.timeEnd('⏱️ Tiempo de consulta getAllActivities');
+    console.log('✅ [getAllActivities] Actividades encontradas:', actividades.length);
+
+    // Validar estructura de datos
+    actividades.forEach(act => {
+      if (!act.fecha_actividad) {
+        console.warn('⚠️ Actividad sin fecha:', act.id_actividad);
+      }
+      if (!act.estado) {
+        console.warn('⚠️ Actividad sin estado:', act.id_actividad);
+      }
+    });
+
+    // Log resumen
+    const estados = actividades.reduce((acc, act) => {
+      acc[act.estado] = (acc[act.estado] || 0) + 1;
+      return acc;
+    }, {});
+
+    console.log('📊 Distribución de estados:', estados);
+    
+    return actividades;
+
+  } catch (error) {
+    console.error('❌ [getAllActivities] Error:', {
+      message: error.message,
+      stack: error.stack,
+      pacienteId: id_paciente
+    });
+    throw error;
+  }
+};
 // Obtener una actividad por ID
 export const getActivityById = async (id_paciente, id_actividad) => {
   return await Paciente.findOne({
