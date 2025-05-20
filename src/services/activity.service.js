@@ -22,55 +22,46 @@ export const createActivity = async (id_paciente, data) => {
   
 
 // Obtener todas las actividades
-export const getAllActivities = async (id_paciente) => {
-  console.log('🔍 [getAllActivities] Solicitando actividades para paciente ID:', id_paciente);
-  
-  if (!id_paciente) {
-    console.error('🚨 ID de paciente no proporcionado');
-    throw new Error('Se requiere ID de paciente');
-  }
+// controllers/activity.controller.js
 
+export const getAllActivities = async (id_paciente) => {
+  console.log('🔍 [getAllActivities] Buscando actividades para paciente ID:', id_paciente);
+  
   try {
-    console.time('⏱️ Tiempo de consulta getAllActivities');
-    
     const actividades = await ActividadCuidado.findAll({
       where: { id_paciente },
       order: [["fecha_actividad", "DESC"]],
       raw: true
     });
 
-    console.timeEnd('⏱️ Tiempo de consulta getAllActivities');
-    console.log('✅ [getAllActivities] Actividades encontradas:', actividades.length);
+    // Mapear los campos para coincidir con el frontend
+    const actividadesFormateadas = actividades.map(act => ({
+      id_actividad: act.id_actividad,
+      titulo: act.tipo_actividad || 'Sin título',
+      descripcion: act.descripcion || 'Sin descripción',
+      fecha: act.fecha_actividad ? formatDate(act.fecha_actividad) : null,
+      hora: act.fecha_actividad ? formatTime(act.fecha_actividad) : null,
+      estado: act.estado || 'pendiente',
+      id_paciente: act.id_paciente
+    }));
 
-    // Validar estructura de datos
-    actividades.forEach(act => {
-      if (!act.fecha_actividad) {
-        console.warn('⚠️ Actividad sin fecha:', act.id_actividad);
-      }
-      if (!act.estado) {
-        console.warn('⚠️ Actividad sin estado:', act.id_actividad);
-      }
-    });
-
-    // Log resumen
-    const estados = actividades.reduce((acc, act) => {
-      acc[act.estado] = (acc[act.estado] || 0) + 1;
-      return acc;
-    }, {});
-
-    console.log('📊 Distribución de estados:', estados);
+    console.log('✅ [getAllActivities] Actividades formateadas:', actividadesFormateadas);
+    return actividadesFormateadas;
     
-    return actividades;
-
   } catch (error) {
-    console.error('❌ [getAllActivities] Error:', {
-      message: error.message,
-      stack: error.stack,
-      pacienteId: id_paciente
-    });
+    console.error('❌ [getAllActivities] Error:', error);
     throw error;
   }
 };
+
+// Funciones auxiliares para formatear fecha y hora
+function formatDate(date) {
+  return new Date(date).toISOString().split('T')[0]; // Formato YYYY-MM-DD
+}
+
+function formatTime(date) {
+  return new Date(date).toTimeString().split(' ')[0].substring(0, 5); // Formato HH:MM
+}
 // Obtener una actividad por ID
 export const getActivityById = async (id_paciente, id_actividad) => {
   return await Paciente.findOne({
