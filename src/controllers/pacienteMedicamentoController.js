@@ -72,10 +72,7 @@ export const listarMedicamentosPorPaciente = async (req, res) => {
       };
     });
 
-    res.status(200).json({
-      success: true,
-      data: resultado
-    });
+res.status(200).json(resultado);
   } catch (error) {
     console.error('Error al listar medicamentos:', error);
     res.status(500).json({
