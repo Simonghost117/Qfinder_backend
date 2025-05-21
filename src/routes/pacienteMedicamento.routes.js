@@ -3,6 +3,7 @@
 import { Router } from 'express';
 import {
   asignarMedicamento,
+  listarMedicamentosPorPaciente,
   listarAsignaciones,
   actualizarAsignacion,
   eliminarAsignacion
@@ -24,6 +25,11 @@ router.post(
 
 // 👉 Listar medicamentos asignados por el usuario logueado
 router.get('/', verifyToken, listarAsignaciones);
+
+// 👉 Listar asignaciones especificas de un paciente en particular
+// router.get('/:id', verifyToken, listarAsignaciones);
+// 👉 Listar asignaciones especificas de un 
+router.get('asignaciones/:id_paciente', verifyToken, listarMedicamentosPorPaciente);
 
 // 👉 Actualizar una asignación específica
 router.put(
