@@ -29,7 +29,7 @@ router.get('/', verifyToken, listarAsignaciones);
 // 👉 Listar asignaciones especificas de un paciente en particular
 // router.get('/:id', verifyToken, listarAsignaciones);
 // 👉 Listar asignaciones especificas de un 
-router.get('asignaciones/:id_paciente', verifyToken, listarMedicamentosPorPaciente);
+router.get('/asignaciones/:id_paciente', verifyToken, listarMedicamentosPorPaciente);
 
 // 👉 Actualizar una asignación específica
 router.put(
