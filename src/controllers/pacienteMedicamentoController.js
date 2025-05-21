@@ -23,7 +23,10 @@ export const listarMedicamentosPorPaciente = async (req, res) => {
     });
 
     if (!paciente) {
-      return res.status(200).json([]); // Devuelve array vacío si no existe o no pertenece
+      return res.status(403).json({ 
+        success: false,
+        message: 'No tienes permisos para acceder a este paciente'
+      });
     }
 
     const asignaciones = await PacienteMedicamento.findAll({
@@ -31,26 +34,54 @@ export const listarMedicamentosPorPaciente = async (req, res) => {
       include: [
         {
           model: Medicamento,
-          attributes: ['id_medicamento', 'nombre', 'descripcion']
+          attributes: ['id_medicamento', 'nombre', 'descripcion', 'tipo'],
+          required: true // Inner join para asegurar que siempre haya medicamento
+        },
+        {
+          model: Paciente,
+          attributes: ['id_paciente', 'nombre', 'apellido'],
+          required: true
         }
       ],
-      attributes: ['id_pac_medicamento', 'fecha_inicio', 'fecha_fin', 'dosis', 'frecuencia']
+      attributes: ['id_pac_medicamento', 'fecha_inicio', 'fecha_fin', 'dosis', 'frecuencia'],
+      order: [['fecha_inicio', 'DESC']] // Ordenar por fecha más reciente
     });
 
-    // Mapear los resultados a un formato más simple si es necesario
-    const resultado = asignaciones.map(asignacion => ({
-      idAsignacion: asignacion.id_pac_medicamento,
-      fechaInicio: asignacion.fecha_inicio,
-      fechaFin: asignacion.fecha_fin,
-      dosis: asignacion.dosis,
-      frecuencia: asignacion.frecuencia,
-      medicamento: asignacion.Medicamento
-    }));
+    // Formatear fechas a YYYY-MM-DD
+    const resultado = asignaciones.map(asignacion => {
+      const fechaInicio = new Date(asignacion.fecha_inicio);
+      const fechaFin = new Date(asignacion.fecha_fin);
+      
+      return {
+        id_pac_medicamento: asignacion.id_pac_medicamento,
+        fecha_inicio: fechaInicio.toISOString().split('T')[0], // Formato YYYY-MM-DD
+        fecha_fin: fechaFin.toISOString().split('T')[0],
+        dosis: asignacion.dosis || 'No especificada',
+        frecuencia: asignacion.frecuencia || 'No especificada',
+        Medicamento: {
+          id_medicamento: asignacion.Medicamento.id_medicamento,
+          nombre: asignacion.Medicamento.nombre,
+          descripcion: asignacion.Medicamento.descripcion,
+          tipo: asignacion.Medicamento.tipo
+        },
+        Paciente: {
+          id_paciente: asignacion.Paciente.id_paciente,
+          nombre: asignacion.Paciente.nombre,
+          apellido: asignacion.Paciente.apellido
+        }
+      };
+    });
 
-    res.status(200).json(resultado);
+    res.status(200).json({
+      success: true,
+      data: resultado
+    });
   } catch (error) {
     console.error('Error al listar medicamentos:', error);
-    res.status(500).json([]); // Devuelve array vacío en caso de error
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    });
   }
 };
 export const listarAsignaciones = async (req, res) => {
