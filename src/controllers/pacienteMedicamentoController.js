@@ -11,55 +11,46 @@ export const asignarMedicamento = async (req, res) => {
     res.status(500).json({ success: false, message: 'Error al asignar medicamento', error: error.message });
   }
 };
-
-export const listarMedicamentosPorPaciente = async (req, res) => {
+// controllers/pacienteMedicamento.controller.js
+export const listarMedicamentosPorPacienteSimple = async (req, res) => {
   try {
     const { id_paciente } = req.params;
     const { id_usuario } = req.user;
 
     // Verificar que el paciente pertenece al usuario
     const paciente = await Paciente.findOne({
-      where: {
-        id_paciente,
-        id_usuario
-      }
+      where: { id_paciente, id_usuario }
     });
 
     if (!paciente) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Paciente no encontrado o no pertenece al usuario' 
-      });
+      return res.status(200).json([]); // Devuelve array vacío si no existe o no pertenece
     }
 
-    const medicamentos = await PacienteMedicamento.findAll({
+    const asignaciones = await PacienteMedicamento.findAll({
       where: { id_paciente },
       include: [
         {
           model: Medicamento,
-          attributes: ['id_medicamento', 'nombre', 'descripcion'] // Puedes incluir más atributos si necesitas
+          attributes: ['id_medicamento', 'nombre', 'descripcion']
         }
       ],
       attributes: ['id_pac_medicamento', 'fecha_inicio', 'fecha_fin', 'dosis', 'frecuencia']
     });
 
-    res.status(200).json({ 
-      success: true, 
-      data: {
-        paciente: {
-          id_paciente: paciente.id_paciente,
-          nombre: paciente.nombre,
-          apellido: paciente.apellido
-        },
-        medicamentos
-      }
-    });
+    // Mapear los resultados a un formato más simple si es necesario
+    const resultado = asignaciones.map(asignacion => ({
+      idAsignacion: asignacion.id_pac_medicamento,
+      fechaInicio: asignacion.fecha_inicio,
+      fechaFin: asignacion.fecha_fin,
+      dosis: asignacion.dosis,
+      frecuencia: asignacion.frecuencia,
+      medicamento: asignacion.Medicamento
+    }));
+
+    res.status(200).json(resultado);
   } catch (error) {
-    res.status(500).json({ 
-      success: false, 
-      message: 'Error al listar medicamentos del paciente', 
-      error: error.message 
-    });
+    console.error('Error al listar medicamentos:', error);
+    res.status(500).json([]); // Devuelve array vacío en caso de error
   }
 };
 export const listarAsignaciones = async (req, res) => {
