@@ -12,7 +12,7 @@ export const asignarMedicamento = async (req, res) => {
   }
 };
 // controllers/pacienteMedicamento.controller.js
-export const listarMedicamentosPorPacienteSimple = async (req, res) => {
+export const listarMedicamentosPorPaciente = async (req, res) => {
   try {
     const { id_paciente } = req.params;
     const { id_usuario } = req.user;
