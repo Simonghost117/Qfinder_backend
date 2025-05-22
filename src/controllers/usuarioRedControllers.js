@@ -1,3 +1,4 @@
+import { db } from '../config/firebase-admin.js';
 import { 
     buscarRed, 
     unirmeRed, 
@@ -7,7 +8,6 @@ import {
 import UsuarioRed from "../models/UsuarioRed.js";
 import { where } from "sequelize";
 import Usuario from "../models/usuario.model.js";
-
 
 export const unirseRed = async (req, res) => {
     try {
@@ -34,11 +34,17 @@ export const unirseRed = async (req, res) => {
             return res.status(400).json({ msg: "El usuario ya está registrado en esta red" });
         }
 
-        // Registrar usuario en la red
+        // Registrar usuario en la red (SQL)
         const usuarioRed = await unirmeRed(id_usuario, id_red);
         if (!usuarioRed) {
             return res.status(500).json({ msg: "Error al unirse a la red" });
         }
+
+        // Registrar en Firebase Realtime Database
+        await db.ref(`comunidades/${id_red}/miembros/${id_usuario}`).set({
+            rol: 'miembro',
+            fecha_union: Date.now()
+        });
 
         return res.status(200).json({
             ok: true,
@@ -116,13 +122,18 @@ export const abandonarRed = async (req, res) => {
         if(!usuario) {
             return res.status(404).json({ error: "El usuario no pertence a la red"})
         }
+        
+        // Eliminar de SQL
         await UsuarioRed.destroy({
             where: { id_usuario, id_red }
-        })
+        });
+
+        // Eliminar de Firebase
+        await db.ref(`comunidades/${id_red}/miembros/${id_usuario}`).remove();
 
         return res.status(200).json({
             success: true,
-            message: "Uusario eliminado de la red"
+            message: "Usuario eliminado de la red"
         })
     } catch (error) {
         console.error('Error al abandonar red');
@@ -155,7 +166,7 @@ export const asignarAdmin = async (req, res) => {
             });
         }
 
-        // Actualizar el rol
+        // Actualizar el rol en SQL
         const [updated] = await UsuarioRed.update(
             { rol: 'administrador' },
             {
@@ -173,6 +184,11 @@ export const asignarAdmin = async (req, res) => {
                 error: "No se pudo actualizar el rol"
             });
         }
+
+        // Actualizar el rol en Firebase
+        await db.ref(`comunidades/${id_red}/miembros/${id_miembro}`).update({
+            rol: 'administrador'
+        });
 
         // Obtener datos actualizados para la respuesta
         const resultado = await UsuarioRed.findOne({
@@ -225,12 +241,18 @@ export const eliminarMiembro = async (req, res) => {
          if(!miembro) {
             return res.status(404).json({ error: "El usuario no es miembro de sta red"})
          }
-            await UsuarioRed.destroy({
-                where: {
-                    id_usuario: id_miembro,
-                    id_red: id_red
-                }
-            })
+         
+         // Eliminar de SQL
+         await UsuarioRed.destroy({
+             where: {
+                 id_usuario: id_miembro,
+                 id_red: id_red
+             }
+         });
+         
+         // Eliminar de Firebase
+         await db.ref(`comunidades/${id_red}/miembros/${id_miembro}`).remove();
+
         return res.status(200).json({
             success: true,
             message: "Miembro eliminado de la red"
@@ -239,11 +261,7 @@ export const eliminarMiembro = async (req, res) => {
     } catch (error) {
         console.error('Error interno al eliminar miembro', error);
         return res.status(500).json({
-            error: "Error interno al eliinar miembro"
+            error: "Error interno al eliminar miembro"
         })
     }
-   
-
-
-
 }

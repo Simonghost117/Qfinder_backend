@@ -4,6 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+import chatRoutes from './routes/chatRoutes.js';
 import cookieParser from 'cookie-parser';
 import session from 'express-session';
 import { EventEmitter } from 'events';
@@ -98,7 +99,7 @@ app.use('/api/citaMedica', CitaMedica);//🟢 cita medica
 app.use('/api/codigoQr', codigoQr)//🟢 codigo qr
 app.use('/api/medicamentos', medicamentoRoutes);//🟢 medicamento
 app.use('/api/paciente-medicamento', pacienteMedicamentoRoutes);
-
+app.use('/api/chat', chatRoutes);
 // app.use('/api/medicos', medicoRoutes); // Validaciones - CRUD (YA NO SE NECESITA pero conservado)
 // app.use('/api/reportes', routerReport); // No se va a usar (comentado pero conservado)
 // app.use('/api/panel', panelRoutes);

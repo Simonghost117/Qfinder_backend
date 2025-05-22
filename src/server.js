@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import app from './app.js';
+import './config/firebase-admin.js'; 
 // server.js (corrección)
 import sequelize, { testConnection, syncModels } from './config/db.js';
 import { models } from "./models/index.js";
