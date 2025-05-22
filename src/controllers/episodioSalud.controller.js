@@ -49,7 +49,6 @@ export class EpisodioSaludController {
   try {
     const id_paciente = this.validarIdPaciente(req.params.id_paciente);
 
-    // ✅ Ya no parsees aquí, usa directamente los datos validados
     const filtros = req.validatedQuery;
 
     const where = { id_paciente };
