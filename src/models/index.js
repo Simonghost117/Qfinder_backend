@@ -50,14 +50,18 @@ Familiar.belongsTo(Usuario, { foreignKey: "id_usuario", as: "usuario" });
 
 Medicamento.belongsTo(Usuario, { foreignKey: "id_usuario", as: "usuario" });
 
+// Asociación de usuarios con redes a través de UsuarioRed
 Usuario.belongsToMany(Red, { through: UsuarioRed, foreignKey: "id_usuario" });
 Red.belongsToMany(Usuario, { through: UsuarioRed, foreignKey: "id_red" });
 
-Usuario.belongsToMany(Red, { through: UsuarioRed, foreignKey: "id_usuario" });
-Red.belongsToMany(Usuario, { through: UsuarioRed, foreignKey: "id_red" });
-
+// Relaciones directas entre UsuarioRed y sus entidades
 UsuarioRed.belongsTo(Usuario, { foreignKey: "id_usuario", as: "usuario" });
-UsuarioRed.belongsTo(Red, { foreignKey: "id_red" });
+UsuarioRed.belongsTo(Red, { foreignKey: "id_red", as: "red" });
+
+Usuario.hasMany(UsuarioRed, { foreignKey: "id_usuario" });
+Red.hasMany(UsuarioRed, { foreignKey: "id_red" });
+
+
   
 
 // Exportar los modelos y la conexión de Sequelize

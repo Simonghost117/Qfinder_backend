@@ -53,6 +53,11 @@ const Paciente = sequelize.define('Paciente', {
     allowNull: true,
     field: 'nivel_autonomia',
   },
+  imagen_paciente: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'imagen_paciente',
+  },
 }, {
   tableName: 'paciente',
   timestamps: false, // Cambiado a true para tener createdAt/updatedAt

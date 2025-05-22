@@ -239,7 +239,7 @@ export const listarUsers = async (req, res) => {
 
 export const actualizarUser = async (req, res) => {
   try {
-    const { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario, correo_usuario } = req.body;
+    const { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario, correo_usuario, imagen_usuario } = req.body;
 
     const { id } = req.usuario;
     console.log("Contenido de req.usuario:", req.usuario);
@@ -249,7 +249,7 @@ export const actualizarUser = async (req, res) => {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
-    const dataToUpdate = { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario, correo_usuario };
+    const dataToUpdate = { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario, correo_usuario, imagen_usuario };
     // if (contrasena_usuario) {
     //   const salt = await bcrypt.genSalt(10);
     //   dataToUpdate.contrasena_usuario = await bcrypt.hash(contrasena_usuario, salt);

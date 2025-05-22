@@ -159,7 +159,7 @@ export const getPacienteById = async (req, res) => {
 export const actualizarPaciente = async (req, res) => {
   try {
     const { id_paciente } = req.params;
-    const { nombre, apellido, fecha_nacimiento, sexo, diagnostico_principal, nivel_autonomia } = req.body;
+    const { nombre, apellido, fecha_nacimiento, sexo, diagnostico_principal, nivel_autonomia, imagen_paciente } = req.body;
 
     // Verificar si el paciente existe
     const paciente = await Paciente.findByPk(id_paciente);
@@ -177,7 +177,8 @@ export const actualizarPaciente = async (req, res) => {
       fecha_nacimiento,
       sexo,
       diagnostico_principal,
-      nivel_autonomia
+      nivel_autonomia,
+      imagen_paciente
     }, {
       where: { id_paciente }
     });
