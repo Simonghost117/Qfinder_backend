@@ -4,20 +4,27 @@ import UsuarioRed from '../models/UsuarioRed.js';
 
 
 export const crearRed = async (req, res) => {
-  try {
-    const { id_usuario } = req.user;
+    try {
+        const { id_usuario } = req.user;
+        const { nombre_red, descripcion_red } = req.body;
 
-    const { nombre_red, descripcion_red } = req.body;
+        // ✅ 1. Crear la red en la base de datos
+        const nuevaRed = await creacionRed(
+            id_usuario,
+            nombre_red,
+            descripcion_red
+        );
+      
+        if (!nuevaRed || nuevaRed.length === 0) {
+            return res.status(400).json({ message: "Error: No se pudo crear la red correctamente." });
+        } 
 
-    const nuevaRed = await creacionRed(id_usuario, nombre_red, descripcion_red);
-console.log("Nueva red creada:", nuevaRed);
-    if (!nuevaRed || nuevaRed.length === 0) {
-      return res.status(400).json({ message: 'No se pudo crear la red' });
+        res.status(201).json({ message: "Red creada exitosamente", data: nuevaRed });
+
+    } catch (error) {
+        console.error("Error al crear red:", error);
+        res.status(500).json({ message: "Error al crear la red", error: error.message });
     }
-    res.status(201).json({ message: 'Red creada exitosamente', data: nuevaRed });
-  } catch (error) {
-    res.status(500).json({ message: 'Error al crear red', error: error.message });
-  }
 };
 
 export const listarRedes = async (req, res) => {

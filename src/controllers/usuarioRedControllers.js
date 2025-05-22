@@ -82,6 +82,7 @@ export const listarMembresiaRed = async (req, res) => {
         if(!red) {
             return res.status(404).json({ error: "Red no encontrada"})
         }
+        
         const membresia = await listarMembresia(id_red);
         if(!membresia || membresia.length === 0){
             return res.status(404).json({ error: "Esta red no tiene usuarios"})
