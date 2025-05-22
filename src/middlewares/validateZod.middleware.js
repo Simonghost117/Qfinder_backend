@@ -26,6 +26,7 @@ export const validateZodSchema = (schema, options = {}) => {
 
       next();
     } catch (error) {
+      console.error('💥 Error en validateZodSchema:', error); 
       if (error instanceof z.ZodError) {
         const errors = error.errors.map(err => ({
           field: err.path.join('.'),

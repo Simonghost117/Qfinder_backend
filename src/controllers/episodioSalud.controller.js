@@ -5,6 +5,8 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs/promises';
 import { episodioSchema } from '../schema/episodioSalud.validator.js';
+import { EpisodioSalud } from '../models/EpisodioSalud.js';
+import { Op } from 'sequelize';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 //Verificar la forma en la que los episodios de salud son creados, ya que son limitados 
@@ -42,6 +44,48 @@ export class EpisodioSaludController {
       this.manejarErrorCreacion(res, error, req.file);
     }
   }
+
+  static async filtrarEpisodios(req, res, next) {
+  try {
+    const id_paciente = this.validarIdPaciente(req.params.id_paciente);
+
+    // ✅ Ya no parsees aquí, usa directamente los datos validados
+    const filtros = req.validatedQuery;
+
+    const where = { id_paciente };
+
+    if (filtros.tipo) {
+      where.tipo = filtros.tipo;
+    }
+
+    if (filtros.severidad) {
+      where.severidad = filtros.severidad;
+    }
+
+    if (filtros.estado) {
+      where.estado = filtros.estado;
+    }
+
+    if (filtros.fecha_desde || filtros.fecha_hasta) {
+      where.fecha_hora_inicio = {};
+      if (filtros.fecha_desde) {
+        where.fecha_hora_inicio[Op.gte] = filtros.fecha_desde;
+      }
+      if (filtros.fecha_hasta) {
+        where.fecha_hora_inicio[Op.lte] = filtros.fecha_hasta;
+      }
+    }
+
+    const episodios = await EpisodioSalud.findAll({
+      where,
+      order: [['fecha_hora_inicio', (filtros.ordenFecha || 'desc').toUpperCase()]]
+    });
+
+    res.status(200).json({ success: true, data: episodios });
+  } catch (error) {
+    next(error);
+  }
+}
 
   /**
    * Obtiene todos los episodios de un paciente
