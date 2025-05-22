@@ -5,17 +5,28 @@ import  Red  from '../models/Red.js';
 export const crearRed = async (req, res) => {
   try {
     const { id_usuario } = req.user;
-
     const { nombre_red, descripcion_red } = req.body;
 
     const nuevaRed = await creacionRed(id_usuario, nombre_red, descripcion_red);
 
     if (!nuevaRed || nuevaRed.length === 0) {
-      return res.status(400).json({ message: 'No se pudo crear la red' });
+      return res.status(400).json({ 
+        success: false,  // ← Campo añadido
+        message: 'No se pudo crear la red' 
+      });
     }
-    res.status(201).json({ message: 'Red creada exitosamente', data: nuevaRed });
+    
+    res.status(201).json({ 
+      success: true,  // ← Campo añadido
+      message: 'Red creada exitosamente', 
+      data: nuevaRed 
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Error al crear red', error: error.message });
+    res.status(500).json({ 
+      success: false,  // ← Campo añadido
+      message: 'Error al crear red', 
+      error: error.message 
+    });
   }
 };
 
@@ -24,12 +35,23 @@ export const listarRedes = async (req, res) => {
     const redes = await Red.findAll();
 
     if (!redes || redes.length === 0) {
-      return res.status(404).json({ message: 'No se encontraron redes' });
+      return res.status(404).json({ 
+        success: false,  // ← Campo añadido
+        message: 'No se encontraron redes' 
+      });
     }
 
-    res.status(200).json({ message: 'Redes encontradas', data: redes });
+    res.status(200).json({ 
+      success: true,  // ← Campo añadido
+      message: 'Redes encontradas', 
+      data: redes 
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Error al listar redes', error: error.message });
+    res.status(500).json({ 
+      success: false,  // ← Campo añadido
+      message: 'Error al listar redes', 
+      error: error.message 
+    });
   }
 }
 
