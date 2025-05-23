@@ -2,7 +2,7 @@ import { createPaciente, getPacientesByUsuario } from "../services/pacienteServi
 import { generarCodigoQR } from "../utils/qrGenerator.js";
 
 import { models } from "../models/index.js";
-const { Paciente, Familiar } = models;
+const { Paciente, Familiar, CodigoQR } = models;
 import codigoQr from "../models/codigoQr.model.js";
 import { generarQRPaciente } from "../controllers/codigoQrController.js";
 
@@ -122,38 +122,48 @@ export const listarPacientes = async (req, res) => {
   }
 };
 
+
+
 export const getPacienteById = async (req, res) => {
-  try {
-    const { id_paciente } = req.params;
-    console.log("ID del paciente:", req.params.id_paciente);
-    const paciente = await Paciente.findOne({
-      where: { id_paciente: id_paciente },
-      include: [{
-        model: Familiar,
-        as: 'familiares',
-        required: false
-      }]
-    });
+    try {
+        const { id_paciente } = req.params;
+        console.log("ID del paciente:", id_paciente);
 
-    if (!paciente) {
-      return res.status(404).json({
-        success: false,
-        message: "Paciente no encontrado."
-      });
+        const paciente = await Paciente.findOne({
+            where: { id_paciente },
+            include: [
+                {
+                    model: Familiar,
+                    as: "familiares",
+                    required: false
+                },
+                {
+                    model: CodigoQR, 
+                    as: "codigo_qr", 
+                    attributes: ["codigo"] 
+                }
+            ]
+        });
+
+        if (!paciente) {
+            return res.status(404).json({
+                success: false,
+                message: "Paciente no encontrado."
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: paciente
+        });
+    } catch (error) {
+        console.error("Error en getPacienteById:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error al obtener el paciente",
+            error: process.env.NODE_ENV === "development" ? error.message : null
+        });
     }
-
-    res.status(200).json({
-      success: true,
-      data: paciente
-    });
-  } catch (error) {
-    console.error("Error en getPacienteById:", error);
-    res.status(500).json({
-      success: false,
-      message: 'Error al obtener el paciente',
-      error: process.env.NODE_ENV === 'development' ? error.message : null
-    });
-  }
 };
 
 export const actualizarPaciente = async (req, res) => {
