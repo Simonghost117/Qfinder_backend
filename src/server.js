@@ -7,6 +7,9 @@ import app from './app.js';
 import sequelize, { testConnection, syncModels } from './config/db.js';
 import { models } from "./models/index.js";
 
+import './config/db.js';
+import './cron/notificador.js';
+
 // 1. Configuración de entorno (carga .env antes que cualquier otra dependencia)
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
@@ -43,6 +46,7 @@ const startServer = async () => {
     if (!isConnected) throw new Error('Conexión fallida');
 
     console.log('✅ Conexión a la base de datos establecida');
+    console.log("⏰ Sistema de notificaciones iniciado.");
 
     // 5. Sincronización segura por entorno
     if (process.env.NODE_ENV === 'development') {
