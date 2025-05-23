@@ -9,14 +9,16 @@ import {
 import { verifyToken } from '../middlewares/verifyToken.js';
 import validateSchema from '../middlewares/validatoreSchema.js';
 import { medicamentoSchema } from '../schema/medicamentoSchema.js';
+import { validateAdmin } from '../middlewares/validateAdmin.js';
 
 const router = Router();
 
 //Autenticacion de rutas
+//ADMINISTRADOR
 
-// Protegidas con verifyToken
 router.post('/crear', 
   verifyToken, 
+  validateAdmin,
   validateSchema(medicamentoSchema),
   crearMedicamento
 );
@@ -30,11 +32,13 @@ router.get('/listar/:id',
 );
 router.put('/actualizar/:id',
   verifyToken, 
+  validateAdmin,
   validateSchema(medicamentoSchema),
   actualizarMedicamento
 );
 router.delete('/eliminar/:id', 
   verifyToken, 
+  validateAdmin,
   eliminarMedicamento
 );
 

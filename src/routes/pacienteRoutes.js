@@ -1,9 +1,10 @@
 import express from 'express';
-import { register, listarPacientes, getPacienteById, actualizarPaciente, eliminarPaciente } from '../controllers/pacienteController.js';
+import { register, listarPacientes, getPacienteById, actualizarPaciente, eliminarPaciente, listarTodosPacientes } from '../controllers/pacienteController.js';
 import validateSchema from "../middlewares/validatoreSchema.js"
 import {PacienteSchema, ActPacienteSchema} from "../schema/pacienteSchema.js";
 import { verifyToken } from '../middlewares/verifyToken.js';
 import { checkEpisodioPermissions } from '../middlewares/episodioPermissions.middleware.js';
+import { validateAdmin } from '../middlewares/validateAdmin.js';
 const router = express.Router();
 
 router.post('/register',
@@ -30,5 +31,12 @@ router.delete('/eliminarPaciente/:id_paciente',
     checkEpisodioPermissions(['Administrador', 'Usuario']),
     eliminarPaciente
 );
+
+//ADMINISTRADOR
+router.get('/todosPacientes', 
+    verifyToken,
+    validateAdmin,
+    listarTodosPacientes
+)
 
 export default router;

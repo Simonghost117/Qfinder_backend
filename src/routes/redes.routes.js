@@ -39,7 +39,7 @@ router.delete('/eliminarRed/:id_red',
     eliminarRed
 )
 
-router.get('/redNombre/:nombre_red',
+router.get('/redNombre',
     verifyToken,
     redNombre
 )

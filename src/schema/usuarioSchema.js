@@ -48,8 +48,8 @@ export const updateSchema = z.object({
     telefono_usuario: z.string()
         .min(1, { message: "El teléfono es obligatorio" })
         .max(50, { message: "El teléfono no puede exceder los 50 caracteres" }),
-    correo_usuario: z.string()
-        .email({ message: "El correo electrónico debe tener un formato válido" }),
+    // correo_usuario: z.string()
+    //     .email({ message: "El correo electrónico debe tener un formato válido" }),
     imagen_usuario: z.string().url({ message: "La imagen debe ser una URL válida" }).optional(),
 });
 export const cambiarContrasenaSchema = z.object({

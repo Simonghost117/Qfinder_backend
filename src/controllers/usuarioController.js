@@ -13,8 +13,10 @@ import {
   generateAndStoreCode,
   verifyCode,
   sendVerificationEmail,
-  clearPendingRegistration
+  clearPendingRegistration,
+  buscarNombre
 } from '../services/usuarioService.js';
+import { or } from 'sequelize';
 
 export const register = async (req, res) => {
   try {
@@ -220,6 +222,9 @@ export const logout = async (req, res) => {
 export const listarUsers = async (req, res) => {
     try {
         const usuarios = await Usuario.findAll();
+        if (!usuarios) {
+            return res.status(404).json({ message: 'No se encontraron usuarios' });
+        }
         res.status(200).json(usuarios.map(usuario => ({
             id_usuario: usuario.id_usuario,
             nombre_usuario: usuario.nombre_usuario,
@@ -309,5 +314,113 @@ export const perfilUser = async (req, res) => {
   } catch (error) {
     console.error('Error al obtener el perfil del usuario:', error);
     res.status(500).json({ message: 'Error al obtener el perfil del usuario', error });
+  }
+}
+
+export const listarUsuarios = async (req, res) => {
+  try { 
+    const usuarios = await Usuario.findAll(
+      {
+      where: {
+        tipo_usuario: 'Usuario'
+      }, order: [['id_usuario', 'ASC']]
+      }
+  );
+    res.status(200).json(usuarios.map(usuario => ({
+      id_usuario: usuario.id_usuario,
+      nombre_usuario: usuario.nombre_usuario,
+      apellido_usuario: usuario.apellido_usuario,
+      identificacion_usuario: usuario.identificacion_usuario,
+      direccion_usuario: usuario.direccion_usuario,
+      telefono_usuario: usuario.telefono_usuario,
+      correo_usuario: usuario.correo_usuario,
+      tipo_usuario: usuario.tipo_usuario,
+      estado_usuario: usuario.estado_usuario
+    })));
+  } catch (error) {
+    console.log('Error al listar los usuarios', error);
+    res.status(500).json({ message: "Erro interno del servidor al listar los usuarios"})
+  }
+}
+export const listarAdmin = async (req, res) => {
+  try {
+    const usuarios = await Usuario.findAll(
+      {
+      where: {
+        tipo_usuario: 'Administrador'
+      }, order: [['id_usuario', 'ASC']]
+      }
+  );
+    res.status(200).json(usuarios.map(usuario => ({
+      id_usuario: usuario.id_usuario,
+      nombre_usuario: usuario.nombre_usuario,
+      apellido_usuario: usuario.apellido_usuario,
+      identificacion_usuario: usuario.identificacion_usuario,
+      direccion_usuario: usuario.direccion_usuario,
+      telefono_usuario: usuario.telefono_usuario,
+      correo_usuario: usuario.correo_usuario,
+      tipo_usuario: usuario.tipo_usuario,
+      estado_usuario: usuario.estado_usuario
+    })));
+  } catch (error) {
+    console.log('Error al listar los usuarios', error);
+    res.status(500).json({ message: "Erro interno del servidor al listar los administradores"})
+  }
+}
+
+export const actualizarUsuario = async (req, res) => {
+  try {
+    const { id_usuario } = req.params;
+    const { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, tipo_usuario} = req.body;
+    const usuario = await Usuario.findAll({
+      where: {
+        id_usuario: id_usuario
+      }
+    })
+    if (!usuario) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+    const dataToUpdate = { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, tipo_usuario };
+    await Usuario.update(dataToUpdate, {
+      where: { id_usuario: id_usuario },
+    });
+    res.status(200).json({ message: 'Información del usuario actualizada exitosamente' });
+  } catch(error) {
+    console.error('Error al actualizar el usuario', error);
+    res.status(500).json({ message: "Error en el servidor al actualizar el usuario" });
+  }
+}
+
+export const eliminarUsuario = async (req, res) => {
+  try {
+    const { id_usuario } = req.params;
+    if (!id_usuario) {
+      return res.status(400).json({ message: "ID de usuario no proporcionado" });
+    }
+    const usuario = await Usuario.findByPk(id_usuario);
+    if(!usuario) {
+      return res.status(404).json({ message: "Usuario no encontrado"});
+    }
+    await Usuario.destroy({
+      where: { id_usuario: id_usuario }
+    })
+    res.status(200).json({ message: "Usuario eliminado exitosamente"})
+  } catch (error) {
+    console.error('Error interno al eliminar el usuario', error);
+    res.status(500).json({ message: "Error interno al eliminar el usuario"})
+  }
+}
+
+export const buscarUserNombre = async (req, res) => {
+  try {
+    const { nombre_usuario } = req.body;
+    const usuarios = await buscarNombre(nombre_usuario);
+    if (usuarios.length === 0 || !usuarios) {
+      return res.status(404).json({ message: "No se encontraron usuarios con ese nombre" });
+    }
+    res.status(200).json(usuarios);
+  } catch (error) {
+    console.error('Error al buscar el usuario por nombre', error);
+    res.status(500).json({ message: "Error interno al buscar el usuario por nombre" });
   }
 }

@@ -64,6 +64,10 @@ Red.belongsToMany(Usuario, {
 UsuarioRed.belongsTo(Usuario, { foreignKey: "id_usuario", as: "usuario" });
 UsuarioRed.belongsTo(Red, { foreignKey: "id_red", as: "red" });
 
+// 🚀 Agrega la relación correctamente
+Red.hasMany(UsuarioRed, { foreignKey: "id_red" });
+UsuarioRed.belongsTo(Red, { foreignKey: "id_red" });
+
 
 // Exportar los modelos y la conexión de Sequelize
 const models = { Usuario, Paciente, Familiar, Medico, Red, PanelPersonalizado, CitaMedica, ActividadCuidado, UsuarioRed };

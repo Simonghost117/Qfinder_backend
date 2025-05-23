@@ -2,13 +2,13 @@ import Medicamento from '../models/medicamento.model.js';
 
 export const crearMedicamento = async (req, res) => {
   try {
-    const { id_usuario } = req.user;
-    console.log(id_usuario);
+    // const { id_usuario } = req.user;
+    // console.log(id_usuario);
 
     const { nombre, descripcion, tipo } = req.body;
 
     const nuevo = await Medicamento.create({
-      id_usuario,
+      // id_usuario,
       nombre,
       descripcion,
       tipo
@@ -21,11 +21,13 @@ export const crearMedicamento = async (req, res) => {
 
 export const listarMedicamentos = async (req, res) => {
   try {
-    const { id_usuario } = req.user; // Extraemos el usuario autenticado
+    // const { id_usuario } = req.user; // Extraemos el usuario autenticado
 
-    const medicamentos = await Medicamento.findAll({
-      where: { id_usuario } // Solo los del usuario actual
-    });
+    const medicamentos = await Medicamento.findAll(
+    //   {
+    //   where: { id_usuario } // Solo los del usuario actual
+    // }
+  );
 
     res.status(200).json(medicamentos);
   } catch (error) {

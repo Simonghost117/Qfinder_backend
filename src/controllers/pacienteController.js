@@ -5,6 +5,8 @@ import { models } from "../models/index.js";
 const { Paciente, Familiar } = models;
 import codigoQr from "../models/codigoQr.model.js";
 import { generarQRPaciente } from "../controllers/codigoQrController.js";
+import Usuario from "../models/usuario.model.js";
+import { Op } from "sequelize";
 
 
 // Registrar un nuevo paciente
@@ -236,6 +238,38 @@ export const eliminarPaciente = async (req, res) => {
       success: false,
       message: 'Error al eliminar el paciente',
       error: process.env.NODE_ENV === 'development' ? error.message : null
+    });
+  }
+}
+
+export const listarTodosPacientes = async (req, res) => {
+  try {
+    const pacientes = await Paciente.findAll({
+      include: [{
+        model: Usuario,
+        as: 'usuario',
+        required: false,
+        attributes:['nombre_usuario', 'apellido_usuario', 'correo_usuario'],
+        
+      }], order: [['id_paciente', 'ASC']]
+    });
+
+    if (!pacientes) {
+      return res.status(404).json({
+        success: false,
+        message: "No se encontraron pacientes."
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: pacientes
+    });
+  } catch (error) {
+    console.error("Error en listarTodosPacientes:", error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al listar todos los pacientes'
     });
   }
 }

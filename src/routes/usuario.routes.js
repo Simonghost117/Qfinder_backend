@@ -1,11 +1,12 @@
 import express from 'express';
 import { login, logout, register, 
     listarUsers, actualizarUser, eliminarUser,
-    verifyUser, perfilUser } from '../controllers/usuarioController.js';
+    verifyUser, perfilUser, listarUsuarios, listarAdmin, eliminarUsuario, buscarUserNombre } from '../controllers/usuarioController.js';
 import validateSchema from '../middlewares/validatoreSchema.js';
 import { loginSchema, registerSchema, updateSchema, cambiarContrasenaSchema } from '../schema/usuarioSchema.js';
 import { verifyToken } from '../middlewares/verifyToken.js';
 import { recuperarContrasena, cambiarContrasena, verificarCodigo } from '../controllers/recuperarContrasena.js';
+import { validateAdmin } from '../middlewares/validateAdmin.js';
 
 const router = express.Router();
 
@@ -52,5 +53,39 @@ router.get('/perfil',
     verifyToken,
     perfilUser
 )
+
+//ADMINISTRADOR
+
+router.get('/listarUsuarios',
+    verifyToken,
+    validateAdmin,
+    listarUsuarios
+);
+router.get('/listarAdmin',
+    verifyToken,
+    validateAdmin,
+    listarAdmin
+);
+
+router.put('/actualizarUsuario/:id_usuario',
+    verifyToken,
+    validateAdmin,
+    validateSchema(registerSchema),
+    actualizarUser
+);
+router.delete('/eliminarUsuario/:id_usuario',
+    verifyToken,
+    validateAdmin,
+    eliminarUsuario
+); 
+router.get('/buscarUsuario',
+    verifyToken,
+    validateAdmin,
+    buscarUserNombre
+)
+
+//listar todos los usuarios
+//listar todos los pacientes
+//actualizar informacion usuarios/pacientes
 
 export default router;
