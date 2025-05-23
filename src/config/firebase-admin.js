@@ -1,4 +1,8 @@
-import { initializeApp, cert, getAuth, getDatabase } from 'firebase-admin/app';
+// ✅ Correcto
+import { initializeApp, cert } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
+import { getDatabase } from 'firebase-admin/database'; // solo si usas Realtime Database
+
 import { readFileSync } from 'fs';
 
 const initializeFirebase = () => {
