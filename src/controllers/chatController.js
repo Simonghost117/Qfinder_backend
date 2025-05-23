@@ -1,6 +1,5 @@
 import { db } from '../config/firebase-admin.js';
 import Usuario from '../models/usuario.model.js';
-import { db } from '../config/firebase-admin.js';
 import Usuario from '../models/usuario.model.js';
 import Red from '../models/red.model.js'; // Asegúrate de que esta importación sea correcta
 
