@@ -1,5 +1,42 @@
 import { db } from '../config/firebase-admin.js';
 import Usuario from '../models/usuario.model.js';
+export const obtenerIdRedPorNombre = async (req, res) => {
+  try {
+    const { nombre } = req.query;
+
+    if (!nombre) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'El parámetro nombre es requerido' 
+      });
+    }
+
+    // Buscar la red por nombre
+    const red = await Red.findOne({
+      where: { nombre_red: nombre },
+      attributes: ['id_red']
+    });
+
+    if (!red) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Red no encontrada' 
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      id_red: red.id_red
+    });
+
+  } catch (error) {
+    console.error('Error al obtener ID de red:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Error al obtener ID de red' 
+    });
+  }
+};
 
 export const enviarMensaje = async (req, res) => {
   try {

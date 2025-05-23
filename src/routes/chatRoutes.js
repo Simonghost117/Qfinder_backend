@@ -5,6 +5,9 @@ import { esMiembroRed } from '../middlewares/validacionesRed.js'; // Deberás cr
 
 const router = express.Router();
 
+// Nuevo endpoint para obtener ID de red por nombre
+router.get('/obtenerIdRed', verifyToken, obtenerIdRedPorNombre);
+
 router.post('/:id_red/enviar', 
   verifyToken,
   esMiembroRed,
