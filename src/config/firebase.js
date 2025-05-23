@@ -10,7 +10,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const serviceAccount = JSON.parse(
-  fs.readFileSync(path.resolve(__dirname, '../serviceAccountKey.json'), 'utf-8')
+  fs.readFileSync(path.resolve(__dirname, '../alishon07-f8f29-firebase-adminsdk-fbsvc-b49bf5b198.json'), 'utf-8')
 );
 
 import admin from 'firebase-admin';
