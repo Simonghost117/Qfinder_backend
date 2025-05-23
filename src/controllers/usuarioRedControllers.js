@@ -8,6 +8,7 @@ import {
 import UsuarioRed from "../models/UsuarioRed.js";
 import { where } from "sequelize";
 import Usuario from "../models/usuario.model.js";
+import { Red} from '../models/Red.js';
 
 export const unirseRed = async (req, res) => {
     try {
