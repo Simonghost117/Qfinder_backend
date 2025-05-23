@@ -62,7 +62,8 @@ export const unirseRed = async (req, res) => {
 export const obtenerRedYEstadoUnion = async (req, res) => {
     try {
         const { nombre } = req.query;
-        const id_usuario = req.user.id;
+      const id_usuario = req.user.id_usuario;
+
 
         // Busca la red por nombre
         const red = await Red.findOne({ where: { nombre_red: nombre } });
