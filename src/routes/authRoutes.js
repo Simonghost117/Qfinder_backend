@@ -1,7 +1,7 @@
 import express from 'express';
 import { verifyToken } from '../middlewares/verifyToken.js';
 import { auth } from '../config/firebase-admin.js';
-import UsuarioRed from '../models/usuarioRed.model.js';
+import UsuarioRed from '../models/UsuarioRed.js';
 
 const router = express.Router();
 
