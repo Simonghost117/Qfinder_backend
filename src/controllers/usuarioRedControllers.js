@@ -57,6 +57,40 @@ export const unirseRed = async (req, res) => {
         return res.status(500).json({ msg: "Error interno al unirse a la red" });
     }
 };
+
+export const obtenerRedYEstadoUnion = async (req, res) => {
+    try {
+        const { nombre } = req.query;
+        const id_usuario = req.user.id;
+
+        // Busca la red por nombre
+        const red = await Red.findOne({ where: { nombre_red: nombre } });
+        if (!red) {
+            return res.status(404).json({ success: false, message: 'Red no encontrada' });
+        }
+
+        // Verifica si el usuario es miembro de la red
+        const membresia = await UsuarioRed.findOne({
+            where: {
+                id_usuario,
+                id_red: red.id_red
+            }
+        });
+
+        return res.json({
+            id_red: red.id_red,
+            nombre_red: red.nombre_red,
+            descripcion_red: red.descripcion_red,
+            success: true,
+            message: "OK",
+            unido: !!membresia
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: 'Error interno del servidor' });
+    }
+};
+
 // En tu controlador de redes o usuarioRed
 export const verificarMembresia = async (req, res) => {
     try {

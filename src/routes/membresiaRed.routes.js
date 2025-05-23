@@ -7,7 +7,8 @@ import {
     abandonarRed,
     asignarAdmin, 
     eliminarMiembro,
-    verificarMembresia
+    verificarMembresia,
+    obtenerRedYEstadoUnion
  } from '../controllers/usuarioRedControllers.js';
 import { esAdministradorRed } from '../middlewares/validacionesRed.js';
 
@@ -27,6 +28,7 @@ router.get('/verificarMembresia/:id_red',
     verifyToken,
     verificarMembresia
 );
+router.get('/obtenerRedYEstadoUnion', verifyToken, obtenerRedYEstadoUnion);
 //listar los usuarios que pertenecen a una red
 router.get('/listarMembresia/:id_red',
     verifyToken,
