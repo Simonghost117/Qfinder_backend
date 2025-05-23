@@ -56,7 +56,7 @@ import CitaMedica from './routes/citaMedica.routes.js';
 import codigoQr from './routes/codigoQr.routes.js';
 import medicamentoRoutes from './routes/medicamento.routes.js';
 import pacienteMedicamentoRoutes from './routes/pacienteMedicamento.routes.js';
-
+import authRoutes from './routes/authRoutes.js'
 import membresiaRoutes from './routes/membresiaRed.routes.js'
 
 // Endpoint raíz informativo
@@ -100,6 +100,7 @@ app.use('/api/codigoQr', codigoQr)//🟢 codigo qr
 app.use('/api/medicamentos', medicamentoRoutes);//🟢 medicamento
 app.use('/api/paciente-medicamento', pacienteMedicamentoRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/firebase', authRoutes); //🟢 episodios salud
 // app.use('/api/medicos', medicoRoutes); // Validaciones - CRUD (YA NO SE NECESITA pero conservado)
 // app.use('/api/reportes', routerReport); // No se va a usar (comentado pero conservado)
 // app.use('/api/panel', panelRoutes);

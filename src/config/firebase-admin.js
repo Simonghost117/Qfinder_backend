@@ -1,37 +1,33 @@
-// src/config/firebase-admin.js
-import { initializeApp, cert } from 'firebase-admin/app';
-import { getDatabase } from 'firebase-admin/database';
+import { initializeApp, cert, getAuth, getDatabase } from 'firebase-admin/app';
+import { readFileSync } from 'fs';
 
 const initializeFirebase = () => {
   try {
-    if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
-      throw new Error('FIREBASE_SERVICE_ACCOUNT is not defined');
-    }
-
-    // 1. Parsear el JSON config
+    // Configuración desde variables de entorno
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-
-    // 2. Corregir formato de la clave privada (CRUCIAL)
+    
+    // Corrección de formato de la clave privada
     serviceAccount.private_key = serviceAccount.private_key
-      .replace(/\\n/g, '\n')          // Convertir \\n a saltos reales
-      .replace(/\\\\/g, '\\')         // Manejar barras escapadas
-      .replace(/"/g, '');             // Eliminar comillas sobrantes
+      .replace(/\\n/g, '\n')
+      .replace(/\\\\/g, '\\')
+      .replace(/"/g, '');
 
-    // 3. Inicializar Firebase
+    // Inicialización de Firebase Admin
     const app = initializeApp({
       credential: cert(serviceAccount),
       databaseURL: `https://${serviceAccount.project_id}.firebaseio.com`
     });
 
-    const db = getDatabase(app);
-    console.log('✅ Firebase initialized successfully');
-    return db;
-    
+    console.log('✅ Firebase Admin inicializado correctamente');
+    return {
+      auth: getAuth(app),
+      db: getDatabase(app)
+    };
   } catch (error) {
-    console.error('❌ Failed to initialize Firebase:', error);
+    console.error('❌ Error al inicializar Firebase Admin:', error);
     throw error;
   }
 };
 
-const db = initializeFirebase();
-export { db };
+const { auth, db } = initializeFirebase();
+export { auth, db };
