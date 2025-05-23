@@ -6,7 +6,8 @@ import {
     unirseRed,
     abandonarRed,
     asignarAdmin, 
-    eliminarMiembro
+    eliminarMiembro,
+    verificarMembresia
  } from '../controllers/usuarioRedControllers.js';
 import { esAdministradorRed } from '../middlewares/validacionesRed.js';
 
@@ -21,6 +22,11 @@ router.get('/listarRedPertenece',
     verifyToken,
     redesPertenecientes
 )
+// En tu archivo de rutas
+router.get('/verificarMembresia/:id_red', 
+    verifyToken,
+    verificarMembresia
+);
 //listar los usuarios que pertenecen a una red
 router.get('/listarMembresia/:id_red',
     verifyToken,
