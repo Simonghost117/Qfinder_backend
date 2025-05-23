@@ -62,25 +62,25 @@ export const redesPertenecientes = async (req, res) => {
   try {
     const { id_usuario } = req.user;
     
-    // Importa los modelos (asegúrate de que la ruta sea correcta)
-    const { MembresiaRed, Red } = require('../models');
-    
+    // Importa el modelo correcto (UsuarioRed en lugar de MembresiaRed)
+    const UsuarioRed = require('../models/UsuarioRed'); // Ajusta la ruta según tu estructura
+    const Red = require('../models/Red'); // Asegúrate de importar el modelo Red
+
     // Consulta a la base de datos para obtener las redes del usuario
-    const redes = await MembresiaRed.findAll({
+    const redes = await UsuarioRed.findAll({
       where: { id_usuario },
       include: [{ 
         model: Red, 
-        as: 'red',
-        attributes: ['id_red', 'nombre_red', 'descripcion_red'] // Solo los campos necesarios
+        as: 'red', // Asegúrate que este alias coincida con tu asociación
+        attributes: ['id_red', 'nombre_red', 'descripcion_red']
       }]
     });
 
-    // Mapear los resultados
+    // Mapear los resultados a un formato adecuado
     const redesResponse = redes.map(membresia => ({
       id_red: membresia.red.id_red,
       nombre_red: membresia.red.nombre_red,
-      descripcion_red: membresia.red.descripcion_red,
-      unido: true // Siempre true porque son redes a las que pertenece
+      descripcion_red: membresia.red.descripcion_red
     }));
 
     res.json({ success: true, data: redesResponse });
@@ -89,7 +89,7 @@ export const redesPertenecientes = async (req, res) => {
     res.status(500).json({ 
       success: false, 
       message: "Error interno del servidor",
-      error: error.message // Para más detalles en desarrollo
+      error: error.message 
     });
   }
 };
