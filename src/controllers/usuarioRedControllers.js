@@ -99,35 +99,49 @@ export const verificarMembresia = async (req, res) => {
         const { id_red } = req.params;
         const { id_usuario } = req.user;
 
+        // 1. Verificar en la base de datos SQL
         const membresia = await UsuarioRed.findOne({
-            where: {
-                id_usuario,
-                id_red
-            }
+            where: { id_usuario, id_red }
         });
 
         if (!membresia) {
             return res.status(403).json({ 
                 success: false,
-                message: 'El usuario no es miembro de esta red' 
+                message: 'No eres miembro de esta red' 
             });
         }
 
-        res.status(200).json({ 
+        // 2. Sincronizar con Firebase
+        try {
+            await db.ref(`comunidades/${id_red}/miembros/ext_${id_usuario}`).set({
+                rol: membresia.rol,
+                fecha_union: Date.now(),
+                sincronizado: true
+            });
+        } catch (firebaseError) {
+            console.error("Error sincronizando Firebase:", firebaseError);
+            // No retornes error aquí, solo loguea
+        }
+
+        // 3. Respuesta exitosa
+        res.json({ 
             success: true,
-            message: 'El usuario es miembro de la red',
             data: {
+                id_red,
+                id_usuario,
                 rol: membresia.rol
             }
         });
+
     } catch (error) {
-        console.error('Error al verificar membresía:', error);
+        console.error("Error en verificarMembresia:", error);
         res.status(500).json({ 
             success: false,
-            error: 'Error al verificar membresía' 
+            message: 'Error al verificar membresía',
+            error: error.message 
         });
     }
-};
+}
 export const redesPertenecientes = async (req, res) => {
   try {
     const { id_usuario } = req.user;
