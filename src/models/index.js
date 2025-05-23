@@ -8,6 +8,7 @@ import PanelPersonalizado from './panel_personalizado.js';
 import CitaMedica from './cita_medica.js';
 import { ActividadCuidado } from './activity.model.js';
 import Medicamento from './medicamento.model.js';
+import CodigoQR from './codigoQr.model.js';
 
 import UsuarioRed from './UsuarioRed.js'
 
@@ -58,8 +59,13 @@ Red.belongsToMany(Usuario, { through: UsuarioRed, foreignKey: "id_red" });
 
 UsuarioRed.belongsTo(Usuario, { foreignKey: "id_usuario", as: "usuario" });
 UsuarioRed.belongsTo(Red, { foreignKey: "id_red" });
+
+
+Paciente.hasOne(CodigoQR, { foreignKey: "id_paciente", as: "codigo_qr" });
+CodigoQR.belongsTo(Paciente, { foreignKey: "id_paciente", as: "paciente" });
+
   
 
 // Exportar los modelos y la conexión de Sequelize
-const models = { Usuario, Paciente, Familiar, Medico, Red, PanelPersonalizado, CitaMedica, ActividadCuidado, UsuarioRed };
+const models = { Usuario, Paciente, Familiar, Medico, Red, PanelPersonalizado, CitaMedica, ActividadCuidado, UsuarioRed, Medicamento, CodigoQR };
 export { sequelize, models };

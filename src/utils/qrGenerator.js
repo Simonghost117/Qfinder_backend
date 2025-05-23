@@ -1,6 +1,6 @@
 import QRCode from "qrcode";
 
-export const generarCodigoQR = async (data, maxLength = 100) => {
+export const generarCodigoQR = async (data, maxLength = 200) => {
   try {
     let jsonData = JSON.stringify(data);
 

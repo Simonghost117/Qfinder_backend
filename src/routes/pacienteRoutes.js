@@ -17,6 +17,7 @@ router.get('/listarPacientes',
 );
 router.get('/listarPacientes/:id_paciente',
      verifyToken, 
+        checkEpisodioPermissions(['Administrador', 'Usuario']),
      getPacienteById
     );
 router.put('/actualizarPaciente/:id_paciente', 
