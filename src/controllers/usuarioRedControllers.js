@@ -59,24 +59,29 @@ export const unirseRed = async (req, res) => {
 };
 
 export const redesPertenecientes = async (req, res) => {
-    try {
+     try {
         const { id_usuario } = req.user;
-        if (!id_usuario) {
-            return res.status(400).json({ msg: "ID de usuario requerido" });
-        }
+        
+        // Consulta a la base de datos para obtener las redes del usuario
+        const redes = await MembresiaRed.findAll({
+            where: { id_usuario },
+            include: [{ model: Red, as: 'red' }]
+        });
 
-        const redes = await listarRedesPorUsuario(id_usuario);
-        if (!redes || redes.length === 0) {
-            return res.status(404).json({ msg: "No estás unido a ninguna red" });
-        }
+        // Mapear los resultados a un formato adecuado
+        const redesResponse = redes.map(membresia => ({
+            id_red: membresia.red.id_red,
+            nombre_red: membresia.red.nombre_red,
+            descripcion_red: membresia.red.descripcion_red
+        }));
 
-        return res.status(200).json({ ok: true, data: redes });
-
+        res.json({ success: true, data: redesResponse });
     } catch (error) {
-        console.error("Error en listarMembresiaRed:", error);
-        return res.status(500).json({ msg: "Error interno al listar redes" });
+        console.error("Error en listarRedPertenece:", error);
+        res.status(500).json({ success: false, message: "Error interno del servidor" });
     }
 };
+
 
 export const listarMembresiaRed = async (req, res) => {
     try {
