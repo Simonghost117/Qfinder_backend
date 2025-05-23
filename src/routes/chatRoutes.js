@@ -1,6 +1,6 @@
 import express from 'express';
 import { verifyToken } from '../middlewares/verifyToken.js';
-import { enviarMensaje, obtenerMensajes } from '../controllers/chatController.js';
+import { enviarMensaje, obtenerMensajes,obtenerIdRedPorNombre } from '../controllers/chatController.js';
 import { esMiembroRed } from '../middlewares/validacionesRed.js'; // Deberás crear este middleware
 
 const router = express.Router();
