@@ -1,6 +1,7 @@
 import { db } from '../config/firebase-admin.js';
-import Usuario from '../models/usuario.model.js';
-import Red from '../models/Red.js'; // Asegúrate de que esta importación sea correcta
+import { models } from '../models/index.js';
+const { UsuarioRed, Red } = models;
+import { Op } from 'sequelize';
 
 export const obtenerIdRedPorNombre = async (req, res) => {
     try {
@@ -13,9 +14,14 @@ export const obtenerIdRedPorNombre = async (req, res) => {
             });
         }
 
+        // Búsqueda case-insensitive y con trim
         const red = await Red.findOne({
-            where: { nombre_red: nombre },
-            attributes: ['id_red']
+            where: { 
+                nombre_red: {
+                    [Op.iLike]: `%${nombre.trim()}%`
+                }
+            },
+            attributes: ['id_red', 'nombre_red']
         });
 
         if (!red) {
@@ -27,7 +33,8 @@ export const obtenerIdRedPorNombre = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            id_red: red.id_red
+            id_red: red.id_red,
+            nombre_red: red.nombre_red
         });
 
     } catch (error) {
@@ -35,62 +42,122 @@ export const obtenerIdRedPorNombre = async (req, res) => {
         res.status(500).json({ 
             success: false,
             error: 'Error al obtener ID de red',
-            details: error.message // Para depuración
+            details: error.message
         });
     }
 };
 
 export const enviarMensaje = async (req, res) => {
-  try {
-    const { id_red } = req.params;
-    const { id_usuario } = req.user;
-    const { mensaje } = req.body;
+    try {
+        const { id_red } = req.params;
+        const { id_usuario } = req.user;
+        const { contenido, idUsuario, nombreUsuario } = req.body;
 
-    // Obtener datos del usuario para mostrar en el chat
-    const usuario = await Usuario.findByPk(id_usuario, {
-      attributes: ['nombre_usuario', 'apellido_usuario']
-    });
+        if (!contenido || !idUsuario || !nombreUsuario) {
+            return res.status(400).json({ 
+                success: false,
+                error: 'Todos los campos son requeridos' 
+            });
+        }
 
-    if (!usuario) {
-      return res.status(404).json({ error: 'Usuario no encontrado' });
+        // Verificar membresía
+        const esMiembro = await UsuarioRed.findOne({
+            where: { id_usuario, id_red }
+        });
+
+        if (!esMiembro) {
+            return res.status(403).json({ 
+                success: false,
+                error: 'No eres miembro de esta red' 
+            });
+        }
+
+        // Crear referencia al chat
+        const chatRef = db.ref(`chats/${id_red}/mensajes`).push();
+        
+        // Crear objeto de mensaje
+        const nuevoMensaje = {
+            id: chatRef.key,
+            contenido,
+            idUsuario,
+            nombreUsuario,
+            fecha_envio: Date.now()
+        };
+
+        // Guardar en Firebase
+        await chatRef.set(nuevoMensaje);
+
+        res.status(201).json({ 
+            success: true, 
+            message: 'Mensaje enviado',
+            data: nuevoMensaje
+        });
+    } catch (error) {
+        console.error('Error al enviar mensaje:', error);
+        res.status(500).json({ 
+            success: false,
+            error: 'Error al enviar mensaje',
+            details: error.message
+        });
     }
-
-    // Crear referencia al chat de la red
-    const chatRef = db.ref(`chats/${id_red}/mensajes`).push();
-    
-    // Guardar mensaje en Firebase
-    await chatRef.set({
-      id_usuario,
-      nombre: `${usuario.nombre_usuario} ${usuario.apellido_usuario}`,
-      mensaje,
-      fecha_envio: Date.now()
-    });
-
-    res.status(201).json({ success: true, message: 'Mensaje enviado' });
-  } catch (error) {
-    console.error('Error al enviar mensaje:', error);
-    res.status(500).json({ error: 'Error al enviar mensaje' });
-  }
 };
 
 export const obtenerMensajes = async (req, res) => {
-  try {
-    const { id_red } = req.params;
-    const { limite = 50 } = req.query;
+    try {
+        const { id_red } = req.params;
+        const { limite = 50 } = req.query;
 
-    const snapshot = await db.ref(`chats/${id_red}/mensajes`)
-      .orderByChild('fecha_envio')
-      .limitToLast(parseInt(limite))
-      .once('value');
+        // Verificar membresía
+        const esMiembro = await UsuarioRed.findOne({
+            where: { id_usuario: req.user.id_usuario, id_red }
+        });
 
-    const mensajes = snapshot.val() || {};
+        if (!esMiembro) {
+            return res.status(403).json({ 
+                success: false,
+                error: 'No eres miembro de esta red' 
+            });
+        }
 
-    res.status(200).json({
-      success: true,
-      data: Object.values(mensajes)
-    });
-  } catch (error) {
-    console.error('Error al obtener mensajes:', error);
-    res.status(500).json({ error: 'Error al obtener mensajes' });
-  }
+        const snapshot = await db.ref(`chats/${id_red}/mensajes`)
+            .orderByChild('fecha_envio')
+            .limitToLast(parseInt(limite))
+            .once('value');
+
+        const mensajes = snapshot.val() || {};
+
+        res.status(200).json({
+            success: true,
+            data: Object.values(mensajes)
+        });
+    } catch (error) {
+        console.error('Error al obtener mensajes:', error);
+        res.status(500).json({ 
+            success: false,
+            error: 'Error al obtener mensajes',
+            details: error.message
+        });
+    }
+};
+
+export const verificarMembresia = async (req, res) => {
+    try {
+        const { id_red } = req.params;
+        const { id_usuario } = req.user;
+
+        const existe = await UsuarioRed.count({
+            where: { id_usuario, id_red }
+        });
+
+        return res.status(existe ? 200 : 403).json({ 
+            success: !!existe,
+            message: existe ? 'Miembro verificado' : 'No eres miembro'
+        });
+    } catch (error) {
+        console.error('Error en verificarMembresia:', error);
+        return res.status(500).json({ 
+            success: false,
+            message: 'Error interno del servidor'
+        });
+    }
 };
