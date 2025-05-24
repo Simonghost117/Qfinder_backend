@@ -7,24 +7,34 @@ import { buscarRed, unirmeRed, listarRedesPorUsuario, listarMembresia } from "..
 // Función optimizada para verificar membresía
 
 export const verificarMembresia = async (req, res) => {
-    const { id_red } = req.params;
-    const { id_usuario } = req.user;
+    try {
+        const { id_red } = req.params;
+        const { id_usuario } = req.user;
 
-    // 1. Verificar en tu base de datos SQL
-    const membresia = await UsuarioRed.findOne({ where: { id_usuario, id_red } });
+        // 1. Verificar en SQL
+        const membresia = await UsuarioRed.findOne({ 
+            where: { id_usuario, id_red } 
+        });
 
-    if (!membresia) {
-        return res.status(403).json({ success: false });
+        if (!membresia) {
+            return res.status(403).json({ success: false });
+        }
+
+        // 2. Sincronizar con Firebase (usando la instancia db importada)
+        const firebaseUid = `ext_${id_usuario}`;
+        await db.ref(`chats/${id_red}/miembros/${firebaseUid}`).update({
+            rol: "miembro",
+            ultima_sincronizacion: Date.now()
+        });
+
+        res.status(200).json({ success: true });
+    } catch (error) {
+        console.error("Error en verificarMembresia:", error);
+        res.status(500).json({ 
+            success: false,
+            error: "Error interno del servidor"
+        });
     }
-
-    // 2. Sincronizar con Firebase
-    const firebaseUid = `ext_${id_usuario}`; // o usa el UID de Firebase Auth si aplica
-    await admin.database().ref(`chats/${id_red}/miembros/${firebaseUid}`).update({
-        rol: "miembro",
-        ultima_sincronizacion: Date.now()
-    });
-
-    res.status(200).json({ success: true });
 };
 
 // Función optimizada para unirse a red
@@ -33,54 +43,32 @@ export const unirseRed = async (req, res) => {
         const { id_red } = req.params;
         const { id_usuario } = req.user;
 
-        // Validación de datos requeridos
-        if (!id_red || !id_usuario) {
-            return res.status(400).json({ msg: "Datos requeridos" });
-        }
-
-        // Verificar si la red existe
-        const red = await buscarRed(id_red);
-        if (!red) {
-            return res.status(404).json({ ok: false, msg: "Red no encontrada" });
-        }
-        
-        // Validar si el usuario ya está en la red
-        const usuarioExistente = await UsuarioRed.findOne({
-            where: { id_usuario, id_red }
-        });
-
-        if (usuarioExistente) {
-            return res.status(400).json({ msg: "El usuario ya está registrado en esta red" });
-        }
-
-        // Registrar usuario en la red (SQL)
+        // 1. Verificar y crear en SQL
         const [membresia, creado] = await UsuarioRed.findOrCreate({
             where: { id_usuario, id_red },
-            defaults: {
-                rol: 'miembro',
-                fecha_union: new Date()
-            }
+            defaults: { rol: 'miembro', fecha_union: new Date() }
         });
 
         if (!creado) {
-            return res.status(500).json({ msg: "Error al unirse a la red" });
+            return res.status(400).json({ msg: "El usuario ya está en esta red" });
         }
 
-        // Registrar en Firebase Realtime Database
-        await db.ref(`comunidades/${id_red}/miembros/ext_${id_usuario}`).set({
+        // 2. Sincronizar con Firebase
+        await db.ref(`chats/${id_red}/miembros/ext_${id_usuario}`).set({
             rol: 'miembro',
-            fecha_union: Date.now()
+            ultima_sincronizacion: Date.now()
         });
 
         return res.status(200).json({
-            ok: true,
-            msg: "Te has unido a la red correctamente",
+            success: true,
             data: membresia
         });
-
     } catch (error) {
-        console.error("Error en unirseRed:", error.message);
-        return res.status(500).json({ msg: "Error interno al unirse a la red" });
+        console.error("Error en unirseRed:", error);
+        return res.status(500).json({ 
+            success: false,
+            error: "Error interno del servidor"
+        });
     }
 };
 
