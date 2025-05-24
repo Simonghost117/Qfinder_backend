@@ -11,28 +11,21 @@ export const verificarMembresia = async (req, res) => {
         const { id_red } = req.params;
         const { id_usuario } = req.user;
 
-        // 1. Verificar en SQL
-        const membresia = await UsuarioRed.findOne({ 
-            where: { id_usuario, id_red } 
+        // Consulta optimizada con índice
+        const existe = await UsuarioRed.count({
+            where: { id_usuario, id_red },
+            logging: console.log // Muestra la consulta SQL en logs
         });
 
-        if (!membresia) {
-            return res.status(403).json({ success: false });
-        }
-
-        // 2. Sincronizar con Firebase (usando la instancia db importada)
-        const firebaseUid = `ext_${id_usuario}`;
-        await db.ref(`chats/${id_red}/miembros/${firebaseUid}`).update({
-            rol: "miembro",
-            ultima_sincronizacion: Date.now()
+        return res.status(existe ? 200 : 403).json({ 
+            success: !!existe,
+            message: existe ? 'Miembro verificado' : 'No eres miembro'
         });
-
-        res.status(200).json({ success: true });
     } catch (error) {
-        console.error("Error en verificarMembresia:", error);
-        res.status(500).json({ 
+        console.error('Error en verificarMembresia:', error);
+        return res.status(500).json({ 
             success: false,
-            error: "Error interno del servidor"
+            message: 'Error interno del servidor'
         });
     }
 };

@@ -1,5 +1,6 @@
 import express from 'express';
 import { verifyToken } from '../middlewares/verifyToken.js';
+import { verifyToken1 } from '../middlewares/auth.js';
 import { 
     listarMembresiaRed,
     redesPertenecientes,
@@ -25,7 +26,8 @@ router.get('/listarRedPertenece',
 )
 // En tu archivo de rutas
 router.get('/verificarMembresia/:id_red', 
-    verifyToken,
+   cache('5 minutes'),
+    verifyToken1,
     verificarMembresia
 );
 router.get('/obtenerRedYEstadoUnion', verifyToken, obtenerRedYEstadoUnion);
