@@ -140,19 +140,28 @@ export const obtenerMensajes = async (req, res) => {
         });
     }
 };
-
 export const verificarMembresia = async (req, res) => {
     try {
         const { id_red } = req.params;
         const { id_usuario } = req.user;
 
-        const existe = await UsuarioRed.count({
-            where: { id_usuario, id_red }
-        });
+        // Verificar en ambas bases de datos
+        const [sqlMembership, firebaseMembership] = await Promise.all([
+            UsuarioRed.findOne({ where: { id_usuario, id_red } }),
+            db.ref(`chats/${id_red}/miembros/${id_usuario}`).once('value')
+        ]);
 
-        return res.status(existe ? 200 : 403).json({ 
-            success: !!existe,
-            message: existe ? 'Miembro verificado' : 'No eres miembro'
+        // Sincronizar si hay discrepancia
+        if (sqlMembership && !firebaseMembership.exists()) {
+            await db.ref(`chats/${id_red}/miembros/${id_usuario}`).set({
+                rol: sqlMembership.rol,
+                fecha_union: sqlMembership.fecha_union.getTime()
+            });
+        }
+
+        return res.status(200).json({ 
+            success: !!sqlMembership,
+            message: sqlMembership ? 'Miembro verificado' : 'No eres miembro'
         });
     } catch (error) {
         console.error('Error en verificarMembresia:', error);
