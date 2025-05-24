@@ -1,4 +1,4 @@
-import { db } from '../config/firebase-admin.js';
+import { auth, db } from '../config/firebase-admin.js';
 import { models } from '../models/index.js';
 const { UsuarioRed, Red } = models;
 import { Op } from 'sequelize';

@@ -2,7 +2,7 @@
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getDatabase } from 'firebase-admin/database';
-
+import admin from 'firebase-admin';
 // 🔥 ATENCIÓN: En producción NUNCA expongas estas credenciales
 // Esto es SOLO para fines de aprendizaje
 const serviceAccount = {
@@ -58,9 +58,14 @@ const app = initializeApp({
   credential: cert(serviceAccount),
   databaseURL: "https://qfinder-comunity-default-rtdb.firebaseio.com"
 });
-
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    databaseURL: "https://qfinder-comunity-default-rtdb.firebaseio.com"
+  });
+}
 // Exporta los servicios
-export const auth = getAuth(app);
+export const auth = admin.auth();
 export const db = getDatabase(app);
 
 console.log('✅ Firebase Admin inicializado correctamente');

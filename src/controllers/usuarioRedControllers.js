@@ -1,4 +1,4 @@
-import { db } from '../config/firebase-admin.js';
+import { auth, db } from '../config/firebase-admin.js';
 import UsuarioRed from '../models/UsuarioRed.js';
 import Usuario from '../models/usuario.model.js';
 import Red from '../models/Red.js';
