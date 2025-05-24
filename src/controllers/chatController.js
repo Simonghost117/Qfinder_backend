@@ -53,6 +53,7 @@ export const enviarMensaje = async (req, res) => {
         const { id_usuario } = req.user;
         const { contenido, idUsuario, nombreUsuario } = req.body;
 
+        // Validación rápida
         if (!contenido || !idUsuario || !nombreUsuario) {
             return res.status(400).json({ 
                 success: false,
@@ -60,22 +61,21 @@ export const enviarMensaje = async (req, res) => {
             });
         }
 
-        // Verificar membresía
-        const esMiembro = await UsuarioRed.findOne({
-            where: { id_usuario, id_red }
-        });
+        // Verificación de membresía optimizada
+        const [esMiembro, red] = await Promise.all([
+            UsuarioRed.findOne({ where: { id_usuario, id_red } }),
+            Red.findByPk(id_red)
+        ]);
 
-        if (!esMiembro) {
+        if (!esMiembro || !red) {
             return res.status(403).json({ 
                 success: false,
-                error: 'No eres miembro de esta red' 
+                error: 'No eres miembro de esta red o la red no existe' 
             });
         }
 
-        // Crear referencia al chat
+        // Crear mensaje en Firebase primero (más rápido)
         const chatRef = db.ref(`chats/${id_red}/mensajes`).push();
-        
-        // Crear objeto de mensaje
         const nuevoMensaje = {
             id: chatRef.key,
             contenido,
@@ -84,14 +84,15 @@ export const enviarMensaje = async (req, res) => {
             fecha_envio: Date.now()
         };
 
-        // Guardar en Firebase
         await chatRef.set(nuevoMensaje);
 
+        // Responder inmediatamente
         res.status(201).json({ 
             success: true, 
             message: 'Mensaje enviado',
             data: nuevoMensaje
         });
+
     } catch (error) {
         console.error('Error al enviar mensaje:', error);
         res.status(500).json({ 
