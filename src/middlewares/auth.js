@@ -1,4 +1,5 @@
 // middleware/auth.js
+import jwt from 'jsonwebtoken';
 export const verifyToken1 = async (req, res, next) => {
     const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
     
