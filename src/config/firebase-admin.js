@@ -36,3 +36,5 @@ const initializeFirebase = () => {
 
 const { db } = initializeFirebase();
 export { db };
+const { auth } = initializeFirebase();
+export { auth };

@@ -1,4 +1,4 @@
-import  db  from '../config/firebase-admin.js';
+import  auth  from '../config/firebase-admin.js';
 import jwt from 'jsonwebtoken';
 import Usuario from '../models/usuario.model.js';
 
@@ -25,10 +25,10 @@ export const verifyToken = async (req, res, next) => {
 
     // Sincronizar con Firebase Auth
     try {
-      await db.getUserByEmail(usuario.correo_usuario);
+      await auth.getUserByEmail(usuario.correo_usuario);
     } catch (error) {
       if (error.code === 'auth/user-not-found') {
-        await db.createUser({
+        await auth.createUser({
           uid: `ext_${usuario.id_usuario}`,
           email: usuario.correo_usuario,
           displayName: usuario.nombre_usuario || 'Usuario',
