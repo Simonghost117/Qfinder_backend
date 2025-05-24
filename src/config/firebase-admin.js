@@ -1,13 +1,9 @@
-// ✅ Correcto
 import { initializeApp, cert } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import { getDatabase } from 'firebase-admin/database'; // solo si usas Realtime Database
+import { getDatabase } from 'firebase-admin/database';
 
-import { readFileSync } from 'fs';
-
+// Configuración optimizada para Firebase Admin
 const initializeFirebase = () => {
   try {
-    // Configuración desde variables de entorno
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
     
     // Corrección de formato de la clave privada
@@ -16,22 +12,27 @@ const initializeFirebase = () => {
       .replace(/\\\\/g, '\\')
       .replace(/"/g, '');
 
-    // Inicialización de Firebase Admin
+    // Configuración con manejo de conexiones
     const app = initializeApp({
       credential: cert(serviceAccount),
-      databaseURL: `https://${serviceAccount.project_id}.firebaseio.com`
+      databaseURL: `https://${serviceAccount.project_id}.firebaseio.com`,
+      databaseAuthVariableOverride: {
+        uid: 'backend-server',
+        backendAuth: true
+      }
     });
 
     console.log('✅ Firebase Admin inicializado correctamente');
-    return {
-      auth: getAuth(app),
-      db: getDatabase(app)
-    };
+    
+    const db = getDatabase(app);
+    db.goOnline(); // Asegurar que la conexión esté activa
+    
+    return { db };
   } catch (error) {
     console.error('❌ Error al inicializar Firebase Admin:', error);
     throw error;
   }
 };
 
-const { auth, db } = initializeFirebase();
-export { auth, db };
+const { db } = initializeFirebase();
+export { db };
