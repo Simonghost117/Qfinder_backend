@@ -10,42 +10,21 @@ export const verificarMembresia = async (req, res) => {
         const { id_red } = req.params;
         const { id_usuario } = req.user;
 
-        // Validación rápida con caché implícito de Sequelize
         const membresia = await UsuarioRed.findOne({
-            where: { id_usuario, id_red },
-            attributes: ['id_usuario', 'id_red', 'rol'],
-            raw: true
+            where: { id_usuario, id_red }
         });
 
         if (!membresia) {
-            return res.status(403).json({ 
-                success: false,
-                message: 'No eres miembro de esta red' 
-            });
+            return res.status(204).end(); // Cambiar a 204 No Content si no es miembro
         }
 
-        // Sincronización con Firebase (no bloqueante)
-        try {
-            await db.ref(`comunidades/${id_red}/miembros/ext_${id_usuario}`).update({
-                rol: membresia.rol,
-                ultima_sincronizacion: Date.now()
-            });
-        } catch (firebaseError) {
-            console.error("Error sincronizando Firebase:", firebaseError);
-        }
-
-        res.json({ 
-            success: true,
-            data: membresia
-        });
+        // Firebase opcional (mantener igual)
+        
+        return res.status(200).end(); // Solo código 200 OK sin body si es miembro
 
     } catch (error) {
-        console.error("Error en verificarMembresia:", error);
-        res.status(500).json({ 
-            success: false,
-            message: 'Error al verificar membresía',
-            error: error.message 
-        });
+        console.error("Error:", error);
+        res.status(500).end();
     }
 };
 
