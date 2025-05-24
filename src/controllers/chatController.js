@@ -148,15 +148,27 @@ export const verificarMembresia = async (req, res) => {
         // Verificar en ambas bases de datos
         const [sqlMembership, firebaseMembership] = await Promise.all([
             UsuarioRed.findOne({ where: { id_usuario, id_red } }),
-            db.ref(`chats/${id_red}/miembros/${id_usuario}`).once('value')
+            db.ref(`comunidades/${id_red}/miembros/ext_${id_usuario}`).once('value')
         ]);
 
         // Sincronizar si hay discrepancia
         if (sqlMembership && !firebaseMembership.exists()) {
-            await db.ref(`chats/${id_red}/miembros/${id_usuario}`).set({
+            await db.ref(`comunidades/${id_red}/miembros/ext_${id_usuario}`).set({
                 rol: sqlMembership.rol,
-                fecha_union: sqlMembership.fecha_union.getTime()
+                ultima_sincronizacion: Date.now()
             });
+            return res.status(200).json({ success: true, message: 'Miembro verificado' });
+        }
+
+        if (!sqlMembership && firebaseMembership.exists()) {
+            // Crear en SQL si existe en Firebase pero no en SQL
+            await UsuarioRed.create({
+                id_usuario,
+                id_red,
+                rol: firebaseMembership.val().rol || 'miembro',
+                fecha_union: new Date(firebaseMembership.val().fecha_union || Date.now())
+            });
+            return res.status(200).json({ success: true, message: 'Miembro verificado' });
         }
 
         return res.status(200).json({ 

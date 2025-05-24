@@ -47,33 +47,53 @@ export const esMiembroRed = async (req, res, next) => {
         const { id_red } = req.params;
         const { id_usuario } = req.user;
 
-        // Verificación en ambas bases de datos
-        const [firebaseMember, sqlMember] = await Promise.all([
-            db.ref(`chats/${id_red}/miembros/${id_usuario}`).once('value'),
-            UsuarioRed.findOne({ where: { id_usuario, id_red } })
+        if (!id_red || !id_usuario) {
+            return res.status(400).json({ 
+                success: false,
+                error: 'Datos requeridos' 
+            });
+        }
+
+        // Verificación optimizada con Promise.all
+        const [sqlMembership, firebaseMembership] = await Promise.all([
+            UsuarioRed.findOne({ 
+                where: { id_usuario, id_red },
+                attributes: ['id_usuario', 'id_red', 'rol', 'fecha_union']
+            }),
+            db.ref(`comunidades/${id_red}/miembros/ext_${id_usuario}`).once('value')
         ]);
 
-        if (!firebaseMember.exists() && !sqlMember) {
+        // Si no es miembro en ningún sistema
+        if (!sqlMembership && !firebaseMembership.exists()) {
             return res.status(403).json({ 
                 success: false,
                 error: 'No eres miembro de esta red' 
             });
         }
 
-        // Sincronizar si hay discrepancia
-        if (firebaseMember.exists() && !sqlMember) {
+        // Sincronización bidireccional
+        if (sqlMembership && !firebaseMembership.exists()) {
+            await db.ref(`comunidades/${id_red}/miembros/ext_${id_usuario}`).set({
+                rol: sqlMembership.rol,
+                ultima_sincronizacion: Date.now()
+            });
+        } else if (!sqlMembership && firebaseMembership.exists()) {
             await UsuarioRed.create({
                 id_usuario,
                 id_red,
-                rol: 'miembro',
-                fecha_union: new Date()
-            });
-        } else if (!firebaseMember.exists() && sqlMember) {
-            await db.ref(`chats/${id_red}/miembros/${id_usuario}`).set({
-                rol: sqlMember.rol,
-                fecha_union: sqlMember.fecha_union.getTime()
+                rol: firebaseMembership.val().rol || 'miembro',
+                fecha_union: new Date(firebaseMembership.val().ultima_sincronizacion || Date.now())
             });
         }
+
+        // Adjuntar información de membresía a la solicitud
+        req.membresia = {
+            id_usuario,
+            id_red,
+            rol: sqlMembership?.rol || firebaseMembership.val().rol,
+            esAdministrador: (sqlMembership?.rol === 'administrador') || 
+                            (firebaseMembership.exists() && firebaseMembership.val().rol === 'administrador')
+        };
 
         next();
     } catch (error) {

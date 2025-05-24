@@ -14,15 +14,27 @@ export const verificarMembresia = async (req, res) => {
         // Verificar en ambas bases de datos
         const [sqlMembership, firebaseMembership] = await Promise.all([
             UsuarioRed.findOne({ where: { id_usuario, id_red } }),
-            db.ref(`chats/${id_red}/miembros/${id_usuario}`).once('value')
+            db.ref(`comunidades/${id_red}/miembros/ext_${id_usuario}`).once('value')
         ]);
 
         // Sincronizar si hay discrepancia
         if (sqlMembership && !firebaseMembership.exists()) {
-            await db.ref(`chats/${id_red}/miembros/${id_usuario}`).set({
+            await db.ref(`comunidades/${id_red}/miembros/ext_${id_usuario}`).set({
                 rol: sqlMembership.rol,
-                fecha_union: sqlMembership.fecha_union.getTime()
+                ultima_sincronizacion: Date.now()
             });
+            return res.status(200).json({ success: true, message: 'Miembro verificado' });
+        }
+
+        if (!sqlMembership && firebaseMembership.exists()) {
+            // Crear en SQL si existe en Firebase pero no en SQL
+            await UsuarioRed.create({
+                id_usuario,
+                id_red,
+                rol: firebaseMembership.val().rol || 'miembro',
+                fecha_union: new Date(firebaseMembership.val().fecha_union || Date.now())
+            });
+            return res.status(200).json({ success: true, message: 'Miembro verificado' });
         }
 
         return res.status(200).json({ 
@@ -44,25 +56,53 @@ export const unirseRed = async (req, res) => {
         const { id_red } = req.params;
         const { id_usuario } = req.user;
 
-        // 1. Verificar y crear en SQL
-        const [membresia, creado] = await UsuarioRed.findOrCreate({
-            where: { id_usuario, id_red },
-            defaults: { rol: 'miembro', fecha_union: new Date() }
-        });
-
-        if (!creado) {
-            return res.status(400).json({ msg: "El usuario ya está en esta red" });
+        // 1. Verificar si la red existe
+        const red = await Red.findByPk(id_red);
+        if (!red) {
+            return res.status(404).json({ 
+                success: false,
+                message: 'Red no encontrada' 
+            });
         }
 
-        // 2. Sincronizar con Firebase
-        await db.ref(`chats/${id_red}/miembros/ext_${id_usuario}`).set({
+        // 2. Verificar si ya es miembro
+        const membresiaExistente = await UsuarioRed.findOne({
+            where: { id_usuario, id_red }
+        });
+
+        if (membresiaExistente) {
+            return res.status(400).json({ 
+                success: false,
+                message: 'Ya eres miembro de esta red' 
+            });
+        }
+
+        // 3. Crear membresía en SQL
+        const nuevaMembresia = await UsuarioRed.create({
+            id_usuario,
+            id_red,
+            rol: 'miembro',
+            fecha_union: new Date()
+        });
+
+        // 4. Sincronizar con Firebase
+        await db.ref(`comunidades/${id_red}/miembros/ext_${id_usuario}`).set({
             rol: 'miembro',
             ultima_sincronizacion: Date.now()
         });
 
+        // 5. Generar token de Firebase para el usuario
+        const firebaseToken = await auth.createCustomToken(`ext_${id_usuario}`, {
+            id_red,
+            id_usuario,
+            rol: 'miembro'
+        });
+
         return res.status(200).json({
             success: true,
-            data: membresia
+            message: 'Te has unido a la red correctamente',
+            data: nuevaMembresia,
+            firebaseToken
         });
     } catch (error) {
         console.error("Error en unirseRed:", error);
