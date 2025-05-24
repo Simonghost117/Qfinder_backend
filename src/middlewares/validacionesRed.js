@@ -47,26 +47,32 @@ export const esMiembroRed = async (req, res, next) => {
         const { id_red } = req.params;
         const { id_usuario } = req.user;
 
-        // Verificación en Firebase
-        const snapshot = await db.ref(`comunidades/${id_red}/miembros/${id_usuario}`).once('value');
-        if (!snapshot.exists()) {
-            // Verificación adicional en SQL por si hay inconsistencia
-            const membresiaSQL = await UsuarioRed.findOne({
-                where: { id_usuario, id_red }
+        // Verificación en ambas bases de datos
+        const [firebaseMember, sqlMember] = await Promise.all([
+            db.ref(`chats/${id_red}/miembros/${id_usuario}`).once('value'),
+            UsuarioRed.findOne({ where: { id_usuario, id_red } })
+        ]);
+
+        if (!firebaseMember.exists() && !sqlMember) {
+            return res.status(403).json({ 
+                success: false,
+                error: 'No eres miembro de esta red' 
             });
-            
-            if (!membresiaSQL) {
-                return res.status(403).json({ 
-                    success: false,
-                    error: 'No eres miembro de esta red' 
-                });
-            } else {
-                // Hay inconsistencia, corregir Firebase
-                await db.ref(`comunidades/${id_red}/miembros/${id_usuario}`).set({
-                    rol: membresiaSQL.rol,
-                    fecha_union: membresiaSQL.fecha_union.getTime()
-                });
-            }
+        }
+
+        // Sincronizar si hay discrepancia
+        if (firebaseMember.exists() && !sqlMember) {
+            await UsuarioRed.create({
+                id_usuario,
+                id_red,
+                rol: 'miembro',
+                fecha_union: new Date()
+            });
+        } else if (!firebaseMember.exists() && sqlMember) {
+            await db.ref(`chats/${id_red}/miembros/${id_usuario}`).set({
+                rol: sqlMember.rol,
+                fecha_union: sqlMember.fecha_union.getTime()
+            });
         }
 
         next();
