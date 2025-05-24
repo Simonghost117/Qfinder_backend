@@ -26,7 +26,6 @@ router.get('/listarRedPertenece',
 )
 // En tu archivo de rutas
 router.get('/verificarMembresia/:id_red', 
-   cache('5 minutes'),
     verifyToken1,
     verificarMembresia
 );
