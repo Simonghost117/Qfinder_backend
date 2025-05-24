@@ -5,27 +5,26 @@ import Red from '../models/Red.js';
 import { buscarRed, unirmeRed, listarRedesPorUsuario, listarMembresia } from "../services/usuarioRedService.js";
 
 // Función optimizada para verificar membresía
+
 export const verificarMembresia = async (req, res) => {
-    try {
-        const { id_red } = req.params;
-        const { id_usuario } = req.user;
+    const { id_red } = req.params;
+    const { id_usuario } = req.user;
 
-        const membresia = await UsuarioRed.findOne({
-            where: { id_usuario, id_red }
-        });
+    // 1. Verificar en tu base de datos SQL
+    const membresia = await UsuarioRed.findOne({ where: { id_usuario, id_red } });
 
-        if (!membresia) {
-            return res.status(204).end(); // Cambiar a 204 No Content si no es miembro
-        }
-
-        // Firebase opcional (mantener igual)
-        
-        return res.status(200).end(); // Solo código 200 OK sin body si es miembro
-
-    } catch (error) {
-        console.error("Error:", error);
-        res.status(500).end();
+    if (!membresia) {
+        return res.status(403).json({ success: false });
     }
+
+    // 2. Sincronizar con Firebase
+    const firebaseUid = `ext_${id_usuario}`; // o usa el UID de Firebase Auth si aplica
+    await admin.database().ref(`chats/${id_red}/miembros/${firebaseUid}`).update({
+        rol: "miembro",
+        ultima_sincronizacion: Date.now()
+    });
+
+    res.status(200).json({ success: true });
 };
 
 // Función optimizada para unirse a red
