@@ -134,7 +134,6 @@ export const redNombre = async (req, res) => {
   }
 };
 
-// En redes.controller.js
 export const obtenerIdRedPorNombre = async (req, res) => {
     try {
         const { nombre } = req.query;
@@ -142,22 +141,33 @@ export const obtenerIdRedPorNombre = async (req, res) => {
         console.log(`Buscando red por nombre: ${nombre}`);
         
         if (!nombre || nombre.trim() === '') {
-            console.log('Nombre de red vacío recibido');
             return res.status(400).json({ 
                 success: false,
                 message: 'Nombre de red requerido',
-                data: null
+                id_red: 0,
+                nombre_red: '',
+                descripcion_red: ''
             });
         }
 
-        const red = await buscarRedPorNombre(nombre);
+        // Buscar en la base de datos (case-insensitive)
+        const red = await Red.findOne({ 
+            where: { 
+                nombre_red: { 
+                    [Op.iLike]: nombre // Búsqueda insensible a mayúsculas/minúsculas
+                }
+            },
+            raw: true
+        });
         
         if (!red) {
-          console.log(`Red no encontrada: ${nombre}`);
-            return res.status(404).json({ 
+            console.log(`Red no encontrada: ${nombre}`);
+            return res.status(200).json({ 
                 success: false,
                 message: 'Red no encontrada',
-                data: null
+                id_red: 0,
+                nombre_red: nombre,
+                descripcion_red: ''
             });
         }
 
@@ -166,19 +176,19 @@ export const obtenerIdRedPorNombre = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: "Red encontrada",
-            data: {
-                id_red: red.id_red,
-                nombre_red: red.nombre_red,
-                descripcion_red: red.descripcion_red
-            }
+            id_red: red.id_red,
+            nombre_red: red.nombre_red,
+            descripcion_red: red.descripcion_red || ''
         });
+        
     } catch (error) {
-      console.log(`Error al buscar red por nombre: ${error.message}`, { stack: error.stack });
+        console.error(`Error al buscar red: ${error.message}`, error.stack);
         return res.status(500).json({ 
             success: false,
-            message: "Error interno al buscar red",
-            error: process.env.NODE_ENV === 'development' ? error.message : null,
-            data: null
+            message: "Error interno del servidor",
+            id_red: 0,
+            nombre_red: '',
+            descripcion_red: ''
         });
     }
 };
