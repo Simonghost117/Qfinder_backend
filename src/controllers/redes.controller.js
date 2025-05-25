@@ -1,6 +1,6 @@
 import { creacionRed, actualiza, buscarRedPorNombre } from '../services/redes.service.js';
 import  Red  from '../models/Red.js';
-
+const { Op } = require('sequelize');
 
 export const crearRed = async (req, res) => {
   try {
