@@ -43,23 +43,8 @@ export const recuperarContrasena = async (req, res) => {
 
 export const cambiarContrasena = async (req, res) => {
   const { nuevaContrasena } = req.body;
+  const token = req.cookies.resetToken || req.headers.authorization?.split(' ')[1];
 
-  // 🔍 Leer token desde la cabecera o cookies
-  let token = null;
-
-  // 1. Verificar si viene en cabecera Authorization: Bearer ...
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
-    token = req.headers.authorization.split(' ')[1];
-  }
-
-  // 2. Si no hay header, buscar en cookies
-  if (!token && req.cookies && req.cookies.resetToken) {
-    token = req.cookies.resetToken;
-  }
-
-  if (!token) {
-    return res.status(401).json({ mensaje: 'Token no proporcionado.' });
-  }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);

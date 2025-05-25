@@ -17,17 +17,26 @@ export const episodioSchema = z.object({
   path: ['fecha_hora_fin']
 });
 
+// export const filtroSchema = z.object({
+//   fecha_desde: z.coerce.date().optional(),
+//   fecha_hasta: z.coerce.date().optional(),
+//   tipo: z.string().optional(),
+//   severidad_min: z.number().int().min(1).max(10).optional()
+// }).refine(data => {
+//   if (data.fecha_desde && data.fecha_hasta) {
+//     return data.fecha_hasta >= data.fecha_desde;
+//   }
+//   return true;
+// }, {
+//   message: 'Fecha final debe ser mayor o igual a la inicial',
+//   path: ['fecha_hasta']
+// });
+
 export const filtroSchema = z.object({
-  fecha_desde: z.coerce.date().optional(),
-  fecha_hasta: z.coerce.date().optional(),
+  ordenFecha: z.enum(['asc', 'desc']).optional(),
+  severidad: z.enum(['baja', 'media', 'alta']).optional(),
   tipo: z.string().optional(),
-  severidad_min: z.number().int().min(1).max(10).optional()
-}).refine(data => {
-  if (data.fecha_desde && data.fecha_hasta) {
-    return data.fecha_hasta >= data.fecha_desde;
-  }
-  return true;
-}, {
-  message: 'Fecha final debe ser mayor o igual a la inicial',
-  path: ['fecha_hasta']
+  estado: z.string().optional(),
+  fecha_desde: z.string().datetime().optional(),
+  fecha_hasta: z.string().datetime().optional(),
 });

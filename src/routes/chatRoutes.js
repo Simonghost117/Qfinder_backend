@@ -17,7 +17,7 @@ router.get('/obtenerIdRed', verifyToken,obtenerIdRedPorNombre );
 router.get('/:id_red/verificarMembresia', verifyToken, verificarMembresia);
 
 // Enviar mensaje
-router.post('/red/:id_red/enviar', 
+router.post('/:id_red/enviar', 
     verifyToken,
     esMiembroRed,
     enviarMensaje

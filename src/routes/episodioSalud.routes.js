@@ -6,6 +6,8 @@ import { validateZodSchema } from '../middlewares/validateZod.middleware.js';
 import { episodioSchema, filtroSchema } from '../schema/episodioSalud.validator.js';
 import { verifyToken } from '../middlewares/verifyToken.js';
 import { injectPacienteId } from '../middlewares/injectPacienteId.middleware.js';
+import { validateZodQuery } from "../middlewares/validateZodQuery.middleware.js";
+
 
 const routerEpisodioSalud = Router();
 
@@ -23,6 +25,15 @@ routerEpisodioSalud.post(
   injectPacienteId,
   validateZodSchema(episodioSchema),
   wrap(EpisodioSaludController.crearEpisodio)
+);
+
+//Obtener episodios de acuerdo al filtro
+routerEpisodioSalud.get(
+  '/episodioSalud/:id_paciente/filtrar',
+  verifyToken,
+  checkEpisodioPermissions(['Familiar', 'Usuario']),
+  validateZodQuery(filtroSchema, { source: 'query' }),
+  wrap(EpisodioSaludController.filtrarEpisodios)
 );
 
 // Obtener todos los episodios de un paciente
@@ -58,5 +69,7 @@ routerEpisodioSalud.delete(
   checkEpisodioPermissions(['Familiar','Usuario']),
   wrap(EpisodioSaludController.eliminarEpisodio)
 );
+
+
 
 export default routerEpisodioSalud;
