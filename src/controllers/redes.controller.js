@@ -133,3 +133,34 @@ export const redNombre = async (req, res) => {
     res.status(500).json({ message: "Error al listar red", error: error.message });
   }
 };
+
+// En redes.controller.js
+export const obtenerIdRedPorNombre = async (req, res) => {
+    try {
+        const { nombre } = req.query; // Cambiar de params a query
+        const red = await buscarRedPorNombre(nombre);
+
+        if (!red) {
+            return res.status(404).json({ 
+                success: false,
+                message: 'Red no encontrada' 
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Red encontrada",
+            data: {
+                id_red: red.id_red,
+                nombre_red: red.nombre_red,
+                descripcion_red: red.descripcion_red
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ 
+            success: false,
+            message: "Error al buscar red", 
+            error: error.message 
+        });
+    }
+};

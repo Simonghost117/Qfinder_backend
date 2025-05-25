@@ -5,7 +5,8 @@ import {
     listarRedId,
     actualizarRed,
     eliminarRed,
-    redNombre
+    redNombre,
+    obtenerIdRedPorNombre
  } from '../controllers/redes.controller.js';
 import { verifyToken } from '../middlewares/verifyToken.js';
 import validateSchema from '../middlewares/validatoreSchema.js';
@@ -13,7 +14,8 @@ import { redesSchema } from '../schema/redesSchema.js';
 import { esAdministradorRed } from '../middlewares/validacionesRed.js';
 
 const router = express.Router();
-
+// En redes.routes.js
+router.get('/obtenerIdRed', verifyToken, obtenerIdRedPorNombre)
 router.post('/crear',
     verifyToken,
     validateSchema(redesSchema),
