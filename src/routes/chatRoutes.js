@@ -5,13 +5,13 @@ import {
     obtenerMensajes,
     verificarMembresia 
 } from '../controllers/chatController.js';
-// import { obtenerIdRedPorNombre } from '../controllers/redes.controller.js';
+ import { obtenerIdRedPorNombre } from '../controllers/redes.controller.js';
 import { esMiembroRed } from '../middlewares/validacionesRed.js';
 
 const router = express.Router();
 
 // Obtener ID de red por nombre
-router.get('/obtenerIdRed', verifyToken, );
+router.get('/obtenerIdRed', verifyToken,obtenerIdRedPorNombre );
 
 // Verificar membresía
 router.get('/:id_red/verificarMembresia', verifyToken, verificarMembresia);
