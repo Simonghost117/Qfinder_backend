@@ -1,84 +1,44 @@
 import { auth, db } from '../config/firebase-admin.js';
 import { models } from '../models/index.js';
-const { UsuarioRed, Red } = models;
-import { Op } from 'sequelize';
-
-export const obtenerIdRedPorNombre = async (req, res) => {
-    try {
-        const { nombre } = req.query;
-
-        if (!nombre) {
-            return res.status(400).json({ 
-                success: false,
-                message: 'El parámetro nombre es requerido' 
-            });
-        }
-
-        // Búsqueda case-insensitive y con trim
-        const red = await Red.findOne({
-            where: { 
-                nombre_red: {
-                    [Op.iLike]: `%${nombre.trim()}%`
-                }
-            },
-            attributes: ['id_red', 'nombre_red']
-        });
-
-        if (!red) {
-            return res.status(404).json({ 
-                success: false,
-                message: 'Red no encontrada' 
-            });
-        }
-
-        res.status(200).json({
-            success: true,
-            id_red: red.id_red,
-            nombre_red: red.nombre_red
-        });
-
-    } catch (error) {
-        console.error('Error al obtener ID de red:', error);
-        res.status(500).json({ 
-            success: false,
-            error: 'Error al obtener ID de red',
-            details: error.message
-        });
-    }
-};
+const { UsuarioRed, Red, Usuario } = models;
 
 export const enviarMensaje = async (req, res) => {
     try {
         const { id_red } = req.params;
         const { id_usuario } = req.user;
-        const { contenido, idUsuario, nombreUsuario } = req.body;
+        const { contenido } = req.body;
 
-        // Validación más estricta
-        if (!contenido || !idUsuario || !nombreUsuario) {
-            return res.status(400).json({ 
+        // Verificar que el usuario es miembro de la red
+        const membresia = await UsuarioRed.findOne({
+            where: { id_usuario, id_red }
+        });
+
+        if (!membresia) {
+            return res.status(403).json({ 
                 success: false,
-                error: 'Todos los campos son requeridos',
-                detalles: {
-                    contenido: !!contenido,
-                    idUsuario: !!idUsuario,
-                    nombreUsuario: !!nombreUsuario
-                }
+                message: 'No eres miembro de esta red' 
             });
         }
 
-        // Verificar que el idUsuario coincida con el usuario autenticado
-        if (idUsuario !== id_usuario.toString()) {
-            return res.status(403).json({
+        // Obtener datos del usuario
+        const usuario = await Usuario.findByPk(id_usuario, {
+            attributes: ['nombre_usuario', 'apellido_usuario']
+        });
+
+        if (!usuario) {
+            return res.status(404).json({ 
                 success: false,
-                error: 'No autorizado: ID de usuario no coincide'
+                message: 'Usuario no encontrado' 
             });
         }
+
+        const nombreUsuario = `${usuario.nombre_usuario} ${usuario.apellido_usuario}`;
 
         // Crear mensaje en Firebase
         const nuevoMensaje = {
-            contenido,
-            idUsuario,
+            idUsuario: id_usuario.toString(),
             nombreUsuario,
+            contenido,
             fecha_envio: Date.now(),
             estado: 'enviado'
         };
@@ -104,11 +64,12 @@ export const enviarMensaje = async (req, res) => {
 export const obtenerMensajes = async (req, res) => {
     try {
         const { id_red } = req.params;
+        const { id_usuario } = req.user;
         const { limite = 50 } = req.query;
 
         // Verificar membresía
         const esMiembro = await UsuarioRed.findOne({
-            where: { id_usuario: req.user.id_usuario, id_red }
+            where: { id_usuario, id_red }
         });
 
         if (!esMiembro) {
@@ -133,49 +94,44 @@ export const obtenerMensajes = async (req, res) => {
         console.error('Error al obtener mensajes:', error);
         res.status(500).json({ 
             success: false,
-            error: 'Error al obtener mensajes',
-            details: error.message
+            error: 'Error al obtener mensajes'
         });
     }
 };
+
 export const verificarMembresia = async (req, res) => {
     try {
         const { id_red } = req.params;
         const { id_usuario } = req.user;
 
-        // Verificar en ambas bases de datos
-        const [sqlMembership, firebaseMembership] = await Promise.all([
-            UsuarioRed.findOne({ where: { id_usuario, id_red } }),
-            db.ref(`comunidades/${id_red}/miembros/ext_${id_usuario}`).once('value')
-        ]);
+        // Verificar en SQL
+        const membresia = await UsuarioRed.findOne({ 
+            where: { id_usuario, id_red }
+        });
 
-        // Sincronizar si hay discrepancia
-        if (sqlMembership && !firebaseMembership.exists()) {
-            await db.ref(`comunidades/${id_red}/miembros/ext_${id_usuario}`).set({
-                rol: sqlMembership.rol,
-                ultima_sincronizacion: Date.now()
+        if (!membresia) {
+            return res.status(200).json({ 
+                success: false,
+                message: 'No eres miembro de esta red'
             });
-            return res.status(200).json({ success: true, message: 'Miembro verificado' });
         }
 
-        if (!sqlMembership && firebaseMembership.exists()) {
-            // Crear en SQL si existe en Firebase pero no en SQL
-            await UsuarioRed.create({
-                id_usuario,
-                id_red,
-                rol: firebaseMembership.val().rol || 'miembro',
-                fecha_union: new Date(firebaseMembership.val().fecha_union || Date.now())
-            });
-            return res.status(200).json({ success: true, message: 'Miembro verificado' });
-        }
+        // Generar token Firebase para el chat
+        const firebaseToken = await auth.createCustomToken(`ext_${id_usuario}`, {
+            id_red,
+            id_usuario,
+            rol: membresia.rol,
+            backendAuth: true
+        });
 
-        return res.status(200).json({ 
-            success: !!sqlMembership,
-            message: sqlMembership ? 'Miembro verificado' : 'No eres miembro'
+        res.status(200).json({ 
+            success: true,
+            message: 'Miembro verificado',
+            firebaseToken
         });
     } catch (error) {
         console.error('Error en verificarMembresia:', error);
-        return res.status(500).json({ 
+        res.status(500).json({ 
             success: false,
             message: 'Error interno del servidor'
         });
