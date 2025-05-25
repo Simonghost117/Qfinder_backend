@@ -98,25 +98,23 @@ export const obtenerMensajes = async (req, res) => {
         });
     }
 };
-
 export const verificarMembresia = async (req, res) => {
     try {
         const { id_red } = req.params;
         const { id_usuario } = req.user;
 
-        // Verificar en SQL
         const membresia = await UsuarioRed.findOne({ 
             where: { id_usuario, id_red }
         });
 
         if (!membresia) {
-            return res.status(200).json({ 
+            return res.status(403).json({  // Cambiado de 200 a 403
                 success: false,
                 message: 'No eres miembro de esta red'
             });
         }
 
-        // Generar token Firebase para el chat
+        // Crear token de Firebase con claims adicionales
         const firebaseToken = await auth.createCustomToken(`ext_${id_usuario}`, {
             id_red,
             id_usuario,
@@ -124,14 +122,28 @@ export const verificarMembresia = async (req, res) => {
             backendAuth: true
         });
 
-        res.status(200).json({ 
+        // Asegurar que el usuario existe en Firebase Auth
+        try {
+            await auth.getUser(`ext_${id_usuario}`);
+        } catch (error) {
+            if (error.code === 'auth/user-not-found') {
+                await auth.createUser({
+                    uid: `ext_${id_usuario}`,
+                    email: `${id_usuario}@qfinder.com`,
+                    disabled: false
+                });
+            }
+        }
+
+        res.status(200).json({
             success: true,
-            message: 'Miembro verificado',
-            firebaseToken
+            firebaseToken,
+            rol: membresia.rol
         });
+
     } catch (error) {
         console.error('Error en verificarMembresia:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             success: false,
             message: 'Error interno del servidor'
         });
