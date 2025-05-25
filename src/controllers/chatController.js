@@ -145,30 +145,35 @@ export const verificarMembresia = async (req, res) => {
         const { id_red } = req.params;
         const { id_usuario } = req.user;
 
-        // 1. Verificar en SQL
-        const sqlMembership = await UsuarioRed.findOne({ 
-            where: { id_usuario, id_red }
-        });
+        // Verificar en ambas bases de datos
+        const [sqlMembership, firebaseMembership] = await Promise.all([
+            UsuarioRed.findOne({ where: { id_usuario, id_red } }),
+            db.ref(`comunidades/${id_red}/miembros/ext_${id_usuario}`).once('value')
+        ]);
 
-        // 2. Generar token Firebase si es miembro
-        if (sqlMembership) {
-            const firebaseToken = await auth.createCustomToken(`ext_${id_usuario}`, {
-                id_red,
-                id_usuario,
+        // Sincronizar si hay discrepancia
+        if (sqlMembership && !firebaseMembership.exists()) {
+            await db.ref(`comunidades/${id_red}/miembros/ext_${id_usuario}`).set({
                 rol: sqlMembership.rol,
-                backendAuth: true
+                ultima_sincronizacion: Date.now()
             });
+            return res.status(200).json({ success: true, message: 'Miembro verificado' });
+        }
 
-            return res.status(200).json({ 
-                success: true,
-                message: 'Miembro verificado',
-                firebaseToken
+        if (!sqlMembership && firebaseMembership.exists()) {
+            // Crear en SQL si existe en Firebase pero no en SQL
+            await UsuarioRed.create({
+                id_usuario,
+                id_red,
+                rol: firebaseMembership.val().rol || 'miembro',
+                fecha_union: new Date(firebaseMembership.val().fecha_union || Date.now())
             });
+            return res.status(200).json({ success: true, message: 'Miembro verificado' });
         }
 
         return res.status(200).json({ 
-            success: false,
-            message: 'No eres miembro'
+            success: !!sqlMembership,
+            message: sqlMembership ? 'Miembro verificado' : 'No eres miembro'
         });
     } catch (error) {
         console.error('Error en verificarMembresia:', error);
