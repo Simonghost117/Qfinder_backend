@@ -43,7 +43,8 @@ export const recuperarContrasena = async (req, res) => {
 
 export const cambiarContrasena = async (req, res) => {
   const { nuevaContrasena } = req.body;
-  const token = req.cookies.resetToken;
+  const token = req.cookies.resetToken || req.headers.authorization?.split(' ')[1];
+
 
   try {
     if (!token) {
