@@ -53,52 +53,50 @@ export const enviarMensaje = async (req, res) => {
         const { id_usuario } = req.user;
         const { contenido, idUsuario, nombreUsuario } = req.body;
 
-        // Validación rápida
+        // Validación más estricta
         if (!contenido || !idUsuario || !nombreUsuario) {
             return res.status(400).json({ 
                 success: false,
-                error: 'Todos los campos son requeridos' 
+                error: 'Todos los campos son requeridos',
+                detalles: {
+                    contenido: !!contenido,
+                    idUsuario: !!idUsuario,
+                    nombreUsuario: !!nombreUsuario
+                }
             });
         }
 
-        // Verificación de membresía optimizada
-        const [esMiembro, red] = await Promise.all([
-            UsuarioRed.findOne({ where: { id_usuario, id_red } }),
-            Red.findByPk(id_red)
-        ]);
-
-        if (!esMiembro || !red) {
-            return res.status(403).json({ 
+        // Verificar que el idUsuario coincida con el usuario autenticado
+        if (idUsuario !== id_usuario.toString()) {
+            return res.status(403).json({
                 success: false,
-                error: 'No eres miembro de esta red o la red no existe' 
+                error: 'No autorizado: ID de usuario no coincide'
             });
         }
 
-        // Crear mensaje en Firebase primero (más rápido)
-        const chatRef = db.ref(`chats/${id_red}/mensajes`).push();
+        // Crear mensaje en Firebase
         const nuevoMensaje = {
-            id: chatRef.key,
             contenido,
             idUsuario,
             nombreUsuario,
-            fecha_envio: Date.now()
+            fecha_envio: Date.now(),
+            estado: 'enviado'
         };
 
-        await chatRef.set(nuevoMensaje);
+        const mensajeRef = db.ref(`chats/${id_red}/mensajes`).push();
+        await mensajeRef.set(nuevoMensaje);
 
-        // Responder inmediatamente
-        res.status(201).json({ 
-            success: true, 
+        res.status(201).json({
+            success: true,
             message: 'Mensaje enviado',
-            data: nuevoMensaje
+            idMensaje: mensajeRef.key
         });
 
     } catch (error) {
         console.error('Error al enviar mensaje:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             success: false,
-            error: 'Error al enviar mensaje',
-            details: error.message
+            error: 'Error interno al enviar mensaje'
         });
     }
 };
