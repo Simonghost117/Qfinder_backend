@@ -2,7 +2,7 @@ import { auth, db } from '../config/firebase-admin.js';
 import UsuarioRed from '../models/UsuarioRed.js';
 import Usuario from '../models/usuario.model.js';
 import Red from '../models/Red.js';
-import { buscarRed, unirseRed, listarRedesPorUsuario, listarMembresia } from "../services/usuarioRedService.js";
+import { buscarRed, unirmeRed, listarRedesPorUsuario, listarMembresia } from "../services/usuarioRedService.js";
 
 // Función optimizada para verificar membresía
 export const verificarMembresia = async (req, res) => {
