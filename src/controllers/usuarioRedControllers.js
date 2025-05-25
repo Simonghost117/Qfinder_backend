@@ -2,7 +2,7 @@ import { auth, db } from '../config/firebase-admin.js';
 import UsuarioRed from '../models/UsuarioRed.js';
 import Usuario from '../models/usuario.model.js';
 import Red from '../models/Red.js';
-import { buscarRed, unirmeRed, listarRedesPorUsuario, listarMembresia } from "../services/usuarioRedService.js";
+import { buscarRed, unirseRed, listarRedesPorUsuario, listarMembresia } from "../services/usuarioRedService.js";
 
 // Función optimizada para verificar membresía
 export const verificarMembresia = async (req, res) => {
@@ -10,36 +10,75 @@ export const verificarMembresia = async (req, res) => {
         const { id_red } = req.params;
         const { id_usuario } = req.user;
 
-        // 1. Verificar en SQL
+        console.log(`Verificando membresía - Usuario: ${id_usuario}, Red: ${id_red}`);
+
+        // Validación de ID de red
+        if (!id_red || isNaN(id_red)) {
+            console.log(`ID de red inválido: ${id_red}`);
+            return res.status(400).json({ 
+                success: false,
+                message: 'ID de red inválido',
+                data: null
+            });
+        }
+
+        const red = await Red.findByPk(id_red);
+        if (!red) {
+            console.log(`Red no encontrada (ID: ${id_red})`);
+            return res.status(404).json({ 
+                success: false,
+                message: 'Red no encontrada',
+                data: null
+            });
+        }
+
         const sqlMembership = await UsuarioRed.findOne({ 
             where: { id_usuario, id_red }
         });
 
-        // 2. Generar token Firebase si es miembro
-        if (sqlMembership) {
-            const firebaseToken = await auth.createCustomToken(`ext_${id_usuario}`, {
+        if (!sqlMembership) {
+            console.log(`Usuario ${id_usuario} no es miembro de red ${id_red}`);
+            return res.status(200).json({ 
+                success: false,
+                message: 'No eres miembro de esta red',
+                data: null
+            });
+        }
+
+        // Generar token Firebase
+        let firebaseToken;
+        try {
+            firebaseToken = await auth.createCustomToken(`ext_${id_usuario}`, {
                 id_red,
                 id_usuario,
                 rol: sqlMembership.rol,
                 backendAuth: true
             });
-
-            return res.status(200).json({ 
-                success: true,
-                message: 'Miembro verificado',
-                firebaseToken
-            });
+            console.log(`Token Firebase generado para usuario ${id_usuario}`);
+        } catch (firebaseError) {
+            console.log(`Error generando token Firebase: ${firebaseError.message}`, { stack: firebaseError.stack });
+            // Continuar sin token Firebase si hay error
+            firebaseToken = null;
         }
 
+        console.log(`Membresía verificada - Usuario: ${id_usuario}, Red: ${id_red}, Rol: ${sqlMembership.rol}`);
+        
         return res.status(200).json({ 
-            success: false,
-            message: 'No eres miembro'
+            success: true,
+            message: 'Miembro verificado',
+            data: {
+                esMiembro: true,
+                rol: sqlMembership.rol,
+                firebaseToken: firebaseToken // Puede ser null si hubo error
+            }
         });
     } catch (error) {
-        console.error('Error en verificarMembresia:', error);
+        console.log(`Error en verificarMembresia: ${error.message}`, { stack: error.stack });
         return res.status(500).json({ 
             success: false,
-            message: 'Error interno del servidor'
+            message: 'Error interno del servidor',
+            error: process.env.NODE_ENV === 'development' ? error.message : null,
+            data: null
         });
     }
 };
