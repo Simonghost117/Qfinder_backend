@@ -77,9 +77,5 @@ CodigoQR.belongsTo(Paciente, { foreignKey: "id_paciente", as: "paciente" });
   
 
 // Exportar los modelos y la conexión de Sequelize
-<<<<<<< HEAD
-const models = { Usuario, Paciente, Familiar, Medico, Red, PanelPersonalizado, CitaMedica, ActividadCuidado, UsuarioRed, Medicamento, CodigoQR };
-=======
 const models = { Usuario, Paciente, Familiar, Medico, Red, PanelPersonalizado, CitaMedica, ActividadCuidado, UsuarioRed, Medicamento, PacienteMedicamento, CodigoQR };
->>>>>>> origin/Alison
 export { sequelize, models };
