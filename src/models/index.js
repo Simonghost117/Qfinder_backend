@@ -13,8 +13,8 @@ import CodigoQR from './codigoQr.model.js';
 
 import UsuarioRed from './UsuarioRed.js'
 
-Paciente.hasOne(CodigoQR, { foreignKey: "id_paciente", as: "codigo_qr" });  
-CodigoQR.belongsTo(Paciente, { foreignKey: "id_paciente", as: "paciente" });  
+// Paciente.hasOne(CodigoQR, { foreignKey: "id_paciente", as: "codigo_qr" });  
+// CodigoQR.belongsTo(Paciente, { foreignKey: "id_paciente", as: "paciente" });  
 
 
 // Definir relaciones entre los modelos
@@ -77,9 +77,5 @@ CodigoQR.belongsTo(Paciente, { foreignKey: "id_paciente", as: "paciente" });
   
 
 // Exportar los modelos y la conexión de Sequelize
-<<<<<<< HEAD
-const models = { Usuario, Paciente, Familiar, Medico, Red, PanelPersonalizado, CitaMedica, ActividadCuidado, UsuarioRed, Medicamento, CodigoQR };
-=======
 const models = { Usuario, Paciente, Familiar, Medico, Red, PanelPersonalizado, CitaMedica, ActividadCuidado, UsuarioRed, Medicamento, PacienteMedicamento, CodigoQR };
->>>>>>> origin/Alison
 export { sequelize, models };
