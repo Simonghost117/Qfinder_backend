@@ -3,6 +3,7 @@ import Usuario from '../models/usuario.model.js';
 import { createAccessToken } from '../libs/jwt.js';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
+import { imgBase64 } from '../utils/imgBase64.js';
 dotenv.config();
 
 
@@ -259,6 +260,14 @@ export const actualizarUser = async (req, res) => {
     //   const salt = await bcrypt.genSalt(10);
     //   dataToUpdate.contrasena_usuario = await bcrypt.hash(contrasena_usuario, salt);
     // }
+    if (imagen_usuario) {
+      try {
+        dataToUpdate.imagen_usuario = await imgBase64(imagen_usuario);
+      } catch (error) {
+        console.error('Error procesando imagen:', error);
+        return res.status(400).json({ message: 'Error al procesar la imagen' });
+      }
+    }
 
     await Usuario.update(dataToUpdate, {
       where: { id_usuario: id },
