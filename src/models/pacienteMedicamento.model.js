@@ -40,15 +40,25 @@ const PacienteMedicamento = sequelize.define('PacienteMedicamento', {
   frecuencia: {
     type: DataTypes.STRING,
     allowNull: true
+  }, ultimo_recordatorio: {
+    type: DataTypes.DATE,
+    allowNull: true
+  }, proxima_dosis: {
+    type: DataTypes.DATE,
+    allowNull: true
+  }, notificaciones_activas: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true
   }
 }, {
   tableName: 'paciente_medicamento',
   timestamps: false
 });
 
-Paciente.hasMany(PacienteMedicamento, { foreignKey: 'id_paciente' });
-Medicamento.hasMany(PacienteMedicamento, { foreignKey: 'id_medicamento' });
-PacienteMedicamento.belongsTo(Paciente, { foreignKey: 'id_paciente' });
-PacienteMedicamento.belongsTo(Medicamento, { foreignKey: 'id_medicamento' });
+// Paciente.hasMany(PacienteMedicamento, { foreignKey: 'id_paciente' });
+// Medicamento.hasMany(PacienteMedicamento, { foreignKey: 'id_medicamento' });
+// PacienteMedicamento.belongsTo(Paciente, { foreignKey: 'id_paciente' });
+// PacienteMedicamento.belongsTo(Medicamento, { foreignKey: 'id_medicamento' });
 
 export default PacienteMedicamento;

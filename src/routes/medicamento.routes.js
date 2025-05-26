@@ -14,14 +14,6 @@ import { validateAdmin } from '../middlewares/validateAdmin.js';
 const router = Router();
 
 //Autenticacion de rutas
-//ADMINISTRADOR
-
-router.post('/crear', 
-  verifyToken, 
-  validateAdmin,
-  validateSchema(medicamentoSchema),
-  crearMedicamento
-);
 router.get('/listar', 
   verifyToken, 
   listarMedicamentos
@@ -29,6 +21,15 @@ router.get('/listar',
 router.get('/listar/:id', 
   verifyToken, 
   listarMedicamentosId
+);
+
+//ADMINISTRADOR
+
+router.post('/crear', 
+  verifyToken, 
+  validateAdmin,
+  validateSchema(medicamentoSchema),
+  crearMedicamento
 );
 router.put('/actualizar/:id',
   verifyToken, 

@@ -8,9 +8,13 @@ import PanelPersonalizado from './panel_personalizado.js';
 import CitaMedica from './cita_medica.js';
 import { ActividadCuidado } from './activity.model.js';
 import Medicamento from './medicamento.model.js';
+import PacienteMedicamento from './pacienteMedicamento.model.js';
 import CodigoQR from './codigoQr.model.js';
 
 import UsuarioRed from './UsuarioRed.js'
+
+Paciente.hasOne(CodigoQR, { foreignKey: "id_paciente", as: "codigo_qr" });  
+CodigoQR.belongsTo(Paciente, { foreignKey: "id_paciente", as: "paciente" });  
 
 
 // Definir relaciones entre los modelos
@@ -34,7 +38,6 @@ Usuario.hasOne(Medico, { foreignKey: "id_usuario" });
 Usuario.hasMany(PanelPersonalizado, { foreignKey: 'id_usuario' });
 PanelPersonalizado.belongsTo(Usuario, { foreignKey: 'id_usuario' });
 
-// 🔗 Relación: Un paciente puede tener varios paneles personalizados
 Paciente.hasMany(PanelPersonalizado, { foreignKey: 'id_paciente' });
 PanelPersonalizado.belongsTo(Paciente, { foreignKey: 'id_paciente' });
 
@@ -51,23 +54,21 @@ Familiar.belongsTo(Usuario, { foreignKey: "id_usuario", as: "usuario" });
 
 Medicamento.belongsTo(Usuario, { foreignKey: "id_usuario", as: "usuario" });
 
-Usuario.belongsToMany(Red, {
-  through: UsuarioRed,
-  foreignKey: 'id_usuario',
-  as: 'redes' // Nombre para la asociación
-});
+Usuario.belongsToMany(Red, { through: UsuarioRed,foreignKey: 'id_usuario', as: 'redes' });
 
-Red.belongsToMany(Usuario, {
-  through: UsuarioRed,
-  foreignKey: 'id_red',
-  as: 'miembros' // Nombre para la asociación
-});
+Red.belongsToMany(Usuario, { through: UsuarioRed, foreignKey: 'id_red', as: 'miembros' });
+
 UsuarioRed.belongsTo(Usuario, { foreignKey: "id_usuario", as: "usuario" });
 UsuarioRed.belongsTo(Red, { foreignKey: "id_red", as: "red" });
 
-// 🚀 Agrega la relación correctamente
 Red.hasMany(UsuarioRed, { foreignKey: "id_red" });
 UsuarioRed.belongsTo(Red, { foreignKey: "id_red" });
+
+Paciente.hasMany(PacienteMedicamento, { foreignKey: 'id_paciente' });
+Medicamento.hasMany(PacienteMedicamento, { foreignKey: 'id_medicamento' });
+
+PacienteMedicamento.belongsTo(Paciente, { foreignKey: 'id_paciente' });
+PacienteMedicamento.belongsTo(Medicamento, { foreignKey: 'id_medicamento' });
 
 
 Paciente.hasOne(CodigoQR, { foreignKey: "id_paciente", as: "codigo_qr" });
@@ -76,5 +77,9 @@ CodigoQR.belongsTo(Paciente, { foreignKey: "id_paciente", as: "paciente" });
   
 
 // Exportar los modelos y la conexión de Sequelize
+<<<<<<< HEAD
 const models = { Usuario, Paciente, Familiar, Medico, Red, PanelPersonalizado, CitaMedica, ActividadCuidado, UsuarioRed, Medicamento, CodigoQR };
+=======
+const models = { Usuario, Paciente, Familiar, Medico, Red, PanelPersonalizado, CitaMedica, ActividadCuidado, UsuarioRed, Medicamento, PacienteMedicamento, CodigoQR };
+>>>>>>> origin/Alison
 export { sequelize, models };
