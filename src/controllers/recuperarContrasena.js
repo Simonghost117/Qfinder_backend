@@ -102,7 +102,7 @@ export const verificarCodigo = async (req, res) => {
     // ✅ Establecer cookie HTTP-only
     res.cookie('token', token, {
       httpOnly: true,
-      secure: false, // 🔴 IMPORTANTE para desarrollo local (debe ser false si no estás en HTTPS)
+      secure: true, // 🔴 IMPORTANTE para desarrollo local (debe ser false si no estás en HTTPS)
       sameSite: 'strict',
       maxAge: 10 * 60 * 1000
     });
