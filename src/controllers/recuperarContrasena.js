@@ -43,7 +43,7 @@ export const recuperarContrasena = async (req, res) => {
 
 export const cambiarContrasena = async (req, res) => {
   const { nuevaContrasena } = req.body;
-  const token = req.cookies.resetToken || req.headers.authorization?.split(' ')[1];
+  const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
 
 
   try {
@@ -68,7 +68,7 @@ export const cambiarContrasena = async (req, res) => {
     await usuario.save();
 
     // ✅ Eliminar cookie después de uso
-    res.clearCookie('resetToken');
+    res.clearCookie('token');
 
     res.status(200).json({ mensaje: 'Contraseña actualizada correctamente.' });
   } catch (error) {
@@ -97,10 +97,10 @@ export const verificarCodigo = async (req, res) => {
       return res.status(400).json({ mensaje: 'Código expirado.' });
 
     // ✅ Crear token JWT
-    const token = jwt.sign({ correo: usuario.correo_usuario }, process.env.JWT_SECRET, { expiresIn: '10m' });
+    const token = jwt.sign({ id: usuario.id_usuario, correo: usuario.correo_usuario }, process.env.JWT_SECRET, { expiresIn: '10m' });
 
     // ✅ Establecer cookie HTTP-only
-    res.cookie('resetToken', token, {
+    res.cookie('token', token, {
       httpOnly: true,
       secure: false, // 🔴 IMPORTANTE para desarrollo local (debe ser false si no estás en HTTPS)
       sameSite: 'strict',
