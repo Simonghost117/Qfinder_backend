@@ -30,7 +30,7 @@ if (missingFields.length > 0) {
 // Inicialización de Firebase
 const app = initializeApp({
   credential: cert(serviceAccount),
-  databaseURL: process.env.FIREBASE_DATABASE_URL || "https://qfinder-community-default-rtdb.firebaseio.com"
+  databaseURL: process.env.FIREBASE_DATABASE_URL || "https://qfinder-comunity-default-rtdb.firebaseio.com/"
 });
 
 if (!admin.apps.length) {
