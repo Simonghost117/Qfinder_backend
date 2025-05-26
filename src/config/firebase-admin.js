@@ -9,7 +9,7 @@ dotenv.config(); // Asegúrate de cargar las variables locales si estás en dev
 // 👇 Parsear JSON de la variable de entorno
 let serviceAccount;
 try {
-  serviceAccount = JSON.parse(process.env.SERVICE_ACCOUNT);
+  serviceAccount = process.env.SERVICE_ACCOUNT
 
   // Arregla el formato del private_key
   if (serviceAccount.private_key) {
