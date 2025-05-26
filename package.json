@@ -26,10 +26,10 @@
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "express-session": "^1.18.1",
-<<<<<<< HEAD
-=======
+
+
     "firebase": "^11.8.1",
->>>>>>> origin/Alison
+
     "firebase-admin": "^13.4.0",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
