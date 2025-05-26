@@ -46,9 +46,10 @@ export const listarRedesPorUsuario = async ( id_usuario ) => {
     }
 }
 
-export const listarMembresia = async ( id_red ) => {
-    try { UsuarioRed.findAll({
-            where: {id_red},
+export const listarMembresia = async (id_red) => {
+    try {
+        const membresia = await UsuarioRed.findAll({
+            where: { id_red },
             include: [
                 {
                     model: Usuario,
@@ -56,9 +57,15 @@ export const listarMembresia = async ( id_red ) => {
                     attributes: ["id_usuario", "nombre_usuario", "apellido_usuario"]
                 }
             ]
-        })
+        });
+
+        if (!membresia || membresia.length === 0) {
+            return { message: "No hay usuarios registrados en esta red." };
+        }
+
+        return membresia;
     } catch (error) {
-        console.error("Error al listar membresia", error);
-        throw new Error("Error al listar membresia")
+        console.error("Error al listar membresía:", error);
+        throw new Error(`Error al listar membresía: ${error.message}`);
     }
-} 
+};

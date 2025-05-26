@@ -55,6 +55,11 @@ const Usuario = sequelize.define('Usuario', {
     defaultValue: 'Activo',
     field: 'estado_usuario'
   },
+  imagen_usuario:{
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'imagen_usuario'
+  },
   codigo_verificacion: {
     type: DataTypes.STRING(5),
     allowNull: true,

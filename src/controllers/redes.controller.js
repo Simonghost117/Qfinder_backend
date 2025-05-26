@@ -7,7 +7,7 @@ export const crearRed = async (req, res) => {
     const { id_usuario } = req.user;
     const { nombre_red, descripcion_red } = req.body;
 
-    const nuevaRed = await creacionRed(id_usuario, nombre_red, descripcion_red);
+        res.status(201).json({ message: "Red creada exitosamente", data: nuevaRed });
 
     if (!nuevaRed || nuevaRed.length === 0) {
       return res.status(400).json({ 
@@ -74,9 +74,9 @@ export const listarRedId = async (req, res) => {
 export const actualizarRed = async (req, res) => {
   try {
     const { id_red } = req.params;
-    const { nombre_red, descripcion_red } = req.body;
+    const { nombre_red, descripcion_red, imagen_red } = req.body;
 
-    const redActualizada = await actualiza(id_red, nombre_red, descripcion_red);
+    const redActualizada = await actualiza(id_red, nombre_red, descripcion_red, imagen_red);
 
     if (!redActualizada) {
       return res.status(400).json({ message: 'No se pudo actualizar la red' });

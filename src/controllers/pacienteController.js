@@ -5,6 +5,8 @@ import { models } from "../models/index.js";
 const { Paciente, Familiar, CodigoQR } = models;
 import codigoQr from "../models/codigoQr.model.js";
 import { generarQRPaciente } from "../controllers/codigoQrController.js";
+import Usuario from "../models/usuario.model.js";
+import { Op } from "sequelize";
 
 
 // Registrar un nuevo paciente
@@ -169,7 +171,7 @@ export const getPacienteById = async (req, res) => {
 export const actualizarPaciente = async (req, res) => {
   try {
     const { id_paciente } = req.params;
-    const { nombre, apellido, fecha_nacimiento, sexo, diagnostico_principal, nivel_autonomia } = req.body;
+    const { nombre, apellido, fecha_nacimiento, sexo, diagnostico_principal, nivel_autonomia, imagen_paciente } = req.body;
 
     // Verificar si el paciente existe
     const paciente = await Paciente.findByPk(id_paciente);
@@ -187,7 +189,8 @@ export const actualizarPaciente = async (req, res) => {
       fecha_nacimiento,
       sexo,
       diagnostico_principal,
-      nivel_autonomia
+      nivel_autonomia,
+      imagen_paciente
     }, {
       where: { id_paciente }
     });
@@ -245,6 +248,38 @@ export const eliminarPaciente = async (req, res) => {
       success: false,
       message: 'Error al eliminar el paciente',
       error: process.env.NODE_ENV === 'development' ? error.message : null
+    });
+  }
+}
+
+export const listarTodosPacientes = async (req, res) => {
+  try {
+    const pacientes = await Paciente.findAll({
+      include: [{
+        model: Usuario,
+        as: 'usuario',
+        required: false,
+        attributes:['nombre_usuario', 'apellido_usuario', 'correo_usuario'],
+        
+      }], order: [['id_paciente', 'ASC']]
+    });
+
+    if (!pacientes) {
+      return res.status(404).json({
+        success: false,
+        message: "No se encontraron pacientes."
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: pacientes
+    });
+  } catch (error) {
+    console.error("Error en listarTodosPacientes:", error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al listar todos los pacientes'
     });
   }
 }

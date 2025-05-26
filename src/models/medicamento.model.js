@@ -8,14 +8,14 @@ const Medicamento = sequelize.define('Medicamento', {
     primaryKey: true,
     autoIncrement: true
   },
-  id_usuario: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: Usuario,
-      key: 'id_usuario'
-    }
-  },
+  // id_usuario: {
+  //   type: DataTypes.INTEGER,
+  //   allowNull: false,
+  //   references: {
+  //     model: Usuario,
+  //     key: 'id_usuario'
+  //   }
+  // },
   nombre: {
     type: DataTypes.STRING(100),
     allowNull: false

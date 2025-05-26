@@ -28,8 +28,8 @@ Usuario.hasOne(Medico, { foreignKey: "id_usuario" });
   
 // Usuario.hasMany(UsuarioRed, { foreignKey: 'id_usuario', as: 'redes' });
 
-Usuario.belongsToMany(Red, { through: Red, foreignKey: "id_usuario" });
-Red.belongsToMany(Usuario, { through: Red, foreignKey: "id_red" });
+// Usuario.belongsToMany(Red, { through: Red, foreignKey: "id_usuario" });
+// Red.belongsToMany(Usuario, { through: Red, foreignKey: "id_red" });
 
 Usuario.hasMany(PanelPersonalizado, { foreignKey: 'id_usuario' });
 PanelPersonalizado.belongsTo(Usuario, { foreignKey: 'id_usuario' });
@@ -51,13 +51,22 @@ Familiar.belongsTo(Usuario, { foreignKey: "id_usuario", as: "usuario" });
 
 Medicamento.belongsTo(Usuario, { foreignKey: "id_usuario", as: "usuario" });
 
-Usuario.belongsToMany(Red, { through: UsuarioRed, foreignKey: "id_usuario" });
-Red.belongsToMany(Usuario, { through: UsuarioRed, foreignKey: "id_red" });
+Usuario.belongsToMany(Red, {
+  through: UsuarioRed,
+  foreignKey: 'id_usuario',
+  as: 'redes' // Nombre para la asociación
+});
 
-Usuario.belongsToMany(Red, { through: UsuarioRed, foreignKey: "id_usuario" });
-Red.belongsToMany(Usuario, { through: UsuarioRed, foreignKey: "id_red" });
-
+Red.belongsToMany(Usuario, {
+  through: UsuarioRed,
+  foreignKey: 'id_red',
+  as: 'miembros' // Nombre para la asociación
+});
 UsuarioRed.belongsTo(Usuario, { foreignKey: "id_usuario", as: "usuario" });
+UsuarioRed.belongsTo(Red, { foreignKey: "id_red", as: "red" });
+
+// 🚀 Agrega la relación correctamente
+Red.hasMany(UsuarioRed, { foreignKey: "id_red" });
 UsuarioRed.belongsTo(Red, { foreignKey: "id_red" });
 
 

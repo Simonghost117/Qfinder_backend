@@ -24,6 +24,11 @@ const Red = sequelize.define('red', {
     allowNull: true,
     field: 'descripcion_red'
   },
+  imagen_red: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'imagen_red'
+  },
   fecha_creacion: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,

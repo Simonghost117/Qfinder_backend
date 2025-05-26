@@ -1,6 +1,6 @@
 import { models } from "../models/index.js";
 const { Red, UsuarioRed, Usuario } = models;
-import { Op } from "sequelize";
+import { Op, fn, col } from "sequelize";
 import sequelize from "../config/db.js";
 
 export const creacionRed = async (id_usuario, nombre_red, descripcion_red) => {
@@ -53,10 +53,10 @@ export const creacionRed = async (id_usuario, nombre_red, descripcion_red) => {
     }
 }
 
-export const actualiza = async (id_red, nombre_red, descripcion_red) => {
+export const actualiza = async (id_red, nombre_red, descripcion_red, imagen_red) => {
     try {
         const redActualizada = await Red.update(
-            { nombre_red, descripcion_red },
+            { nombre_red, descripcion_red, imagen_red },
             { where: { id_red } }
         );
         return redActualizada;
@@ -66,18 +66,67 @@ export const actualiza = async (id_red, nombre_red, descripcion_red) => {
     }
 }
 
+// export const buscarRedPorNombre = async (nombre_red) => {
+//     try {
+//         const red = await Red.findAll({
+//             where: sequelize.where(
+//             sequelize.fn("LOWER", sequelize.col("nombre_red")),
+//             { [Op.like]: `%${nombre_red.toLowerCase()}%` }
+//       )
+//         });
+//         return red;
+//     } catch (error) {
+//         console.error("Error al buscar la red por nombre:", error);
+//         throw error;
+//     }
+// }
+
+
+// export const buscarRedPorNombre = async (nombre_red) => {
+//     try {
+//         const red = await Red.findAll({
+//             where: {
+//                 nombre_red: {
+//                     [Op.iLike]: `%${nombre_red}%` // `ILIKE` funciona mejor en PostgreSQL sin `LOWER`
+//                 }
+//             },
+//             order: [["nombre_red", "ASC"]] // Ordena resultados alfabéticamente
+//         });
+
+//         return red;
+//     } catch (error) {
+//         console.error("Error al buscar la red por nombre:", error);
+//         throw error;
+//     }
+// };
+
 export const buscarRedPorNombre = async (nombre_red) => {
     try {
-        const red = await Red.findAll({
-            where: sequelize.where(
-            sequelize.fn("LOWER", sequelize.col("nombre_red")),
-            { [Op.like]: `%${nombre_red.toLowerCase()}%` }
-      )
+        const redes = await Red.findAll({
+            where: {
+                nombre_red: {
+                    [Op.iLike]: `%${nombre_red}%` // Búsqueda insensible a mayúsculas/minúsculas
+                }
+            },
+            attributes: [
+                "id_red",
+                "nombre_red",
+                "descripcion_red",
+                [fn("COUNT", col("usuario_reds.id_usuario")), "total_integrantes"] // Cuenta integrantes
+            ],
+            include: [
+                {
+                    model: UsuarioRed,
+                    attributes: [],
+                }
+            ],
+            group: ["red.id_red"],
+            order: [[fn("COUNT", col("usuario_reds.id_usuario")), "DESC"]] // Ordena por número de integrantes
         });
-        return red;
+
+        return redes;
     } catch (error) {
-        console.error("Error al buscar la red por nombre:", error);
+        console.error("Error al buscar redes:", error);
         throw error;
     }
-}
-   
+};
