@@ -4,6 +4,7 @@ const { Paciente, Familiar, CodigoQR } = models;
 import { generarQRPaciente } from "../controllers/codigoQrController.js";
 import Usuario from "../models/usuario.model.js";
 import { imgBase64 } from "../utils/imgBase64.js";
+import e from "express";
 
 
 // Registrar un nuevo paciente
@@ -291,3 +292,138 @@ export const listarTodosPacientes = async (req, res) => {
     });
   }
 }
+
+export const registerPaciente2 = async (req, res) => {
+  try {
+    const { id_usuario } = req.params;
+
+    // Desestructurar solo los campos esperados desde el body
+    const {
+      nombre,
+      apellido,
+      identificacion,
+      fecha_nacimiento,
+      sexo,
+      diagnostico_principal,
+      nivel_autonomia
+    } = req.body;
+
+    const pacienteExistente = await Paciente.findOne({
+      where: { identificacion, id_usuario }
+    });
+
+    if (pacienteExistente) {
+      return res.status(400).json({
+        success: false,
+        message: "Este usuario ya registró un paciente con la misma identificación."
+      });
+    };
+
+    const pacienteData = {
+      id_usuario,
+      nombre,
+      apellido,
+      identificacion,
+      fecha_nacimiento,
+      sexo,
+      diagnostico_principal,
+      nivel_autonomia
+    };
+
+    // Crear paciente
+    const paciente = await createPaciente(pacienteData);
+
+    res.status(201).json({
+      success: true,
+      message: "Paciente registrado exitosamente",
+      data: {
+        id: paciente.id_paciente,
+        nombre: paciente.nombre,
+        apellido: paciente.apellido,
+        identificacion: paciente.identificacion,
+        diagnostico: paciente.diagnostico_principal
+      }
+    });
+  } catch (error) {
+    console.error("Error en registerPaciente2:", error.message);
+
+    if (error.message === "Un usuario solo puede registrar hasta 5 pacientes.") {
+      return res.status(400).json({
+        success: false,
+        message: error.message
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Error al registrar el paciente',
+      error: process.env.NODE_ENV === 'development' ? error.message : null
+    });
+  }
+}
+
+export const actualizarPaciente2 = async (req, res) => {
+  try {
+    const { id_paciente } = req.params;
+    console.log("ID del paciente a actualizar:", id_paciente);
+    const { nombre, apellido, fecha_nacimiento, sexo, diagnostico_principal, nivel_autonomia, imagen_paciente } = req.body;
+
+    // Verificar si el paciente existe
+    const paciente = await Paciente.findOne({
+      where: { id_paciente }
+    });
+    if (!paciente) {
+      return res.status(404).json({
+        success: false,
+        message: "Paciente no encontrado."
+      });
+    }
+
+    let nueva_imagen = paciente.imagen_paciente; // Mantener la imagen existente si no hay nueva
+
+    if (imagen_paciente) {
+      try {
+        nueva_imagen = await imgBase64(imagen_paciente); // Convertir imagen
+      } catch (error) {
+        console.error('Error procesando imagen:', error);
+        return res.status(400).json({ message: 'Error al procesar la imagen' });
+      }
+    }
+
+    // Actualizar el paciente
+    await Paciente.update({
+      nombre,
+      apellido,
+      fecha_nacimiento,
+      sexo,
+      diagnostico_principal,
+      nivel_autonomia,
+      imagen_paciente: nueva_imagen
+    }, {
+      where: { id_paciente }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Paciente actualizado exitosamente.",
+      data: {
+        id: id_paciente,
+        nombre,
+        apellido,
+        identificacion: paciente.identificacion,
+        fecha_nacimiento,
+        sexo,
+        diagnostico_principal,
+        nivel_autonomia,
+        imagen_paciente: nueva_imagen
+      }
+    });
+  } catch (error) {
+    console.error("Error en actualizarPaciente2:", error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al actualizar el paciente',
+      error: process.env.NODE_ENV === 'development' ? error.message : null
+    });
+  }
+};
