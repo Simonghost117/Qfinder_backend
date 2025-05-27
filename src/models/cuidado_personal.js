@@ -38,7 +38,13 @@ import sequelize from '../config/db.js';
         type: DataTypes.TEXT,
         allowNull: true,
         field: 'observaciones'
-      }
+      },
+      // notificado: {
+      //   type: DataTypes.BOOLEAN,
+      //   allowNull: false,
+      //   defaultValue: false,
+      //   field: 'notificado'
+      // }
     }, {
       tableName: 'cuidado_personal',
       timestamps: false
