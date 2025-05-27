@@ -75,18 +75,30 @@ export const actualizarRed = async (req, res) => {
   try {
     const { id_red } = req.params;
     const { nombre_red, descripcion_red, imagen_red } = req.body;
+    
+    const red = await Red.findOne({ where: { id_red } });
 
-    const redActualizada = await actualiza(id_red, nombre_red, descripcion_red, imagen_red);
+    if (!red) {
+      return res.status(404).json({ message: 'Red no encontrada' });
+    }
+
+    let nueva_imagen = red.imagen_red; 
+    
+        if (imagen_red) {
+          try {
+            nueva_imagen = await imgBase64(imagen_red); // Convertir imagen
+          } catch (error) {
+            console.error('Error procesando imagen:', error);
+            return res.status(400).json({ message: 'Error al procesar la imagen' });
+          }
+        }
+
+    const redActualizada = await actualiza(id_red, nombre_red, descripcion_red, nueva_imagen);
 
     if (!redActualizada) {
       return res.status(400).json({ message: 'No se pudo actualizar la red' });
     }
 
-    const datosActualizados = await Red.findOne({ where: { id_red } });
-
-    if (!datosActualizados) {
-      return res.status(404).json({ message: 'Red no encontrada' });
-    }
 
     res.status(200).json({ 
       success: true,
