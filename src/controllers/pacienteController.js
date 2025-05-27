@@ -179,19 +179,25 @@ export const actualizarPaciente = async (req, res) => {
       });
     }
 
-    let nueva_imagen = paciente.imagen_paciente; // Mantener la imagen existente si no hay nueva
+    // Manejo de imagen
+    let nueva_imagen = paciente.imagen_paciente; // Mantener la imagen actual
+    if (imagen_paciente && typeof imagen_paciente === "string") {
+      const esBase64 = imagen_paciente.startsWith("data:image/");
+      const esURL = imagen_paciente.startsWith("http://") || imagen_paciente.startsWith("https://");
 
-    if (imagen_paciente) {
-      try {
-        nueva_imagen = await imgBase64(imagen_paciente); // Convertir imagen
-      } catch (error) {
-        console.error('Error procesando imagen:', error);
-        return res.status(400).json({ message: 'Error al procesar la imagen' });
+      if (!esBase64 && !esURL) {
+        try {
+          nueva_imagen = await imgBase64(imagen_paciente); // Solo si es un archivo local
+        } catch (error) {
+          console.error("Error procesando imagen:", error);
+          return res.status(400).json({ message: "Error al procesar la imagen" });
+        }
+      } else {
+        nueva_imagen = imagen_paciente; // Mantener la imagen si es Base64 o URL
       }
     }
 
-    // Actualizar el paciente
-    await Paciente.update({
+    await paciente.update({
       nombre,
       apellido,
       fecha_nacimiento,
@@ -199,8 +205,6 @@ export const actualizarPaciente = async (req, res) => {
       diagnostico_principal,
       nivel_autonomia,
       imagen_paciente: nueva_imagen
-    }, {
-      where: { id_paciente }
     });
 
     res.status(200).json({
@@ -222,8 +226,8 @@ export const actualizarPaciente = async (req, res) => {
     console.error("Error en actualizarPaciente:", error);
     res.status(500).json({
       success: false,
-      message: 'Error al actualizar el paciente',
-      error: process.env.NODE_ENV === 'development' ? error.message : null
+      message: "Error al actualizar el paciente",
+      error: error.message
     });
   }
 };
