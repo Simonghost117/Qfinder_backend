@@ -1,4 +1,4 @@
-import { db } from '../utils/firebase-admin.js';
+import { db } from '../config/firebase-admin.js';
 import { NotificationService } from './notification.service.js';
 
 export class ChatNotificationService {
