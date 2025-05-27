@@ -7,7 +7,7 @@ export const crearRed = async (req, res) => {
     const { id_usuario } = req.user;
     const { nombre_red, descripcion_red } = req.body;
 
-        res.status(201).json({ message: "Red creada exitosamente", data: nuevaRed });
+    const nuevaRed = await creacionRed(id_usuario, nombre_red, descripcion_red);
 
     if (!nuevaRed || nuevaRed.length === 0) {
       return res.status(400).json({ 
