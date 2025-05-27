@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import { Op } from 'sequelize';
-import { ActividadCuidado, Paciente } from '../models/index.js';
+import  ActividadCuidado from '../models/actividadCuidado.model.js';
+import  Paciente from '../models/paciente.model.js';
 import { NotificationService } from './notification.service.js';
 
 export class ActivityNotificationService {
