@@ -53,10 +53,10 @@ export const creacionRed = async (id_usuario, nombre_red, descripcion_red) => {
     }
 }
 
-export const actualiza = async (id_red, nombre_red, descripcion_red, imagen_red) => {
+export const actualiza = async (id_red, nombre_red, descripcion_red, nueva_imagen) => {
     try {
         const redActualizada = await Red.update(
-            { nombre_red, descripcion_red, imagen_red },
+            { nombre_red, descripcion_red, imagen_red: nueva_imagen },
             { where: { id_red } }
         );
         return redActualizada;

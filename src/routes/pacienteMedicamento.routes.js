@@ -12,6 +12,7 @@ import {
 import { verifyToken } from '../middlewares/verifyToken.js';
 import { validateSchema } from '../middlewares/validatePaciMedi.js';
 import { asignarMedicamentoSchema } from '../schema/pacienteMedicamento.js';
+import { checkEpisodioPermissions } from '../middlewares/episodioPermissions.middleware.js';
 
 const router = Router();
 
@@ -20,6 +21,7 @@ router.post(
   '/crear',
   verifyToken,
   validateSchema(asignarMedicamentoSchema),
+  // checkEpisodioPermissions([ 'Usuario']),
   asignarMedicamento
 );
 
