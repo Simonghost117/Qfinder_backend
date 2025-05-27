@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import { Op } from 'sequelize';
-import { PacienteMedicamento, Paciente } from '../models/index.js';
+import {  Paciente } from '../models/paciente.model.js';
+import { PacienteMedicamento } from '../models/pacienteMedicamento.model.js';
 import { NotificationService } from './notification.service.js';
 
 function parseFrecuencia(frecuencia) {
