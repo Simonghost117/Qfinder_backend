@@ -1,9 +1,9 @@
 import express from 'express';
 import { login, logout, register, 
     listarUsers, actualizarUser, eliminarUser,
-    verifyUser, perfilUser, listarUsuarios, listarAdmin, eliminarUsuario, buscarUserNombre } from '../controllers/usuarioController.js';
+    verifyUser, perfilUser, listarUsuarios, listarAdmin, eliminarUsuario, buscarUserNombre, registerUsuario } from '../controllers/usuarioController.js';
 import validateSchema from '../middlewares/validatoreSchema.js';
-import { loginSchema, registerSchema, updateSchema, cambiarContrasenaSchema } from '../schema/usuarioSchema.js';
+import { loginSchema, registerSchema, updateSchema, cambiarContrasenaSchema, usuarioAdmiAct } from '../schema/usuarioSchema.js';
 import { verifyToken } from '../middlewares/verifyToken.js';
 import { recuperarContrasena, cambiarContrasena, verificarCodigo } from '../controllers/recuperarContrasena.js';
 import { validateAdmin } from '../middlewares/validateAdmin.js';
@@ -66,11 +66,10 @@ router.get('/listarAdmin',
     validateAdmin,
     listarAdmin
 );
-
 router.put('/actualizarUsuario/:id_usuario',
     verifyToken,
     validateAdmin,
-    validateSchema(registerSchema),
+    validateSchema(usuarioAdmiAct),
     actualizarUser
 );
 router.delete('/eliminarUsuario/:id_usuario',
@@ -82,7 +81,13 @@ router.get('/buscarUsuario',
     verifyToken,
     validateAdmin,
     buscarUserNombre
-)
+);
+router.post('/registrarUsuario',
+    verifyToken,
+    validateAdmin,
+    validateSchema(registerSchema),
+    registerUsuario
+);
 
 //listar todos los usuarios
 //listar todos los pacientes

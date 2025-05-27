@@ -1,12 +1,9 @@
 import { createPaciente, getPacientesByUsuario } from "../services/pacienteService.js";
-import { generarCodigoQR } from "../utils/qrGenerator.js";
-
 import { models } from "../models/index.js";
 const { Paciente, Familiar, CodigoQR } = models;
-import codigoQr from "../models/codigoQr.model.js";
 import { generarQRPaciente } from "../controllers/codigoQrController.js";
 import Usuario from "../models/usuario.model.js";
-import { Op } from "sequelize";
+import { imgBase64 } from "../utils/imgBase64.js";
 
 
 // Registrar un nuevo paciente
@@ -167,7 +164,6 @@ export const getPacienteById = async (req, res) => {
         });
     }
 };
-
 export const actualizarPaciente = async (req, res) => {
   try {
     const { id_paciente } = req.params;
@@ -182,6 +178,17 @@ export const actualizarPaciente = async (req, res) => {
       });
     }
 
+    let nueva_imagen = paciente.imagen_paciente; // Mantener la imagen existente si no hay nueva
+
+    if (imagen_paciente) {
+      try {
+        nueva_imagen = await imgBase64(imagen_paciente); // Convertir imagen
+      } catch (error) {
+        console.error('Error procesando imagen:', error);
+        return res.status(400).json({ message: 'Error al procesar la imagen' });
+      }
+    }
+
     // Actualizar el paciente
     await Paciente.update({
       nombre,
@@ -190,7 +197,7 @@ export const actualizarPaciente = async (req, res) => {
       sexo,
       diagnostico_principal,
       nivel_autonomia,
-      imagen_paciente
+      imagen_paciente: nueva_imagen
     }, {
       where: { id_paciente }
     });
@@ -206,7 +213,8 @@ export const actualizarPaciente = async (req, res) => {
         fecha_nacimiento,
         sexo,
         diagnostico_principal,
-        nivel_autonomia
+        nivel_autonomia,
+        imagen_paciente: nueva_imagen
       }
     });
   } catch (error) {
@@ -217,7 +225,7 @@ export const actualizarPaciente = async (req, res) => {
       error: process.env.NODE_ENV === 'development' ? error.message : null
     });
   }
-}
+};
 
 export const eliminarPaciente = async (req, res) => {
   try {

@@ -433,3 +433,58 @@ export const buscarUserNombre = async (req, res) => {
     res.status(500).json({ message: "Error interno al buscar el usuario por nombre" });
   }
 }
+
+export const registerUsuario = async (req, res) => {
+  try {
+    const { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, contrasena_usuario, tipo_usuario } = req.body;
+
+    const userData = {
+      nombre_usuario,
+      apellido_usuario,
+      identificacion_usuario,
+      direccion_usuario,
+      telefono_usuario,
+      contrasena_usuario,
+      tipo_usuario: tipo_usuario || 'Usuario', // Por defecto 'Usuario'
+    };
+    
+    // 1. Validar duplicados en BD (solo el correo)
+    const existe = await Usuario.findOne({ where: { correo_usuario } });
+    if (existe) {
+      return res.status(400).json({ error: 'El correo ya está registrado' });
+    }
+
+    const idExiste = await Usuario.findOne({ where: { identificacion_usuario: userData.identificacion_usuario } });
+    if (idExiste) {
+      return res.status(400).json({ error: 'El número de identificación ya está registrado' });
+    }
+    const passwordHash = await bcrypt.hash(contrasena_usuario, 10);
+
+    const usuario = await Usuario.create({
+      ...userData,
+      correo_usuario,
+      contrasena_usuario: passwordHash,
+    });
+    
+    res.status(200).json({ 
+      message: 'Usuario registrado exitosamente',
+      usuario: {
+        id_usuario: usuario.id_usuario,
+        nombre_usuario: usuario.nombre_usuario,
+        apellido_usuario: usuario.apellido_usuario,
+        identificacion_usuario: usuario.identificacion_usuario,
+        direccion_usuario: usuario.direccion_usuario,
+        telefono_usuario: usuario.telefono_usuario,
+        correo_usuario: usuario.correo_usuario,
+        tipo_usuario: usuario.tipo_usuario,
+      }
+      
+    });
+    
+  } catch (error) {
+    res.status(500).json({ 
+      error: 'Error en registro', 
+      details: error.message 
+    });
+  }
+}

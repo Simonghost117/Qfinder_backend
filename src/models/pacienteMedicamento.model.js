@@ -40,17 +40,19 @@ const PacienteMedicamento = sequelize.define('PacienteMedicamento', {
   frecuencia: {
     type: DataTypes.STRING,
     allowNull: true
-  }, ultimo_recordatorio: {
-    type: DataTypes.DATE,
-    allowNull: true
-  }, proxima_dosis: {
-    type: DataTypes.DATE,
-    allowNull: true
-  }, notificaciones_activas: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: true
-  }
+  }, 
+  // ultimo_recordatorio: {
+  //   type: DataTypes.DATE,
+  //   allowNull: true
+  // }, 
+  // proxima_dosis: {
+  //   type: DataTypes.DATE,
+  //   allowNull: true
+  // }, notificaciones_activas: {
+  //   type: DataTypes.BOOLEAN,
+  //   allowNull: true,
+  //   defaultValue: true
+  // }
 }, {
   tableName: 'paciente_medicamento',
   timestamps: false
