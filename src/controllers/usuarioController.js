@@ -119,11 +119,11 @@ export const verifyUser = async (req, res) => {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict'
     });*/
-    res.cookie("token", token, {
+     res.cookie("token", token, {
       httpOnly: process.env.NODE_ENV !== "development",
       secure: true,
-      sameSite: "none",
-    });
+      sameSite: "none",
+    });
     // Enviar el token en la cabecera Authorization
       res.setHeader("Authorization", `Bearer ${token}`);
 
@@ -187,11 +187,11 @@ export const login = async (req, res) => {
           rol: usuario.tipo_usuario
         });
 
-        res.cookie("token", token, {
-          httpOnly: process.env.NODE_ENV !== "development",
-          secure: false,
-          sameSite: "none",
-        });
+         res.cookie("token", token, {
+      httpOnly: process.env.NODE_ENV !== "development",
+      secure: true,
+      sameSite: "none",
+    });
         // Enviar el token en la cabecera Authorization
         res.setHeader("Authorization", `Bearer ${token}`);
         

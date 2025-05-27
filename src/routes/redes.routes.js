@@ -12,15 +12,11 @@ import { verifyToken } from '../middlewares/verifyToken.js';
 import validateSchema from '../middlewares/validatoreSchema.js';
 import { redesSchema } from '../schema/redesSchema.js';
 import { esAdministradorRed } from '../middlewares/validacionesRed.js';
+import { validateAdmin } from '../middlewares/validateAdmin.js';
 
 const router = express.Router();
 // En redes.routes.js
 router.get('/obtenerIdRed', verifyToken, obtenerIdRedPorNombre)
-router.post('/crear',
-    verifyToken,
-    validateSchema(redesSchema),
-    crearRed
-)
 router.get('/listarRedes',
     verifyToken,
     listarRedes
@@ -44,5 +40,13 @@ router.delete('/eliminarRed/:id_red',
 router.get('/redNombre',
     verifyToken,
     redNombre
+)
+
+//ADMINISTRADOR
+router.post('/crear',
+    verifyToken,
+    validateAdmin,
+    validateSchema(redesSchema),
+    crearRed
 )
 export default router;
