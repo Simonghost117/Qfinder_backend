@@ -52,11 +52,11 @@ const missingFields = requiredFields.filter(field => !serviceAccount[field]);
 if (missingFields.length > 0) {
   throw new Error(`Faltan campos esenciales: ${missingFields.join(', ')}`);
 }
-
+const databaseURL = "https://qfinder-comunity-default-rtdb.firebaseio.com/"
 // Inicialización de Firebase
 const app = initializeApp({
   credential: cert(serviceAccount),
-  databaseURL: "https://qfinder-comunity-default-rtdb.firebaseio.com"
+  databaseURL: databaseURL 
 });
 if (!admin.apps.length) {
   admin.initializeApp({
