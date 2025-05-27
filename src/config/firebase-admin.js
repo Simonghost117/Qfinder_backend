@@ -43,5 +43,5 @@ if (!admin.apps.length) {
 // Exporta los servicios
 export const auth = admin.auth();
 export const db = getDatabase(app);
-export const messaging = getMessaging(firebaseApp);
+export const messaging = admin.messaging();
 console.log('✅ Firebase Admin inicializado correctamente');  
