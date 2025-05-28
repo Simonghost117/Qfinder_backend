@@ -18,21 +18,36 @@ import sequelize from '../config/db.js';
       allowNull: false,
       field: 'fecha_cita'
     },
-    motivo_cita: {
-      type: DataTypes.TEXT,  
+    titulo: {
+      type: DataTypes.STRING,  
       allowNull: false,
-      field: 'motivo_cita'
-    },
-    resultado_consulta: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-      field: 'resultado_consulta'
+      field: 'titulo'
     },
     estado_cita: {
       type: DataTypes.ENUM('programada', 'completada', 'cancelada'),
       defaultValue: 'programada',
       field: 'estado'
-      },
+    },
+    descripcion: {
+      type: DataTypes.TEXT,  
+      allowNull: true,
+      field: 'descripcion'
+    },
+    fecha_recordatorio: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      field: 'fecha_recordatorio'
+    },
+    // notificado_1h: {
+    //   type: DataTypes.BOOLEAN,
+    //   defaultValue: false,
+    //   field: 'notificado_1h'
+    // },
+    // notificado_24h: {
+    //   type: DataTypes.BOOLEAN,
+    //   defaultValue: false,
+    //   field: 'notificado_24h'
+    // }
     },
     {
       tableName: 'cita_medica',

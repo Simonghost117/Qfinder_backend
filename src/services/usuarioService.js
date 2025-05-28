@@ -4,6 +4,7 @@ import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 dotenv.config();
+import { Op, or } from 'sequelize';
 
 // Configuración del transporter para emails
 const transporter = nodemailer.createTransport({
@@ -17,27 +18,18 @@ const transporter = nodemailer.createTransport({
 // Almacenamiento temporal en memoria
 const tempStorage = new Map();
 
-/**
- * Crea un nuevo usuario en el sistema
- */
 export const createUser = async (userData) => {
   const hashedPassword = await bcrypt.hash(userData.contrasena_usuario, 10);
   
   return await Usuario.create({
     ...userData,
     contrasena_usuario: hashedPassword,
-    estado_usuario: 'Inactivo',
+    estado_usuario: 'Inactivo'
+    ,
     verificado: false
   });
 };
 
-/**
- * Genera y almacena un código de verificación para el usuario
- * Combinación de ambas versiones:
- * - Recibe userData de HEAD
- * - Genera código de 5 dígitos de moriones
- * - Mantiene ambos sistemas de expiración
- */
 export const generateAndStoreCode = (correo_usuario, userData) => {
   // Versión moriones: código de 5 dígitos y expiración Date
   const codigo = crypto.randomInt(10000, 99999).toString();
@@ -56,7 +48,6 @@ export const generateAndStoreCode = (correo_usuario, userData) => {
 
 /**
  * Verifica el código de validación
- * Combina verificación de ambas versiones
  */
 export const verifyCode = (correo_usuario, codigo) => {
   const storedData = tempStorage.get(correo_usuario);
@@ -148,14 +139,6 @@ export const authenticateUser = async (correo_usuario, contrasena_usuario) => {
   return { success: true, usuario };
 };
 
-/**
- * Limpieza de almacenamiento temporal
- * (Conserva ambos nombres de función comentados)
- */
-// export const cleanTempStorage = (correo_usuario) => {
-//   tempStorage.delete(correo_usuario);
-// };
-
 export const clearPendingRegistration = (correo_usuario) => {
   tempStorage.delete(correo_usuario);
 };
@@ -174,3 +157,53 @@ export const clearPendingRegistration = (correo_usuario) => {
 // const verificationCodes = new Map();
 
 // ... (resto de código comentario preservado)
+
+
+
+// export const buscarNombre = async (nombre_usuario) => {
+//     try {
+//         const usuario = await Usuario.findAll({
+//             where: {
+//                 [Op.or]: [ // ✅ Arreglado: `[Op.or]` en vez de `[or]`
+//                     { nombre_usuario: { [Op.iLike]: `%${nombre_usuario}%` } },
+//                     { apellido_usuario: { [Op.iLike]: `%${nombre_usuario}%` } }
+//                 ]
+//             },
+//             attributes: ["id_usuario", "nombre_usuario", "apellido_usuario", "correo_usuario"],
+//             order: [["nombre_usuario", "ASC"]] // ✅ Ordenar alfabéticamente
+//         });
+
+//         if (!usuario || usuario.length === 0) {
+//             return { message: "No se encontraron usuarios con ese nombre/apellido." };
+//         }
+
+//         return usuario;
+//     } catch (error) {
+//         console.error("Error al buscar usuario por nombre:", error);
+//         throw new Error(`Error al buscar usuario: ${error.message}`);
+//     }
+//   }
+export const buscarNombre = async (nombre) => {
+    try {
+        const usuarios = await Usuario.findAll({
+            where: {
+                [Op.or]: [
+                    { nombre_usuario: { [Op.iLike]: `%${nombre}%` } },
+                    { apellido_usuario: { [Op.iLike]: `%${nombre}%` } },
+                    { identificacion_usuario: { [Op.iLike]: `%${nombre}%` } },
+                ]
+            },
+            attributes: ["id_usuario", "nombre_usuario", "apellido_usuario", "correo_usuario", "identificacion_usuario"],
+            order: [["nombre_usuario", "ASC"]]
+        });
+
+        if (!usuarios || usuarios.length === 0) {
+            return { message: "No se encontraron usuarios con ese nombre/apellido." };
+        }
+
+        return usuarios;
+    } catch (error) {
+        console.error("Error al buscar usuario:", error);
+        throw new Error(`Error en la búsqueda: ${error.message}`);
+    }
+};

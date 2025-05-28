@@ -75,11 +75,15 @@ export class EpisodioSaludService {
     }
   }
 
-  static async obtenerPorId(idEpisodio) {
+  static async obtenerPorId(id_paciente, idEpisodio) {
     try {
-      const episodio = await EpisodioSalud.findByPk(idEpisodio, {
+      const episodio = await EpisodioSalud.findOne({
+        where: {
+          id_episodio: idEpisodio,
+          id_paciente: id_paciente
+        },
         attributes: {
-          exclude: ['created_at', 'updated_at']
+          exclude: ['created_at', 'updated_at'] // Excluir campos innecesarios
         }
       });
       
@@ -95,7 +99,7 @@ export class EpisodioSaludService {
     }
   }
 
-  static async actualizarEpisodio(idEpisodio, datosActualizados) {
+  static async actualizarEpisodio(id_paciente, idEpisodio, datosActualizados) {
     try {
       // Validar estado si viene en la actualización
       if (datosActualizados.estado) {
@@ -106,7 +110,10 @@ export class EpisodioSaludService {
       }
 
       const [affectedCount] = await EpisodioSalud.update(datosActualizados, {
-        where: { id_episodio: idEpisodio }
+        where: { 
+          id_episodio: idEpisodio,
+          id_paciente: id_paciente
+         }
       });
 
       if (affectedCount === 0) {
@@ -121,10 +128,13 @@ export class EpisodioSaludService {
     }
   }
 
-  static async eliminarEpisodio(idEpisodio) {
+  static async eliminarEpisodio(id_paciente, idEpisodio) {
     try {
       const deletedCount = await EpisodioSalud.destroy({
-        where: { id_episodio: idEpisodio }
+        where: { 
+          id_episodio: idEpisodio,
+          id_paciente: id_paciente
+        }
       });
 
       if (deletedCount === 0) {

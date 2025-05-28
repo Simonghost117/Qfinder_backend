@@ -4,6 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+import chatRoutes from './routes/chatRoutes.js';
 import cookieParser from 'cookie-parser';
 import session from 'express-session';
 import { EventEmitter } from 'events';
@@ -54,6 +55,9 @@ import medicoRoutes from './routes/medico.routes.js';
 import CitaMedica from './routes/citaMedica.routes.js';
 import codigoQr from './routes/codigoQr.routes.js';
 import medicamentoRoutes from './routes/medicamento.routes.js';
+import pacienteMedicamentoRoutes from './routes/pacienteMedicamento.routes.js';
+import authRoutes from './routes/authRoutes.js'
+import membresiaRoutes from './routes/membresiaRed.routes.js'
 
 // Endpoint raíz informativo
 app.get('/', (req, res) => {
@@ -81,31 +85,25 @@ app.get('/test', (req, res) => {
   res.json({ message: 'El servidor está funcionando correctamente' });
 });
 
-// Configuración de rutas
-app.use('/api/auth', usuarioRoutes);//Completar rutas de autenticación -falta recuperar contraseña
-app.use('/api/medicos', medicoRoutes);//Validaciones - crud YA NO SE NECESITA
-app.use('/api/episodios', routerEpisodioSalud);//Completo
-//app.use('/api/reportes', routerReport);//Esta ruta no va a ser utilizada
-app.use('/api/redes', redesRoutes);//Completo
-
-app.use('/api/paciente', pacienteRoutes);//Completo
-app.use('/api/familiar', familiarRoutes);//No se necesita
-// Configuración de rutas API
-app.use('/api/auth', usuarioRoutes); // Autenticación (falta recuperar contraseña)
-app.use('/api/medicos', medicoRoutes); // Validaciones - CRUD (YA NO SE NECESITA pero conservado)
-app.use('/api/episodios', routerEpisodioSalud); // Completo
+// // Configuración de rutas API
+app.use('/api/auth', usuarioRoutes); //🟢 usuario
+app.use('/api/episodios', routerEpisodioSalud); //🟢 episodio salud
+app.use('/api/redes', redesRoutes); //🟢 Redes
+app.use('/api/membresiaRed', membresiaRoutes); // 🟢 usuario_red
+app.use('/api/paciente', pacienteRoutes); //🟢 paciente
+app.use('/api/familiar', familiarRoutes); //🟢 familiar
+app.use('/api/cuidadoPersonal', cuidadoPersonalRoutes);// 🟢 Cuidado personal
+app.use('/api/actividades', actividadRouter); //🟢 actividad fisica 🔴
+app.use('/api/regSintomas', RegSintomas); //🟢 monitoreo sintomas 🔴
+app.use('/api/citaMedica', CitaMedica);//🟢 cita medica
+app.use('/api/codigoQr', codigoQr)//🟢 codigo qr
+app.use('/api/medicamentos', medicamentoRoutes);//🟢 medicamento
+app.use('/api/paciente-medicamento', pacienteMedicamentoRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/firebase', authRoutes); //🟢 episodios salud
+// app.use('/api/medicos', medicoRoutes); // Validaciones - CRUD (YA NO SE NECESITA pero conservado)
 // app.use('/api/reportes', routerReport); // No se va a usar (comentado pero conservado)
-app.use('/api/redes', redesRoutes); // Completo
-app.use('/api/paciente', pacienteRoutes); // Completo
-app.use('/api/familiar', familiarRoutes); // No se necesita pero conservado
-app.use('/api/panel', panelRoutes);
-app.use('/api/cuidadoPersonal', cuidadoPersonalRoutes);
-app.use('/api/actividades', actividadRouter); //Completo
-app.use('/api/regSintomas', RegSintomas); //+-
-app.use('/api/citaMedica', CitaMedica);//Completa
-app.use('/api/codigoQr', codigoQr)
-
-app.use('/api/medicamentos', medicamentoRoutes);
+// app.use('/api/panel', panelRoutes);
 
 // Exportación de la app
 export default app;

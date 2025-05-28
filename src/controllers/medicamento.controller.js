@@ -2,46 +2,121 @@ import Medicamento from '../models/medicamento.model.js';
 
 export const crearMedicamento = async (req, res) => {
   try {
-    const nuevo = await Medicamento.create(req.body);
-    res.status(201).json({ message: 'Medicamento creado exitosamente', data: nuevo });
+    const datos = req.body;
+    console.log("Datos recibidos para crear medicamento:", datos);
+
+    if (Array.isArray(datos)) {
+      // Si es un arreglo, crear múltiples registros
+      const nuevosMedicamentos = await Medicamento.bulkCreate(datos);
+      res.status(201).json({
+        message: "Medicamentos creados exitosamente",
+        data: nuevosMedicamentos
+      });
+    } else {
+      // Si es un solo objeto, crear un solo registro
+      const nuevoMedicamento = await Medicamento.create(datos);
+      res.status(201).json({
+        message: "Medicamento creado exitosamente",
+        data: nuevoMedicamento
+      });
+    }
   } catch (error) {
-    res.status(500).json({ message: 'Error al crear medicamento', error: error.message });
+    res.status(500).json({
+      message: "Error al crear medicamento",
+      error: error.message
+    });
   }
 };
 
 export const listarMedicamentos = async (req, res) => {
   try {
-    const medicamentos = await Medicamento.findAll();
+    // const { id_usuario } = req.user; // Extraemos el usuario autenticado
+
+    const medicamentos = await Medicamento.findAll(
+    //   {
+    //   where: { id_usuario } // Solo los del usuario actual
+    // }
+  );
+
     res.status(200).json(medicamentos);
   } catch (error) {
     res.status(500).json({ message: 'Error al listar medicamentos', error: error.message });
   }
 };
 
+
+export const listarMedicamentosId = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { id_usuario } = req.user;
+
+    const medicamento = await Medicamento.findOne({
+      where: {
+        id_medicamento: id,
+        id_usuario
+      }
+    });
+
+    if (!medicamento) {
+      return res.status(404).json({ message: 'Medicamento no encontrado o no autorizado' });
+    }
+
+    res.status(200).json(medicamento);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al listar medicamento', error: error.message });
+  }
+};
+
 export const actualizarMedicamento = async (req, res) => {
   try {
     const { id } = req.params;
-    const actualizado = await Medicamento.update(req.body, {
-      where: { id_medicamento: id }
+    const { id_usuario } = req.user;
+
+    // Verificar que el medicamento exista y pertenezca al usuario
+    const medicamento = await Medicamento.findOne({
+      where: {
+        id_medicamento: id,
+        id_usuario
+      }
     });
-    if (actualizado[0] === 0) {
-      return res.status(404).json({ message: 'Medicamento no encontrado' });
+
+    if (!medicamento) {
+      return res.status(404).json({ message: 'Medicamento no encontrado o no autorizado' });
     }
+
+    // Actualizar si pertenece al usuario
+    await medicamento.update(req.body);
+
     res.status(200).json({ message: 'Medicamento actualizado correctamente' });
   } catch (error) {
     res.status(500).json({ message: 'Error al actualizar medicamento', error: error.message });
   }
 };
 
+
 export const eliminarMedicamento = async (req, res) => {
   try {
     const { id } = req.params;
-    const eliminado = await Medicamento.destroy({ where: { id_medicamento: id } });
-    if (!eliminado) {
-      return res.status(404).json({ message: 'Medicamento no encontrado' });
+    const { id_usuario } = req.user;
+
+    // Verificar que el medicamento exista y pertenezca al usuario
+    const medicamento = await Medicamento.findOne({
+      where: {
+        id_medicamento: id,
+        id_usuario
+      }
+    });
+
+    if (!medicamento) {
+      return res.status(404).json({ message: 'Medicamento no encontrado o no autorizado' });
     }
+
+    // Eliminar si pertenece al usuario
+    await medicamento.destroy();
+
     res.status(200).json({ message: 'Medicamento eliminado correctamente' });
   } catch (error) {
     res.status(500).json({ message: 'Error al eliminar medicamento', error: error.message });
   }
 };
+

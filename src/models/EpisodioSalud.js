@@ -13,15 +13,8 @@ export const EpisodioSalud = sequelize.define('episodio_salud', {
         allowNull: false
     },
     tipo: {
-        type: DataTypes.ENUM(
-            'crisis_psiquiatrica', 
-            'crisis_epileptica', 
-            'recaida', 
-            'hospitalizacion', 
-            'observacion',
-            'datos_dispositivo'
-        ),
-        allowNull: false
+        type: DataTypes.STRING,
+        allowNull: false,
     },
     fecha_hora_inicio: {
         type: DataTypes.DATE,
@@ -32,23 +25,8 @@ export const EpisodioSalud = sequelize.define('episodio_salud', {
         allowNull: true
     },
     severidad: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.ENUM('baja', 'media', 'alta'),
         allowNull: false,
-        validate: {
-            min: 1,
-            max: 10
-        }
-    },
-    sintomas: {
-        type: DataTypes.TEXT,
-        allowNull: false,
-        get() {
-            const rawValue = this.getDataValue('sintomas');
-            return rawValue ? JSON.parse(rawValue) : [];
-        },
-        set(value) {
-            this.setDataValue('sintomas', JSON.stringify(value));
-        }
     },
     descripcion: {
         type: DataTypes.TEXT,

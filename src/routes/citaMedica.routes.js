@@ -30,6 +30,7 @@ router.put(
     '/actualizarCita/:id_paciente/:id_cita',
     verifyToken,
     checkEpisodioPermissions(['Usuario']),
+    validateSchema(citaMedicaSchema),
     actualizarCitaMedica
 );
 router.delete(

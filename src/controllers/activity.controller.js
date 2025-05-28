@@ -86,3 +86,20 @@ export const deleteActivity = async (req, res, next) => {
     next(error);
   }
 };
+
+export const todasActividades = async (req, res) => {
+  try {
+    const { id_usuario } = req.params;
+    const actividades = await activityService.todasActividades(id_usuario);
+    if(!actividades || actividades.length === 0) {
+      return res.status(404).json({ error: "No hay actividades registradas"})
+    }
+    return res.status(200).json({ 
+      success: true,
+      data: actividades
+    })
+    } catch (error) {
+      console.error('Error al listar actividades', error);
+      return res.status(500).json({ error: "Error interno al listar actividades"})
+    }
+}

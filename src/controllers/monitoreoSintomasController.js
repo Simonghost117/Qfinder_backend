@@ -13,7 +13,7 @@ export class MonitoreoSintomasController {
       const datos = {
         id_paciente,
         sintoma: req.body.sintoma,
-        gravedad: parseInt(req.body.gravedad || 3),
+        gravedad: req.body.gravedad || 'baja',
         observaciones: req.body.observaciones || null,
         fecha_sintoma: req.body.fecha_sintoma || new Date()
       };
@@ -48,6 +48,13 @@ export class MonitoreoSintomasController {
   
       // Obtener los síntomas del paciente sin validar acceso
       const registros = await MonitoreoSintomasService.obtenerPorPaciente(id_paciente);
+
+      if (!registros || registros.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'No se encontraron síntomas para este paciente'
+        });
+      }
   
       // Responder con los registros
       return res.status(200).json({
@@ -77,10 +84,10 @@ export class MonitoreoSintomasController {
       console.log("Datos del usuario autenticado:", req.usuario);
 
       // Obtener el síntoma por ID
-      const sintoma = await MonitoreoSintomasService.obtenerSintomaPorId(id_registro, id_paciente);
+      const sintoma = await MonitoreoSintomasService.obtenerSintomaPorId(id_paciente, id_registro);
       console.log('sintoma', sintoma);
 
-      if (!sintoma) {
+      if (!sintoma || sintoma.length === 0) {
         return res.status(404).json({
           success: false,
           message: 'Síntoma no encontrado'
@@ -92,6 +99,67 @@ export class MonitoreoSintomasController {
         success: true,
         message: 'Síntoma obtenido exitosamente',
         data: sintoma
+      });
+    } catch (error) {
+      handleError(res, error);
+    }
+  }
+  static async actualizarSintoma(req, res) {
+    try {
+      const id_paciente = parseInt(req.params.id_paciente);
+      const id_registro = parseInt(req.params.id_registro);
+
+      // Preparar los datos a actualizar
+      const datos = {
+        sintoma: req.body.sintoma,
+        gravedad: req.body.gravedad || 'baja',
+        observaciones: req.body.observaciones || null,
+        fecha_sintoma: req.body.fecha_sintoma || new Date()
+      };
+
+      const traerreg = await MonitoreoSintomasService.obtenerSintomaPorId(id_paciente, id_registro);
+      if (!traerreg || traerreg.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Síntoma no encontrado'
+        });
+      }
+
+      // Actualizar el síntoma
+      const sintomaActualizado = await MonitoreoSintomasService.actualizarSintoma(id_paciente, id_registro, datos);
+
+      // Responder con el síntoma actualizado
+      return res.status(200).json({
+        success: true,
+        message: 'Síntoma actualizado exitosamente',
+        data: sintomaActualizado
+      });
+    } catch (error) {
+      handleError(res, error);
+    }
+  }
+
+  static async eliminarSintoma(req, res) {
+    try {
+      const id_paciente = parseInt(req.params.id_paciente);
+      const id_registro = parseInt(req.params.id_registro);
+
+      // Verificar si el síntoma existe
+      const sintoma = await MonitoreoSintomasService.obtenerSintomaPorId(id_paciente, id_registro);
+      if (!sintoma || sintoma.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Síntoma no encontrado'
+        });
+      }
+
+      // Eliminar el síntoma
+      await MonitoreoSintomasService.eliminarSintoma(id_paciente, id_registro);
+
+      // Responder con éxito
+      return res.status(200).json({
+        success: true,
+        message: 'Síntoma eliminado exitosamente'
       });
     } catch (error) {
       handleError(res, error);

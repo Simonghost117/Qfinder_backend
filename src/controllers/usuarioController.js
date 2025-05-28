@@ -3,6 +3,7 @@ import Usuario from '../models/usuario.model.js';
 import { createAccessToken } from '../libs/jwt.js';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
+import { imgBase64 } from '../utils/imgBase64.js';
 dotenv.config();
 
 
@@ -13,8 +14,10 @@ import {
   generateAndStoreCode,
   verifyCode,
   sendVerificationEmail,
-  clearPendingRegistration
+  clearPendingRegistration,
+  buscarNombre
 } from '../services/usuarioService.js';
+import { or } from 'sequelize';
 
 export const register = async (req, res) => {
   try {
@@ -24,6 +27,11 @@ export const register = async (req, res) => {
     const existe = await Usuario.findOne({ where: { correo_usuario } });
     if (existe) {
       return res.status(400).json({ error: 'El correo ya está registrado' });
+    }
+
+    const idExiste = await Usuario.findOne({ where: { identificacion_usuario: userData.identificacion_usuario } });
+    if (idExiste) {
+      return res.status(400).json({ error: 'El número de identificación ya está registrado' });
     }
 
     // if (userData.tipo_usuario === 'Medico') {
@@ -88,6 +96,8 @@ export const verifyUser = async (req, res) => {
     if (!valid) {
       return res.status(400).json({ error: message });
     }
+
+   
     
     // 2. Crear usuario con contraseña hasheada
     const hashedPassword = await bcrypt.hash(userData.contrasena_usuario, 10);
@@ -95,6 +105,7 @@ export const verifyUser = async (req, res) => {
       ...userData,
       correo_usuario,
       contrasena_usuario: hashedPassword,
+      tipo_usuario: userData.tipo_usuario || 'Usuario', // De HEAD
       estado_usuario: 'Activo' // De HEAD
     });
     
@@ -110,13 +121,27 @@ export const verifyUser = async (req, res) => {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict'
     });*/
-    res.cookie("token", token, {
+     res.cookie("token", token, {
       httpOnly: process.env.NODE_ENV !== "development",
       secure: true,
       sameSite: "none",
     });
+    // Enviar el token en la cabecera Authorization
+      res.setHeader("Authorization", `Bearer ${token}`);
+
     
+    // res.status(201).json({
+    //   message: 'Registro completado exitosamente',
+    //   usuario: {
+    //     id: usuario.id_usuario,
+    //     correo: usuario.correo_usuario, 
+    //     nombre: usuario.nombre_usuario,
+    //     apellido: usuario.apellido_usuario,
+    //   },
+    //   token
+    // });
     res.status(201).json({
+      success: true,
       message: 'Registro completado exitosamente',
       usuario: {
         id: usuario.id_usuario,
@@ -126,6 +151,7 @@ export const verifyUser = async (req, res) => {
       },
       token
     });
+    
     
   } catch (error) {
     console.log(error)
@@ -140,6 +166,7 @@ export const verifyUser = async (req, res) => {
 export const login = async (req, res) => {
     try {
         const { correo_usuario, contrasena_usuario } = req.body;
+        console.log(req.body)
         
         const usuario = await Usuario.findOne({ 
           where: { correo_usuario: correo_usuario } 
@@ -148,8 +175,10 @@ export const login = async (req, res) => {
         if (!usuario) {
           return res.status(401).json({ error: "Credenciales incorrectas (usuario no registrado)" });
         }
+
         
         const contrasenaValida = await bcrypt.compare(contrasena_usuario, usuario.contrasena_usuario);
+        console.log(contrasenaValida)
         if (!contrasenaValida) {
           return res.status(401).json({ error: "Credenciales incorrectas (contraseña invalida)" });
         }
@@ -160,11 +189,13 @@ export const login = async (req, res) => {
           rol: usuario.tipo_usuario
         });
 
-        res.cookie("token", token, {
-          httpOnly: process.env.NODE_ENV !== "development",
-          secure: true,
-          sameSite: "none",
-        });
+         res.cookie("token", token, {
+  httpOnly: false, // For testing only
+  secure: false,   // Important for localhost (no https)
+  sameSite: "lax", // "none" requires secure=true
+    });
+        // Enviar el token en la cabecera Authorization
+        res.setHeader("Authorization", `Bearer ${token}`);
         
         res.json({ 
           id: usuario.id_usuario,
@@ -175,6 +206,7 @@ export const login = async (req, res) => {
           token 
         });
       } catch (error) {
+        console.log(error)
         return res.status(500).json({ message: error.message });
         }  
 };
@@ -192,6 +224,9 @@ export const logout = async (req, res) => {
 export const listarUsers = async (req, res) => {
     try {
         const usuarios = await Usuario.findAll();
+        if (!usuarios) {
+            return res.status(404).json({ message: 'No se encontraron usuarios' });
+        }
         res.status(200).json(usuarios.map(usuario => ({
             id_usuario: usuario.id_usuario,
             nombre_usuario: usuario.nombre_usuario,
@@ -211,7 +246,7 @@ export const listarUsers = async (req, res) => {
 
 export const actualizarUser = async (req, res) => {
   try {
-    const { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario, correo_usuario, contrasena_usuario } = req.body;
+    const { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario, correo_usuario, imagen_usuario } = req.body;
 
     const { id } = req.usuario;
     console.log("Contenido de req.usuario:", req.usuario);
@@ -221,10 +256,18 @@ export const actualizarUser = async (req, res) => {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
-    const dataToUpdate = { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario, correo_usuario };
-    if (contrasena_usuario) {
-      const salt = await bcrypt.genSalt(10);
-      dataToUpdate.contrasena_usuario = await bcrypt.hash(contrasena_usuario, salt);
+    const dataToUpdate = { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario, correo_usuario, imagen_usuario };
+    // if (contrasena_usuario) {
+    //   const salt = await bcrypt.genSalt(10);
+    //   dataToUpdate.contrasena_usuario = await bcrypt.hash(contrasena_usuario, salt);
+    // }
+    if (imagen_usuario) {
+      try {
+        dataToUpdate.imagen_usuario = await imgBase64(imagen_usuario);
+      } catch (error) {
+        console.error('Error procesando imagen:', error);
+        return res.status(400).json({ message: 'Error al procesar la imagen' });
+      }
     }
 
     await Usuario.update(dataToUpdate, {
@@ -257,3 +300,192 @@ export const eliminarUser = async (req, res) => {
         res.status(500).json({ message: 'Error al eliminar el usuario', error });
     }
 };
+
+export const perfilUser = async (req, res) => {
+  try {
+    const { id_usuario } = req.user;
+    console.log("Contenido de req.usuario:", req.usuario);
+
+    const usuario = await Usuario.findByPk(id_usuario);
+    if (!usuario) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
+
+    res.status(200).json({
+      id_usuario: usuario.id_usuario,
+      nombre_usuario: usuario.nombre_usuario,
+      apellido_usuario: usuario.apellido_usuario,
+      identificacion_usuario: usuario.identificacion_usuario,
+      direccion_usuario: usuario.direccion_usuario,
+      telefono_usuario: usuario.telefono_usuario,
+      correo_usuario: usuario.correo_usuario,
+   
+    });
+  } catch (error) {
+    console.error('Error al obtener el perfil del usuario:', error);
+    res.status(500).json({ message: 'Error al obtener el perfil del usuario', error });
+  }
+}
+
+export const listarUsuarios = async (req, res) => {
+  try { 
+    const usuarios = await Usuario.findAll(
+      {
+      where: {
+        tipo_usuario: 'Usuario'
+      }, order: [['id_usuario', 'ASC']]
+      }
+  );
+    res.status(200).json(usuarios.map(usuario => ({
+      id_usuario: usuario.id_usuario,
+      nombre_usuario: usuario.nombre_usuario,
+      apellido_usuario: usuario.apellido_usuario,
+      identificacion_usuario: usuario.identificacion_usuario,
+      direccion_usuario: usuario.direccion_usuario,
+      telefono_usuario: usuario.telefono_usuario,
+      correo_usuario: usuario.correo_usuario,
+      tipo_usuario: usuario.tipo_usuario,
+      estado_usuario: usuario.estado_usuario
+    })));
+  } catch (error) {
+    console.log('Error al listar los usuarios', error);
+    res.status(500).json({ message: "Erro interno del servidor al listar los usuarios"})
+  }
+}
+export const listarAdmin = async (req, res) => {
+  try {
+    const usuarios = await Usuario.findAll(
+      {
+      where: {
+        tipo_usuario: 'Administrador'
+      }, order: [['id_usuario', 'ASC']]
+      }
+  );
+    res.status(200).json(usuarios.map(usuario => ({
+      id_usuario: usuario.id_usuario,
+      nombre_usuario: usuario.nombre_usuario,
+      apellido_usuario: usuario.apellido_usuario,
+      identificacion_usuario: usuario.identificacion_usuario,
+      direccion_usuario: usuario.direccion_usuario,
+      telefono_usuario: usuario.telefono_usuario,
+      correo_usuario: usuario.correo_usuario,
+      tipo_usuario: usuario.tipo_usuario,
+      estado_usuario: usuario.estado_usuario
+    })));
+  } catch (error) {
+    console.log('Error al listar los usuarios', error);
+    res.status(500).json({ message: "Erro interno del servidor al listar los administradores"})
+  }
+}
+
+export const actualizarUsuario = async (req, res) => {
+  try {
+    const { id_usuario } = req.params;
+    const { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, tipo_usuario} = req.body;
+    const usuario = await Usuario.findAll({
+      where: {
+        id_usuario: id_usuario
+      }
+    })
+    if (!usuario) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+    const dataToUpdate = { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, tipo_usuario };
+    await Usuario.update(dataToUpdate, {
+      where: { id_usuario: id_usuario },
+    });
+    res.status(200).json({ message: 'Información del usuario actualizada exitosamente' });
+  } catch(error) {
+    console.error('Error al actualizar el usuario', error);
+    res.status(500).json({ message: "Error en el servidor al actualizar el usuario" });
+  }
+}
+
+export const eliminarUsuario = async (req, res) => {
+  try {
+    const { id_usuario } = req.params;
+    if (!id_usuario) {
+      return res.status(400).json({ message: "ID de usuario no proporcionado" });
+    }
+    const usuario = await Usuario.findByPk(id_usuario);
+    if(!usuario) {
+      return res.status(404).json({ message: "Usuario no encontrado"});
+    }
+    await Usuario.destroy({
+      where: { id_usuario: id_usuario }
+    })
+    res.status(200).json({ message: "Usuario eliminado exitosamente"})
+  } catch (error) {
+    console.error('Error interno al eliminar el usuario', error);
+    res.status(500).json({ message: "Error interno al eliminar el usuario"})
+  }
+}
+
+export const buscarUserNombre = async (req, res) => {
+  try {
+    const { nombre_usuario } = req.body;
+    const usuarios = await buscarNombre(nombre_usuario);
+    if (usuarios.length === 0 || !usuarios) {
+      return res.status(404).json({ message: "No se encontraron usuarios con ese nombre" });
+    }
+    res.status(200).json(usuarios);
+  } catch (error) {
+    console.error('Error al buscar el usuario por nombre', error);
+    res.status(500).json({ message: "Error interno al buscar el usuario por nombre" });
+  }
+}
+
+export const registerUsuario = async (req, res) => {
+  try {
+    const { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, contrasena_usuario, tipo_usuario } = req.body;
+
+    const userData = {
+      nombre_usuario,
+      apellido_usuario,
+      identificacion_usuario,
+      direccion_usuario,
+      telefono_usuario,
+      contrasena_usuario,
+      tipo_usuario: tipo_usuario || 'Usuario', // Por defecto 'Usuario'
+    };
+    
+    // 1. Validar duplicados en BD (solo el correo)
+    const existe = await Usuario.findOne({ where: { correo_usuario } });
+    if (existe) {
+      return res.status(400).json({ error: 'El correo ya está registrado' });
+    }
+
+    const idExiste = await Usuario.findOne({ where: { identificacion_usuario: userData.identificacion_usuario } });
+    if (idExiste) {
+      return res.status(400).json({ error: 'El número de identificación ya está registrado' });
+    }
+    const passwordHash = await bcrypt.hash(contrasena_usuario, 10);
+
+    const usuario = await Usuario.create({
+      ...userData,
+      correo_usuario,
+      contrasena_usuario: passwordHash,
+    });
+    
+    res.status(200).json({ 
+      message: 'Usuario registrado exitosamente',
+      usuario: {
+        id_usuario: usuario.id_usuario,
+        nombre_usuario: usuario.nombre_usuario,
+        apellido_usuario: usuario.apellido_usuario,
+        identificacion_usuario: usuario.identificacion_usuario,
+        direccion_usuario: usuario.direccion_usuario,
+        telefono_usuario: usuario.telefono_usuario,
+        correo_usuario: usuario.correo_usuario,
+        tipo_usuario: usuario.tipo_usuario,
+      }
+      
+    });
+    
+  } catch (error) {
+    res.status(500).json({ 
+      error: 'Error en registro', 
+      details: error.message 
+    });
+  }
+}

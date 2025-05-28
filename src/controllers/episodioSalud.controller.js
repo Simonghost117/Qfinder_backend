@@ -5,6 +5,8 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs/promises';
 import { episodioSchema } from '../schema/episodioSalud.validator.js';
+import { EpisodioSalud } from '../models/EpisodioSalud.js';
+import { Op } from 'sequelize';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 //Verificar la forma en la que los episodios de salud son creados, ya que son limitados 
@@ -34,12 +36,55 @@ export class EpisodioSaludController {
         tipo: episodio.tipo,
         severidad: episodio.severidad,
         estado: episodio.estado,
-        fecha_hora_inicio: episodio.fecha_hora_inicio
+        fecha_hora_inicio: episodio.fecha_hora_inicio,
+        fecha_hora_fin: episodio.fecha_hora_fin,
+        sintomas: episodio.sintomas,
       });
     } catch (error) {
       this.manejarErrorCreacion(res, error, req.file);
     }
   }
+
+  static async filtrarEpisodios(req, res, next) {
+  try {
+    const id_paciente = this.validarIdPaciente(req.params.id_paciente);
+
+    const filtros = req.validatedQuery;
+
+    const where = { id_paciente };
+
+    if (filtros.tipo) {
+      where.tipo = filtros.tipo;
+    }
+
+    if (filtros.severidad) {
+      where.severidad = filtros.severidad;
+    }
+
+    if (filtros.estado) {
+      where.estado = filtros.estado;
+    }
+
+    if (filtros.fecha_desde || filtros.fecha_hasta) {
+      where.fecha_hora_inicio = {};
+      if (filtros.fecha_desde) {
+        where.fecha_hora_inicio[Op.gte] = filtros.fecha_desde;
+      }
+      if (filtros.fecha_hasta) {
+        where.fecha_hora_inicio[Op.lte] = filtros.fecha_hasta;
+      }
+    }
+
+    const episodios = await EpisodioSalud.findAll({
+      where,
+      order: [['fecha_hora_inicio', (filtros.ordenFecha || 'desc').toUpperCase()]]
+    });
+
+    res.status(200).json({ success: true, data: episodios });
+  } catch (error) {
+    next(error);
+  }
+}
 
   /**
    * Obtiene todos los episodios de un paciente
@@ -63,8 +108,9 @@ export class EpisodioSaludController {
    * Obtiene un episodio específico
    */
   static async obtenerEpisodio(req, res) {
+    const {id_paciente, id_episodio} = req.params;
     try {
-      const episodio = await EpisodioSaludService.obtenerPorId(req.params.id_episodio);
+      const episodio = await EpisodioSaludService.obtenerPorId(id_paciente, id_episodio);
       
       if (!episodio) {
         throw { status: 404, message: 'Episodio no encontrado' };
@@ -81,8 +127,10 @@ export class EpisodioSaludController {
    */
   static async actualizarEpisodio(req, res) {
     try {
-      const { id_episodio } = req.params;
-      const episodioExistente = await EpisodioSaludService.obtenerPorId(id_episodio);
+      const { id_paciente, id_episodio } = req.params;
+      console.log('ID Paciente:', id_paciente);
+      console.log('ID Episodio:', id_episodio);
+      const episodioExistente = await EpisodioSaludService.obtenerPorId(id_paciente, id_episodio);
       
       if (!episodioExistente) {
         throw { status: 404, message: 'Episodio no encontrado' };
@@ -98,6 +146,7 @@ export class EpisodioSaludController {
       
       const datosActualizados = await this.prepararDatosActualizacion(req, episodioExistente);
       const episodioActualizado = await EpisodioSaludService.actualizarEpisodio(
+        id_paciente,
         id_episodio, 
         datosActualizados
       );
@@ -113,8 +162,8 @@ export class EpisodioSaludController {
    */
   static async eliminarEpisodio(req, res) {
     try {
-      const { id_episodio } = req.params;
-      const episodio = await EpisodioSaludService.obtenerPorId(id_episodio);
+      const { id_paciente, id_episodio } = req.params;
+      const episodio = await EpisodioSaludService.obtenerPorId(id_paciente, id_episodio);
       
       if (!episodio) {
         throw { status: 404, message: 'Episodio no encontrado' };
@@ -129,7 +178,7 @@ export class EpisodioSaludController {
       }
       
       await this.eliminarMultimedia(episodio);
-      await EpisodioSaludService.eliminarEpisodio(id_episodio);
+      await EpisodioSaludService.eliminarEpisodio(id_paciente, id_episodio);
       
       this.responderExito(res, 200, 'Episodio eliminado exitosamente');
     } catch (error) {
@@ -144,8 +193,8 @@ export class EpisodioSaludController {
       id_paciente,
       tipo: req.body.tipo,
       fecha_hora_inicio: req.body.fecha_hora_inicio || new Date(),
-      severidad: parseInt(req.body.severidad || 3),
-       sintomas: this.parsearSintomas(req.body.sintomas),
+      fecha_hora_fin: req.body.fecha_hora_fin || null,
+      severidad: req.body.severidad || 'baja',
       descripcion: req.body.descripcion,
       // multimedia: this.obtenerRutaMultimedia(req.file),
       registrado_por: req.user.id_usuario,
@@ -162,13 +211,13 @@ export class EpisodioSaludController {
       datosActualizados.multimedia = this.obtenerRutaMultimedia(req.file);
     }
 
-    if (datosActualizados.sintomas) {
-      datosActualizados.sintomas = this.parsearSintomas(datosActualizados.sintomas);
-    }
+    // if (datosActualizados.sintomas) {
+    //   datosActualizados.sintomas = this.parsearSintomas(datosActualizados.sintomas);
+    // }
 
-    if (datosActualizados.severidad) {
-      datosActualizados.severidad = parseInt(datosActualizados.severidad);
-    }
+    // if (datosActualizados.severidad) {
+    //   datosActualizados.severidad = episodioExistente.severidad;
+    // }
 
     return datosActualizados;
   }

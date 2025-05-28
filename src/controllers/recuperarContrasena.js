@@ -43,13 +43,10 @@ export const recuperarContrasena = async (req, res) => {
 
 export const cambiarContrasena = async (req, res) => {
   const { nuevaContrasena } = req.body;
-  const token = req.cookies.resetToken;
+  const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
+
 
   try {
-    if (!token) {
-      return res.status(401).json({ mensaje: 'Token no encontrado en cookies.' });
-    }
-
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const correo = decoded.correo;
 
@@ -67,7 +64,7 @@ export const cambiarContrasena = async (req, res) => {
     await usuario.save();
 
     // ✅ Eliminar cookie después de uso
-    res.clearCookie('resetToken');
+    res.clearCookie('token');
 
     res.status(200).json({ mensaje: 'Contraseña actualizada correctamente.' });
   } catch (error) {
@@ -75,6 +72,41 @@ export const cambiarContrasena = async (req, res) => {
     return res.status(401).json({ mensaje: 'Token inválido o expirado.' });
   }
 };
+
+// export const cambiarContrasena = async (req, res) => {
+//   const { nuevaContrasena } = req.body;
+//   const token = req.cookies.resetToken;
+
+//   try {
+//     if (!token) {
+//       return res.status(401).json({ mensaje: 'Token no encontrado en cookies.' });
+//     }
+
+//     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+//     const correo = decoded.correo;
+
+//     const usuario = await Usuario.findOne({ where: { correo_usuario: correo } });
+
+//     if (!usuario) {
+//       return res.status(404).json({ mensaje: 'Usuario no encontrado.' });
+//     }
+
+//     const hash = await bcrypt.hash(nuevaContrasena, 10);
+//     usuario.contrasena_usuario = hash;
+//     usuario.codigo_verificacion = null;
+//     usuario.codigo_expiracion = null;
+
+//     await usuario.save();
+
+//     // ✅ Eliminar cookie después de uso
+//     res.clearCookie('resetToken');
+
+//     res.status(200).json({ mensaje: 'Contraseña actualizada correctamente.' });
+//   } catch (error) {
+//     console.error('Error al cambiar contraseña:', error);
+//     return res.status(401).json({ mensaje: 'Token inválido o expirado.' });
+//   }
+// };
 
   
 export const verificarCodigo = async (req, res) => {
@@ -96,15 +128,17 @@ export const verificarCodigo = async (req, res) => {
       return res.status(400).json({ mensaje: 'Código expirado.' });
 
     // ✅ Crear token JWT
-    const token = jwt.sign({ correo: usuario.correo_usuario }, process.env.JWT_SECRET, { expiresIn: '10m' });
+    const token = jwt.sign({ id: usuario.id_usuario, correo: usuario.correo_usuario }, process.env.JWT_SECRET, { expiresIn: '10m' });
 
     // ✅ Establecer cookie HTTP-only
-    res.cookie('resetToken', token, {
+    res.cookie('token', token, {
       httpOnly: true,
       secure: false, // 🔴 IMPORTANTE para desarrollo local (debe ser false si no estás en HTTPS)
       sameSite: 'strict',
       maxAge: 10 * 60 * 1000
     });
+    // Enviar el token en la cabecera Authorization
+      res.setHeader("Authorization", `Bearer ${token}`);
 
     res.status(200).json({ mensaje: 'Código verificado correctamente.' });
   } catch (error) {

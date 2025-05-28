@@ -7,19 +7,23 @@ import { obtenerReporteCuidadoPersonal, detectarAumentoAsistencia } from '../ser
 export const crearCuidadoPersonal = async (req, res) => {
   try {
     const { id_paciente } = req.params;
-    const { tipo_cuidado, descripcion_cuidado, nivel_asistencia, observaciones } = req.body;
+    const { fecha, tipo_cuidado, descripcion_cuidado, nivel_asistencia, observaciones } = req.body;
 
     // if (!id_paciente || !tipo_cuidado || !nivel_asistencia) {
     //   return res.status(400).json({ message: 'Los campos tipo de cuidado y nivel de asistencia son obligatorios' });
     // }
 
     const nuevoRegistro = await registrarCuidadoPersonal({
+      fecha,
       id_paciente,
       tipo_cuidado,
       descripcion_cuidado,
       nivel_asistencia,
       observaciones
     });
+    if (!nuevoRegistro) {
+      return res.status(400).json({ message: 'Error al registrar el cuidado personal' });
+    }
 
     res.status(201).json({ message: 'Registro guardado exitosamente', data: nuevoRegistro });
   } catch (error) {
@@ -31,9 +35,9 @@ export const crearCuidadoPersonal = async (req, res) => {
 // Obtener registros de cuidado personal por paciente
 export const getCuidadosPorPaciente = async (req, res) => {
   try {
-    const { idPaciente } = req.params;
+    const { id_paciente } = req.params;
 
-    const registros = await obtenerCuidadosPorPaciente(idPaciente);
+    const registros = await obtenerCuidadosPorPaciente(id_paciente);
 
     if (!registros || registros.length === 0) {
       return res.status(404).json({ message: 'No se encontraron registros de cuidado personal' });
@@ -68,23 +72,23 @@ export const getReporteCuidadoPersonal = async (req, res) => {
 
   export const updateCuidadoPersonal = async (req, res) => {
     try {
-        const { idCuidado } = req.params;
+        const { id_paciente, id_cuidado } = req.params;
         const { tipo_cuidado, descripcion_cuidado, nivel_asistencia, observaciones } = req.body;
 
         // Validar que se haya proporcionado un ID de cuidado
-        if (!idCuidado) {
+        if (!id_cuidado) {
             return res.status(400).json({ message: 'ID de cuidado es requerido' });
         }
 
         // Actualizar el registro de cuidado personal
-        const updatedRegistro = await actualizarCuidadoPersonal(idCuidado, {
+        const updatedRegistro = await actualizarCuidadoPersonal(id_paciente, id_cuidado, {
             tipo_cuidado,
             descripcion_cuidado,
             nivel_asistencia,
             observaciones
         });
 
-        if (!updatedRegistro) {
+        if (!updatedRegistro || updatedRegistro[0] === 0) {
             return res.status(404).json({ message: 'Registro no encontrado' });
         }
 
@@ -97,15 +101,15 @@ export const getReporteCuidadoPersonal = async (req, res) => {
 
   export const deleteCuidadoPersonal = async (req, res) => {
     try {
-        const { idPaciente, idCuidado } = req.params;
+        const { id_paciente, id_cuidado } = req.params;
 
         // Validar que se haya proporcionado un ID de cuidado
-        if (!idCuidado || !idPaciente) {
+        if (!id_cuidado || !id_paciente) {
             return res.status(400).json({ message: 'Registre correctamente los campos requeridos' });
         }
 
         // Eliminar el registro de cuidado personal
-        const deletedRegistro = await eliminarCuidadoPersonal(idPaciente, idCuidado);
+        const deletedRegistro = await eliminarCuidadoPersonal(id_paciente, id_cuidado);
 
         if (!deletedRegistro) {
             return res.status(404).json({ message: 'Registro no encontrado' });
@@ -120,15 +124,15 @@ export const getReporteCuidadoPersonal = async (req, res) => {
 
   export const cuidadoId = async (req, res) => {
     try {
-        const { idPaciente, idCuidado } = req.params;
+        const { id_paciente, id_cuidado } = req.params;
 
         // Validar que se haya proporcionado un ID de cuidado
-        if (!idCuidado || !idPaciente) {
+        if (!id_paciente || !id_cuidado) {
             return res.status(400).json({ message: 'Registre correctamente los campos requeridos' });
         }
 
         // Obtener el registro de cuidado personal por ID
-        const registro = await obtenerCuidadoId(idPaciente, idCuidado);
+        const registro = await obtenerCuidadoId(id_paciente, id_cuidado);
 
         if (!registro) {
             return res.status(404).json({ message: 'Registro no encontrado' });

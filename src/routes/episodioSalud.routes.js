@@ -6,6 +6,8 @@ import { validateZodSchema } from '../middlewares/validateZod.middleware.js';
 import { episodioSchema, filtroSchema } from '../schema/episodioSalud.validator.js';
 import { verifyToken } from '../middlewares/verifyToken.js';
 import { injectPacienteId } from '../middlewares/injectPacienteId.middleware.js';
+import { validateZodQuery } from "../middlewares/validateZodQuery.middleware.js";
+
 
 const routerEpisodioSalud = Router();
 
@@ -15,9 +17,6 @@ function wrap(method) {
 }
 
 // Crear episodio
-//El id_paciente no debe ser manualmente ingresado, sino que debe ser inyectado en el middleware
-// si son 5 pacientes, de que  manera vamos a saber a que paciente pertenece el episodio?
-//El usuario no puede crear episodios
 routerEpisodioSalud.post(
   '/episodioSalud/:id_paciente',
   verifyToken,
@@ -28,17 +27,25 @@ routerEpisodioSalud.post(
   wrap(EpisodioSaludController.crearEpisodio)
 );
 
+//Obtener episodios de acuerdo al filtro
+routerEpisodioSalud.get(
+  '/episodioSalud/:id_paciente/filtrar',
+  verifyToken,
+  checkEpisodioPermissions(['Familiar', 'Usuario']),
+  validateZodQuery(filtroSchema, { source: 'query' }),
+  wrap(EpisodioSaludController.filtrarEpisodios)
+);
+
 // Obtener todos los episodios de un paciente
-//El usuario no puede ver los episodios
 routerEpisodioSalud.get(
   '/episodioSalud/:id_paciente',
   verifyToken,
-  checkEpisodioPermissions(['Familiar', 'Administrador', 'Usuario']),//Medico tiene error de permisos
+  checkEpisodioPermissions(['Administrador', 'Usuario']),//Medico tiene error de permisos
   //Paciente tiene permiso de visualizacion de los episodios?
   // validateZodSchema(filtroSchema, { source: 'query' }),
   wrap(EpisodioSaludController.obtenerEpisodiosPaciente)
 );
-
+// Obtener episodios de un paciente por id
 routerEpisodioSalud.get(
   '/pacientes/:id_paciente/episodioSalud/:id_episodio', 
   verifyToken,
@@ -57,10 +64,12 @@ routerEpisodioSalud.put(
 );
 // Eliminar episodio
 routerEpisodioSalud.delete(
-  '/episodioSalud/:id_episodio',
+  '/eliminarEpis/:id_paciente/:id_episodio',
   verifyToken,
   checkEpisodioPermissions(['Familiar','Usuario']),
   wrap(EpisodioSaludController.eliminarEpisodio)
 );
+
+
 
 export default routerEpisodioSalud;
