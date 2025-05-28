@@ -74,7 +74,12 @@ const Usuario = sequelize.define('Usuario', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
     field: 'verificado'
-  }
+  }, 
+  // fcm_token: {
+  //   type: DataTypes.STRING,
+  //   allowNull: true,
+  //   field: 'fcm_token'
+  // }
 }, {
   tableName: 'usuario',
   timestamps: false,
