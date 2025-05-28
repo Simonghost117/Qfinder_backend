@@ -24,9 +24,6 @@ router.post('/token/:id_red', verifyToken, async (req, res) => {
         });
     }
 });
-
-// Nuevo endpoint para registrar token FCM (relacionado con autenticación/usuarios)
-// authRoutes.js - Mejora del endpoint /register-fcm
 router.post('/register-fcm', verifyToken, async (req, res) => {
     try {
         const { fcmToken } = req.body;
@@ -40,26 +37,26 @@ router.post('/register-fcm', verifyToken, async (req, res) => {
         }
 
         // Actualizar token según el tipo de usuario
-        if (tipo_usuario === 'Usuario') {
-            // Para pacientes
+        if (tipo_usuario === 'Paciente') {
             await Paciente.update({ fcm_token: fcmToken }, { 
                 where: { id_usuario } 
             });
         } else {
-            // Para otros tipos de usuarios (familiares, médicos, etc.)
             await Usuario.update({ fcm_token: fcmToken }, {
                 where: { id_usuario }
             });
         }
 
-        res.json({ success: true });
+        res.json({ 
+            success: true,
+            message: 'Token FCM registrado correctamente'
+        });
     } catch (error) {
         console.error('Error registrando FCM token:', error);
         res.status(500).json({ 
             success: false, 
-            message: 'Error al registrar token' 
+            message: 'Error al registrar token',
+            error: error.message
         });
     }
 });
-
-export default router;
