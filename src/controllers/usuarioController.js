@@ -188,11 +188,17 @@ export const login = async (req, res) => {
           rol: usuario.tipo_usuario
         });
 
-         res.cookie("token", token, {
-  httpOnly: false, // For testing only
-  secure: false,   // Important for localhost (no https)
-  sameSite: "lax", // "none" requires secure=true
-    });
+        res.cookie("token", token, {
+          httpOnly: false,
+          secure: false,
+          sameSite: "lax",
+          maxAge: 1000 * 60 * 60 * 24, // 1 día
+        });
+  //        res.cookie("token", token, {
+  // httpOnly: false, // For testing only
+  // secure: false,   // Important for localhost (no https)
+  // sameSite: "lax", // "none" requires secure=true
+  //   });
         // Enviar el token en la cabecera Authorization
         res.setHeader("Authorization", `Bearer ${token}`);
         
