@@ -8,7 +8,7 @@ import logger from '../utils/logger.js';
 
 export class MedicationNotificationService {
   static start() {
-    // Run every 10 minutes
+    // Ejecutar cada 10 minutos
     cron.schedule('*/10 * * * *', this.checkMedicationNotifications.bind(this));
     logger.info('Medication notification scheduler started');
   }
@@ -19,7 +19,7 @@ export class MedicationNotificationService {
       return null;
     }
     
-    // Supported formats: "8h", "24h", "3d", "12h", etc.
+    // Formatos soportados: "8h", "24h", "3d", "12h", etc.
     const match = frecuencia.match(/^(\d+)([hd])$/i);
     if (!match) {
       logger.warn(`Invalid frequency format: ${frecuencia}`);
@@ -29,8 +29,8 @@ export class MedicationNotificationService {
     const valor = parseInt(match[1]);
     const unidad = match[2].toLowerCase();
 
-    if (unidad === 'h') return valor * 60 * 60 * 1000; // hours to milliseconds
-    if (unidad === 'd') return valor * 24 * 60 * 60 * 1000; // days to milliseconds
+    if (unidad === 'h') return valor * 60 * 60 * 1000; // horas a milisegundos
+    if (unidad === 'd') return valor * 24 * 60 * 60 * 1000; // días a milisegundos
 
     logger.warn(`Unsupported frequency unit: ${unidad}`);
     return null;
@@ -41,6 +41,7 @@ export class MedicationNotificationService {
     logger.debug('Checking medication notifications...');
 
     try {
+      // Obtener todos los tratamientos activos (sin filtrar por notificaciones_activas)
       const tratamientos = await PacienteMedicamento.findAll({
         attributes: [
           'id_pac_medicamento',
@@ -49,15 +50,11 @@ export class MedicationNotificationService {
           'fecha_inicio',
           'fecha_fin',
           'dosis',
-          'frecuencia',
-          'proxima_dosis',
-          'ultimo_recordatorio',
-          'notificaciones_activas'
+          'frecuencia'
         ],
         where: {
-          notificaciones_activas: true,
           fecha_inicio: { [Op.lte]: now },
-          fecha_fin: { [Op.gte]: now },
+          fecha_fin: { [Op.gte]: now }
         },
         include: [{
           model: Paciente,
@@ -70,12 +67,11 @@ export class MedicationNotificationService {
           model: Medicamento,
           as: 'Medicamento',
           attributes: ['id_medicamento', 'nombre', 'tipo']
-        }],
-        order: [['proxima_dosis', 'ASC']]
+        }]
       });
 
       if (!tratamientos || tratamientos.length === 0) {
-        logger.debug('No active medication treatments found for notification');
+        logger.debug('No active medication treatments found');
         return [];
       }
 
@@ -83,7 +79,7 @@ export class MedicationNotificationService {
       
       for (const tratamiento of tratamientos) {
         try {
-          // Validate required fields
+          // Validar campos requeridos
           if (!tratamiento.Paciente?.fcm_token) {
             logger.warn(`Patient ${tratamiento.id_paciente} has no FCM token`);
             continue;
@@ -100,48 +96,36 @@ export class MedicationNotificationService {
             continue;
           }
 
-          const proximaDosis = tratamiento.proxima_dosis || tratamiento.fecha_inicio;
-          if (!(proximaDosis instanceof Date)) {
-            logger.warn(`Invalid next dose date for treatment ID: ${tratamiento.id_pac_medicamento}`);
-            continue;
-          }
+          // Calcular próxima dosis basada en la frecuencia
+          const ultimaNotificacion = now; // Simulamos que siempre notificamos ahora
+          const proximaDosis = new Date(ultimaNotificacion.getTime() + frecuenciaMs);
 
-          if (now >= proximaDosis) {
-            const notificationData = {
-              token: tratamiento.Paciente.fcm_token,
-              title: '💊 Recordatorio de Medicación',
-              body: `Es hora de tomar: ${tratamiento.Medicamento.nombre} - ${tratamiento.dosis || 'Dosis indicada'}`,
-              data: {
-                type: 'medication',
-                id: tratamiento.id_pac_medicamento.toString(),
-                medicamentoId: tratamiento.id_medicamento.toString(),
-                pacienteId: tratamiento.id_paciente.toString(),
-                action: 'take_medication',
-                pacienteNombre: `${tratamiento.Paciente.nombre} ${tratamiento.Paciente.apellido}`
-              }
-            };
+          // Enviar notificación (sin verificar proxima_dosis)
+          const notificationData = {
+            token: tratamiento.Paciente.fcm_token,
+            title: '💊 Recordatorio de Medicación',
+            body: `Es hora de tomar: ${tratamiento.Medicamento.nombre} - ${tratamiento.dosis || 'Dosis indicada'}`,
+            data: {
+              type: 'medication',
+              id: tratamiento.id_pac_medicamento.toString(),
+              medicamentoId: tratamiento.id_medicamento.toString(),
+              pacienteId: tratamiento.id_paciente.toString(),
+              action: 'take_medication',
+              pacienteNombre: `${tratamiento.Paciente.nombre} ${tratamiento.Paciente.apellido}`,
+              nextDoseTime: proximaDosis.toISOString()
+            }
+          };
 
-            // Send notification
-            await NotificationService.sendPushNotification(notificationData);
-            
-            // Update dates after sending notification
-            const nuevaProximaDosis = new Date(now.getTime() + frecuenciaMs);
-            await PacienteMedicamento.update({
-              ultimo_recordatorio: now,
-              proxima_dosis: nuevaProximaDosis
-            }, {
-              where: { id_pac_medicamento: tratamiento.id_pac_medicamento }
-            });
-            
-            notificationResults.push({
-              success: true,
-              treatmentId: tratamiento.id_pac_medicamento,
-              patientId: tratamiento.id_paciente,
-              nextDose: nuevaProximaDosis
-            });
-            
-            logger.info(`Medication reminder sent for ${tratamiento.Paciente.nombre} (Treatment ID: ${tratamiento.id_pac_medicamento})`);
-          }
+          await NotificationService.sendPushNotification(notificationData);
+          
+          notificationResults.push({
+            success: true,
+            treatmentId: tratamiento.id_pac_medicamento,
+            patientId: tratamiento.id_paciente,
+            nextDose: proximaDosis
+          });
+          
+          logger.info(`Medication reminder sent for ${tratamiento.Paciente.nombre}`);
         } catch (error) {
           logger.error(`Failed to process treatment ID: ${tratamiento.id_pac_medicamento}`, error);
           notificationResults.push({
@@ -150,13 +134,9 @@ export class MedicationNotificationService {
             error: error.message
           });
           
-          // Disable notifications if token is invalid
+          // Manejar tokens inválidos (aunque no tengamos notificaciones_activas)
           if (error.code === 'messaging/invalid-registration-token') {
-            await PacienteMedicamento.update(
-              { notificaciones_activas: false },
-              { where: { id_pac_medicamento: tratamiento.id_pac_medicamento } }
-            );
-            logger.warn(`Disabled notifications for treatment ID: ${tratamiento.id_pac_medicamento} due to invalid token`);
+            logger.warn(`Invalid token for treatment ID: ${tratamiento.id_pac_medicamento}`);
           }
         }
       }
@@ -174,11 +154,11 @@ export class MedicationNotificationService {
     }
   }
 
-  static async getUpcomingTreatments(minutesAhead = 60) {
+  // Método para obtener tratamientos que necesitan notificación pronto
+  static async getTreatmentsNeedingNotification() {
     const now = new Date();
-    const futureTime = new Date(now.getTime() + minutesAhead * 60 * 1000);
     
-    return PacienteMedicamento.findAll({
+    const tratamientos = await PacienteMedicamento.findAll({
       attributes: [
         'id_pac_medicamento',
         'id_paciente',
@@ -186,21 +166,27 @@ export class MedicationNotificationService {
         'fecha_inicio',
         'fecha_fin',
         'dosis',
-        'frecuencia',
-        'proxima_dosis'
+        'frecuencia'
       ],
       where: {
-        notificaciones_activas: true,
-        proxima_dosis: {
-          [Op.between]: [now, futureTime]
-        }
+        fecha_inicio: { [Op.lte]: now },
+        fecha_fin: { [Op.gte]: now }
       },
       include: [{
         model: Paciente,
         as: 'Paciente',
         attributes: ['id_paciente', 'nombre', 'apellido', 'fcm_token']
-      }],
-      order: [['proxima_dosis', 'ASC']]
+      }]
+    });
+
+    return tratamientos.map(tratamiento => {
+      const frecuenciaMs = this.parseFrecuencia(tratamiento.frecuencia) || 0;
+      return {
+        ...tratamiento.toJSON(),
+        proximaDosis: frecuenciaMs > 0 ? 
+          new Date(now.getTime() + frecuenciaMs) : 
+          null
+      };
     });
   }
 }
