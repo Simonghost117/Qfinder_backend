@@ -58,11 +58,11 @@ const Paciente = sequelize.define('Paciente', {
     allowNull: true,
     field: 'imagen_paciente',
   },
-  // fcm_token: {
-  //   type: DataTypes.STRING,
-  //   allowNull: true,
-  //   field: 'fcm_token'
-  // }
+  fcm_token: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'fcm_token'
+  }
 }, {
   tableName: 'paciente',
   timestamps: false, // Cambiado a true para tener createdAt/updatedAt

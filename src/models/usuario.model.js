@@ -76,11 +76,11 @@ const Usuario = sequelize.define('Usuario', {
     defaultValue: false,
     field: 'verificado'
   }, 
-  // fcm_token: {
-  //   type: DataTypes.STRING,
-  //   allowNull: true,
-  //   field: 'fcm_token'
-  // }
+  fcm_token: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'fcm_token'
+  }
 }, {
   tableName: 'usuario',
   timestamps: false,

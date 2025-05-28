@@ -9,7 +9,7 @@ import sequelize, { testConnection, syncModels } from './config/db.js';
 import { models } from "./models/index.js";
 
 import './config/db.js';
-import './cron/notificador.js';
+// import './cron/notificador.js';
 
 // 1. Configuración de entorno (carga .env antes que cualquier otra dependencia)
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

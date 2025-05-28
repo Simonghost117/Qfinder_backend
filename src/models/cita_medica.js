@@ -38,16 +38,16 @@ import sequelize from '../config/db.js';
       allowNull: false,
       field: 'fecha_recordatorio'
     },
-    // notificado_1h: {
-    //   type: DataTypes.BOOLEAN,
-    //   defaultValue: false,
-    //   field: 'notificado_1h'
-    // },
-    // notificado_24h: {
-    //   type: DataTypes.BOOLEAN,
-    //   defaultValue: false,
-    //   field: 'notificado_24h'
-    // }
+    notificado_1h: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      field: 'notificado_1h'
+    },
+    notificado_24h: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      field: 'notificado_24h'
+    }
     },
     {
       tableName: 'cita_medica',
