@@ -1,7 +1,7 @@
 // En tu archivo chat.service.js
 import { db, messaging } from '../config/firebase-admin.js';
 import Usuario from '../models/usuario.model.js';
-import  UsuarioRed  from '../models/usuarioRed.model.js';
+import  UsuarioRed  from '../models/UsuarioRed.js';
 
 export class ChatNotificationService {
   static async setupListeners() {
