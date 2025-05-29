@@ -21,8 +21,7 @@ export class ActivityNotificationService {
           fecha_actividad: {
             [Op.between]: [now, thirtyMinutesLater]
           },
-          estado: 'pendiente',
-          notificado: false
+          estado: 'pendiente'
         },
         include: [Paciente]
       });

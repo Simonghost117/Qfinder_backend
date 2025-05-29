@@ -2,8 +2,7 @@ import { initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getDatabase } from 'firebase-admin/database';
 import admin from 'firebase-admin';
-import dotenv from 'dotenv';
-dotenv.config();
+import { getMessaging } from 'firebase-admin/messaging';
 
 // Configuración desde variables de entorno
 const serviceAccount = {
@@ -45,5 +44,6 @@ if (!admin.apps.length) {
 // Exporta los servicios
 export const auth = admin.auth();
 export const db = getDatabase(app);
-export const messaging = admin.messaging();
-console.log('✅ Firebase Admin inicializado correctamente');
+// export const messaging = admin.messaging();
+export const messaging = getMessaging(app);
+console.log('✅ Firebase Admin inicializado correctamente');  
