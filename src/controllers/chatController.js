@@ -96,17 +96,15 @@ export const obtenerMensajes = async (req, res) => {
     const snapshot = await mensajesQuery.once('value');
     const mensajes = snapshot.val() || {};
 
-    const mensajesArray = Object.entries(mensajes).map(([id, mensaje]) => ({
+    // Convertir objeto a array
+    const mensajesArray = Object.keys(mensajes).map(id => ({
       id,
-      ...mensaje
+      ...mensajes[id]
     }));
 
     mensajesArray.sort((a, b) => b.fecha_envio - a.fecha_envio);
 
-    return successResponse(res, 'Mensajes obtenidos', {
-      mensajes: mensajesArray,
-      total: mensajesArray.length
-    });
+    return successResponse(res, 'Mensajes obtenidos', mensajesArray); // Enviar array directamente
 
   } catch (error) {
     console.error('Error en obtenerMensajes:', error);
