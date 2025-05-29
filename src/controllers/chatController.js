@@ -2,7 +2,7 @@ import { db, auth, messaging } from '../config/firebase-admin.js';
 import Usuario from '../models/usuario.model.js';
 import UsuarioRed from '../models/UsuarioRed.js';
 import Red from '../models/Red.js';
-import { successResponse, errorResponse } from '../utils/responseHandler.js';
+import { successResponse, errorResponse } from '../utils/response.js';
 import { verifyToken } from '../middlewares/verifyToken.js';
 
 
