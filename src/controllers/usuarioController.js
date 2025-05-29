@@ -188,17 +188,19 @@ export const login = async (req, res) => {
           rol: usuario.tipo_usuario
         });
 
-          res.cookie("token", token, {
-          httpOnly: process.env.NODE_ENV !== "development",
-          secure: true,
-          sameSite: "none",
-        });
-        // res.cookie("token", token, {
-        //   httpOnly: false,
-        //   secure: false,
-        //   sameSite: "lax",
-        //   maxAge: 1000 * 60 * 60 * 24, // 1 día
-        // });
+       res.cookie('token', token, {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  maxAge: 30 * 24 * 60 * 60 * 1000, // 30 días en milisegundos
+  domain: '.qfinder-production.up.railway.app', // ¡Atención al punto inicial!
+  path: '/',
+  priority: 'high'
+});
+
+    // 4. Configurar cookie de sesión (connect.sid) si usas express-session
+    req.session.userId = usuario.id_usuario; // Esto activará la cookie de sesión
+
   //        res.cookie("token", token, {
   // httpOnly: false, // For testing only
   // secure: false,   // Important for localhost (no https)

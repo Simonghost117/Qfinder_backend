@@ -1,0 +1,48 @@
+2025-05-27 20:59:11 [32minfo[39m: Medication notification scheduler started
+2025-05-27 21:00:02 [31merror[39m: Error
+    at Query.run (C:\Users\ASUS\OneDrive\Escritorio\QfindeR\project_final\backend\Qfinder_backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\ASUS\OneDrive\Escritorio\QfindeR\project_final\backend\Qfinder_backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async PostgresQueryInterface.select (C:\Users\ASUS\OneDrive\Escritorio\QfindeR\project_final\backend\Qfinder_backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:407:12)
+    at async PacienteMedicamento.findAll (C:\Users\ASUS\OneDrive\Escritorio\QfindeR\project_final\backend\Qfinder_backend\node_modules\sequelize\lib\model.js:1140:21)
+    at async MedicationNotificationService.checkMedicationNotifications (file:///C:/Users/ASUS/OneDrive/Escritorio/QfindeR/project_final/backend/Qfinder_backend/src/firebaseServices/medication.service.js:44:28)
+    at async C:\Users\ASUS\OneDrive\Escritorio\QfindeR\project_final\backend\Qfinder_backend\node_modules\node-cron\dist\esm\scheduler\runner.js:67:44
+2025-05-27 21:05:48 [32minfo[39m: Medication notification scheduler started
+2025-05-27 21:08:33 [32minfo[39m: Medication notification scheduler started
+2025-05-27 21:09:01 [32minfo[39m: Medication notification scheduler started
+2025-05-27 21:10:02 [31merror[39m: Error
+    at Query.run (C:\Users\ASUS\OneDrive\Escritorio\QfindeR\project_final\backend\Qfinder_backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\ASUS\OneDrive\Escritorio\QfindeR\project_final\backend\Qfinder_backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async PostgresQueryInterface.select (C:\Users\ASUS\OneDrive\Escritorio\QfindeR\project_final\backend\Qfinder_backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:407:12)
+    at async PacienteMedicamento.findAll (C:\Users\ASUS\OneDrive\Escritorio\QfindeR\project_final\backend\Qfinder_backend\node_modules\sequelize\lib\model.js:1140:21)
+    at async MedicationNotificationService.checkMedicationNotifications (file:///C:/Users/ASUS/OneDrive/Escritorio/QfindeR/project_final/backend/Qfinder_backend/src/firebaseServices/medication.service.js:44:28)
+    at async C:\Users\ASUS\OneDrive\Escritorio\QfindeR\project_final\backend\Qfinder_backend\node_modules\node-cron\dist\esm\scheduler\runner.js:67:44
+2025-05-27 21:10:58 [32minfo[39m: Medication notification scheduler started
+2025-05-27 21:11:20 [32minfo[39m: Medication notification scheduler started
+2025-05-27 21:16:37 [32minfo[39m: Medication notification scheduler started
+2025-05-27 21:20:03 [31merror[39m: Error
+    at Query.run (C:\Users\ASUS\OneDrive\Escritorio\QfindeR\project_final\backend\Qfinder_backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\ASUS\OneDrive\Escritorio\QfindeR\project_final\backend\Qfinder_backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async PostgresQueryInterface.select (C:\Users\ASUS\OneDrive\Escritorio\QfindeR\project_final\backend\Qfinder_backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:407:12)
+    at async PacienteMedicamento.findAll (C:\Users\ASUS\OneDrive\Escritorio\QfindeR\project_final\backend\Qfinder_backend\node_modules\sequelize\lib\model.js:1140:21)
+    at async MedicationNotificationService.checkMedicationNotifications (file:///C:/Users/ASUS/OneDrive/Escritorio/QfindeR/project_final/backend/Qfinder_backend/src/firebaseServices/medication.service.js:44:28)
+    at async C:\Users\ASUS\OneDrive\Escritorio\QfindeR\project_final\backend\Qfinder_backend\node_modules\node-cron\dist\esm\scheduler\runner.js:67:44
+2025-05-27 21:26:35 [32minfo[39m: Medication notification scheduler started
+2025-05-27 21:27:13 [32minfo[39m: Medication notification scheduler started
+2025-05-27 21:28:03 [32minfo[39m: Medication notification scheduler started
+2025-05-27 21:28:15 [32minfo[39m: Medication notification scheduler started
+2025-05-27 21:28:22 [32minfo[39m: Medication notification scheduler started
+2025-05-27 21:28:37 [32minfo[39m: Medication notification scheduler started
+2025-05-27 21:30:01 [31merror[39m: Error
+    at Query.run (C:\Users\ASUS\OneDrive\Escritorio\QfindeR\project_final\backend\Qfinder_backend\node_modules\sequelize\lib\dialects\postgres\query.js:50:25)
+    at C:\Users\ASUS\OneDrive\Escritorio\QfindeR\project_final\backend\Qfinder_backend\node_modules\sequelize\lib\sequelize.js:315:28
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async PostgresQueryInterface.select (C:\Users\ASUS\OneDrive\Escritorio\QfindeR\project_final\backend\Qfinder_backend\node_modules\sequelize\lib\dialects\abstract\query-interface.js:407:12)
+    at async PacienteMedicamento.findAll (C:\Users\ASUS\OneDrive\Escritorio\QfindeR\project_final\backend\Qfinder_backend\node_modules\sequelize\lib\model.js:1140:21)
+    at async MedicationNotificationService.checkMedicationNotifications (file:///C:/Users/ASUS/OneDrive/Escritorio/QfindeR/project_final/backend/Qfinder_backend/src/firebaseServices/medication.service.js:44:28)
+    at async C:\Users\ASUS\OneDrive\Escritorio\QfindeR\project_final\backend\Qfinder_backend\node_modules\node-cron\dist\esm\scheduler\runner.js:67:44
+2025-05-27 21:32:56 [32minfo[39m: Medication notification scheduler started
+2025-05-27 21:33:01 [32minfo[39m: Medication notification scheduler started
+2025-05-27 21:34:12 [32minfo[39m: Medication notification scheduler started
