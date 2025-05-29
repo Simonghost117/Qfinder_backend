@@ -44,30 +44,44 @@ export const enviarMensaje = async (req, res) => {
       estado: 'pending_notification'
     };
 
+    // 1. Guardar mensaje en Firebase
     const mensajeRef = db.ref(`chats/${id_red}/mensajes`).push();
     await mensajeRef.set(nuevoMensaje);
+    const mensajeId = mensajeRef.key;
 
+    // 2. Obtener datos de la comunidad
     const comunidad = await Red.findByPk(id_red, {
       attributes: ['nombre_red']
     });
 
-    enviarNotificacionesPush({
-      comunidadId: id_red,
-      comunidadNombre: comunidad?.nombre_red || 'Comunidad',
-      mensajeId: mensajeRef.key,
-      mensaje: nuevoMensaje,
-      remitenteId: id_usuario
-    }).catch(error => {
-      console.error('Error enviando notificaciones:', error);
-    });
+    if (!comunidad) {
+      return errorResponse(res, 'Comunidad no encontrada', 404);
+    }
+
+    // 3. Enviar notificaciones (manejando errores)
+    try {
+      await enviarNotificacionesPush({
+        comunidadId: id_red,
+        comunidadNombre: comunidad.nombre_red,
+        mensajeId,
+        mensaje: nuevoMensaje,
+        remitenteId: id_usuario
+      });
+    } catch (notifError) {
+      console.error('Error enviando notificaciones:', notifError);
+      // Actualizar estado del mensaje a fallido
+      await db.ref(`chats/${id_red}/mensajes/${mensajeId}`).update({
+        estado: 'notification_failed'
+      });
+    }
 
     return successResponse(res, 'Mensaje enviado correctamente', {
-      idMensaje: mensajeRef.key,
+      idMensaje: mensajeId,
       fecha_envio: nuevoMensaje.fecha_envio
     }, 201);
 
   } catch (error) {
-    console.error('Error en enviarMensaje:', error);
+    console.error('Error crítico en enviarMensaje:', error);
     return errorResponse(res, 'Error interno al enviar el mensaje');
   }
 };
