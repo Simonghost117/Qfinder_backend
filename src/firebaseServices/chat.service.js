@@ -1,7 +1,7 @@
 // En tu archivo chat.service.js
 import { db, messaging } from '../config/firebase-admin.js';
 import Usuario from '../models/usuario.model.js';
-import  UsuarioRed  from '../models/UsuarioRed.js';
+import UsuarioRed from '../models/UsuarioRed.js';
 
 export class ChatNotificationService {
   static async setupListeners() {
@@ -44,7 +44,7 @@ export class ChatNotificationService {
         const miembros = await this.getCommunityMembers(comunidadId, mensaje.idUsuario);
         
         // Enviar notificaciones
-        await this.sendNotifications(miembros, comunidadId, mensaje);
+        await this.sendNotifications(miembros, comunidadId, mensaje, snapshot);
         
         // Marcar mensaje como notificado
         await snapshot.ref.update({ estado: 'notified' });
@@ -60,19 +60,20 @@ export class ChatNotificationService {
       where: { id_red: comunidadId },
       include: [{
         model: Usuario,
+        as: 'usuario', // Usando el alias definido en la asociación
         attributes: ['id_usuario', 'fcm_token']
       }]
     });
 
     return miembros
-      .filter(m => m.Usuario.id_usuario.toString() !== senderId)
+      .filter(m => m.usuario.id_usuario.toString() !== senderId)
       .map(m => ({
-        id_usuario: m.Usuario.id_usuario,
-        fcm_token: m.Usuario.fcm_token
+        id_usuario: m.usuario.id_usuario,
+        fcm_token: m.usuario.fcm_token
       }));
   }
 
-  static async sendNotifications(miembros, comunidadId, mensaje) {
+  static async sendNotifications(miembros, comunidadId, mensaje, snapshot) {
     const notificationPromises = miembros
       .filter(miembro => miembro.fcm_token)
       .map(miembro => {
