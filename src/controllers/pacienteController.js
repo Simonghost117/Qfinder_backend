@@ -3,8 +3,8 @@ import { models } from "../models/index.js";
 const { Paciente, Familiar, CodigoQR } = models;
 import { generarQRPaciente } from "../controllers/codigoQrController.js";
 import Usuario from "../models/usuario.model.js";
-import { imgBase64 } from "../utils/imgBase64.js";
-import e from "express";
+import { manejarImagenes } from "../utils/imgBase64.js";
+;
 
 
 // Registrar un nuevo paciente
@@ -180,21 +180,14 @@ export const actualizarPaciente = async (req, res) => {
     }
 
     // Manejo de imagen
-    let nueva_imagen = paciente.imagen_paciente; // Mantener la imagen actual
-    if (imagen_paciente && typeof imagen_paciente === "string") {
-      const esBase64 = imagen_paciente.startsWith("data:image/");
-      const esURL = imagen_paciente.startsWith("http://") || imagen_paciente.startsWith("https://");
-
-      if (!esBase64 && !esURL) {
-        try {
-          nueva_imagen = await imgBase64(imagen_paciente); // Solo si es un archivo local
-        } catch (error) {
-          console.error("Error procesando imagen:", error);
-          return res.status(400).json({ message: "Error al procesar la imagen" });
-        }
-      } else {
-        nueva_imagen = imagen_paciente; // Mantener la imagen si es Base64 o URL
-      }
+    let nueva_imagen;
+    try {
+      nueva_imagen = await manejarImagenes(imagen_paciente, paciente.imagen_paciente);
+    } catch (error) {
+      return res.status(400).json({ 
+        success: false,
+        message: error.message 
+      });
     }
 
     await paciente.update({
@@ -383,15 +376,15 @@ export const actualizarPaciente2 = async (req, res) => {
       });
     }
 
-    let nueva_imagen = paciente.imagen_paciente; // Mantener la imagen existente si no hay nueva
-
-    if (imagen_paciente) {
-      try {
-        nueva_imagen = await imgBase64(imagen_paciente); // Convertir imagen
-      } catch (error) {
-        console.error('Error procesando imagen:', error);
-        return res.status(400).json({ message: 'Error al procesar la imagen' });
-      }
+     // Manejo de imagen
+    let nueva_imagen;
+    try {
+      nueva_imagen = await manejarImagenes(imagen_paciente, paciente.imagen_paciente);
+    } catch (error) {
+      return res.status(400).json({ 
+        success: false,
+        message: error.message 
+      });
     }
 
     // Actualizar el paciente

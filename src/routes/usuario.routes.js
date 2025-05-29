@@ -1,7 +1,8 @@
 import express from 'express';
 import { login, logout, register, 
     listarUsers, actualizarUser, eliminarUser,
-    verifyUser, perfilUser, listarUsuarios, listarAdmin, eliminarUsuario, buscarUserNombre, registerUsuario } from '../controllers/usuarioController.js';
+    verifyUser, perfilUser, listarUsuarios, listarAdmin, eliminarUsuario, buscarUserNombre, registerUsuario, 
+    actualizarUsuario} from '../controllers/usuarioController.js';
 import validateSchema from '../middlewares/validatoreSchema.js';
 import { loginSchema, registerSchema, updateSchema, cambiarContrasenaSchema, usuarioAdmiAct } from '../schema/usuarioSchema.js';
 import { verifyToken } from '../middlewares/verifyToken.js';
@@ -70,7 +71,7 @@ router.put('/actualizarUsuario/:id_usuario',
     verifyToken,
     validateAdmin,
     validateSchema(usuarioAdmiAct),
-    actualizarUser
+    actualizarUsuario
 );
 router.delete('/eliminarUsuario/:id_usuario',
     verifyToken,
