@@ -34,43 +34,85 @@ export const enviarMensaje = async (req, res) => {
     }
 
     const nombreUsuario = `${usuario.nombre_usuario} ${usuario.apellido_usuario}`;
+    const fecha_envio = Date.now();
 
     const nuevoMensaje = {
       idUsuario: id_usuario.toString(),
       nombreUsuario,
       contenido: contenido.trim(),
       fotoPerfil: usuario.foto_perfil || null,
-      fecha_envio: Date.now(),
+      fecha_envio,
       estado: 'pending_notification'
     };
 
-    const mensajeRef = db.ref(`chats/${id_red}/mensajes`).push();
-    await mensajeRef.set(nuevoMensaje);
+    // 1. Guardar mensaje en Firebase
+    try {
+      const mensajeRef = db.ref(`chats/${id_red}/mensajes`).push();
+      await mensajeRef.set(nuevoMensaje);
+      const mensajeId = mensajeRef.key;
+      
+      // 2. Obtener datos de la comunidad
+      const comunidad = await Red.findByPk(id_red, {
+        attributes: ['nombre_red']
+      });
 
-    const comunidad = await Red.findByPk(id_red, {
-      attributes: ['nombre_red']
-    });
+      if (!comunidad) {
+        return errorResponse(res, 'Comunidad no encontrada', 404);
+      }
 
-    enviarNotificacionesPush({
-      comunidadId: id_red,
-      comunidadNombre: comunidad?.nombre_red || 'Comunidad',
-      mensajeId: mensajeRef.key,
-      mensaje: nuevoMensaje,
-      remitenteId: id_usuario
-    }).catch(error => {
-      console.error('Error enviando notificaciones:', error);
-    });
+      // 3. Enviar notificaciones (manejando errores)
+      try {
+        await enviarNotificacionesPush({
+          comunidadId: id_red,
+          comunidadNombre: comunidad.nombre_red,
+          mensajeId,
+          mensaje: nuevoMensaje,
+          remitenteId: id_usuario
+        });
+      } catch (notifError) {
+        console.error('Error enviando notificaciones:', notifError);
+        // Actualizar estado del mensaje a fallido
+        await db.ref(`chats/${id_red}/mensajes/${mensajeId}`).update({
+          estado: 'notification_failed'
+        });
+      }
 
-    return successResponse(res, 'Mensaje enviado correctamente', {
-      idMensaje: mensajeRef.key,
-      fecha_envio: nuevoMensaje.fecha_envio
-    }, 201);
+      return successResponse(res, 'Mensaje enviado correctamente', {
+        idMensaje: mensajeId,
+        fecha_envio
+      }, 201);
+
+    } catch (firebaseError) {
+      console.error('Error en Firebase:', firebaseError);
+      
+      // Guardar en base de datos local como respaldo
+      try {
+        const backupMessage = await MensajeBackup.create({
+          id_red,
+          id_usuario,
+          contenido,
+          fecha_envio: new Date(fecha_envio),
+          estado: 'firebase_failed'
+        });
+        
+        console.log('Mensaje guardado en backup DB:', backupMessage.id);
+        return successResponse(res, 'Mensaje enviado con backup', {
+          idMensaje: `backup_${backupMessage.id}`,
+          fecha_envio
+        }, 201);
+        
+      } catch (dbError) {
+        console.error('Error guardando backup en DB:', dbError);
+        return errorResponse(res, 'Error crítico al guardar mensaje', 500);
+      }
+    }
 
   } catch (error) {
-    console.error('Error en enviarMensaje:', error);
+    console.error('Error crítico en enviarMensaje:', error);
     return errorResponse(res, 'Error interno al enviar el mensaje');
   }
 };
+
 
 /**
  * Obtiene los mensajes de un chat de comunidad
@@ -96,17 +138,15 @@ export const obtenerMensajes = async (req, res) => {
     const snapshot = await mensajesQuery.once('value');
     const mensajes = snapshot.val() || {};
 
-    const mensajesArray = Object.entries(mensajes).map(([id, mensaje]) => ({
+    // Convertir objeto a array
+    const mensajesArray = Object.keys(mensajes).map(id => ({
       id,
-      ...mensaje
+      ...mensajes[id]
     }));
 
     mensajesArray.sort((a, b) => b.fecha_envio - a.fecha_envio);
 
-    return successResponse(res, 'Mensajes obtenidos', {
-      mensajes: mensajesArray,
-      total: mensajesArray.length
-    });
+    return successResponse(res, 'Mensajes obtenidos', mensajesArray); // Enviar array directamente
 
   } catch (error) {
     console.error('Error en obtenerMensajes:', error);
