@@ -172,6 +172,7 @@ const enviarNotificacionesPush = async ({ comunidadId, remitenteId, mensajeId, m
       },
       include: [{
         model: Usuario,
+        as: 'usuario', // Usando el alias definido en la asociación
         attributes: ['id_usuario', 'fcm_token', 'notificaciones_activas']
       }]
     });
