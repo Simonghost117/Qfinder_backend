@@ -2,6 +2,7 @@ import express from 'express';
 import { verifyToken } from '../middlewares/verifyToken.js';
 import { auth } from '../config/firebase-admin.js';
 import UsuarioRed from '../models/UsuarioRed.js';
+import Usuario from '../models/usuario.model.js'; // ✅ Asegúrate de que la ruta coincida con la estructura real de tu proyecto
 
 const router = express.Router();
 
