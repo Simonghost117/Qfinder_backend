@@ -21,7 +21,7 @@ export const enviarMensaje = async (req, res) => {
     }
 
     const usuario = await Usuario.findByPk(id_usuario, {
-      attributes: ['nombre_usuario', 'apellido_usuario', 'foto_perfil']
+      attributes: ['nombre_usuario', 'apellido_usuario']
     });
 
     if (!usuario) {
