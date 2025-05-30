@@ -3,12 +3,8 @@ import Usuario from '../models/usuario.model.js';
 import UsuarioRed from '../models/UsuarioRed.js';
 import Red from '../models/Red.js';
 import { successResponse, errorResponse } from '../utils/response.js';
-import { verifyToken } from '../middlewares/verifyToken.js';
 import { Op } from 'sequelize';
 
-/**
- * Envía un mensaje a un chat de comunidad
- */
 export const enviarMensaje = async (req, res) => {
   try {
     const { id_red } = req.params;
@@ -20,7 +16,6 @@ export const enviarMensaje = async (req, res) => {
     }
 
     const membresia = await UsuarioRed.findOne({ where: { id_usuario, id_red } });
-
     if (!membresia) {
       return errorResponse(res, 'No tienes permisos para enviar mensajes en esta comunidad', 403);
     }
@@ -42,91 +37,39 @@ export const enviarMensaje = async (req, res) => {
       contenido: contenido.trim(),
       fotoPerfil: usuario.foto_perfil || null,
       fecha_envio,
-      estado: 'pending_notification'
+      estado: 'enviado'
     };
 
-    // 1. Guardar mensaje en Firebase
-    try {
-      const mensajeRef = db.ref(`chats/${id_red}/mensajes`).push();
-      await mensajeRef.set(nuevoMensaje);
-      const mensajeId = mensajeRef.key;
-      
-      // 2. Obtener datos de la comunidad
-      const comunidad = await Red.findByPk(id_red, {
-        attributes: ['nombre_red']
-      });
+    const mensajeRef = db.ref(`chats/${id_red}/mensajes`).push();
+    await mensajeRef.set(nuevoMensaje);
+    const mensajeId = mensajeRef.key;
 
-      if (!comunidad) {
-        return errorResponse(res, 'Comunidad no encontrada', 404);
-      }
+    // Enviar notificaciones push
+    await enviarNotificacionesPush({
+      comunidadId: id_red,
+      remitenteId: id_usuario,
+      mensajeId,
+      mensaje: nuevoMensaje
+    });
 
-      // 3. Enviar notificaciones (manejando errores)
-      try {
-        await enviarNotificacionesPush({
-          comunidadId: id_red,
-          comunidadNombre: comunidad.nombre_red,
-          mensajeId,
-          mensaje: nuevoMensaje,
-          remitenteId: id_usuario
-        });
-      } catch (notifError) {
-        console.error('Error enviando notificaciones:', notifError);
-        // Actualizar estado del mensaje a fallido
-        await db.ref(`chats/${id_red}/mensajes/${mensajeId}`).update({
-          estado: 'notification_failed'
-        });
-      }
-
-      return successResponse(res, 'Mensaje enviado correctamente', {
-        idMensaje: mensajeId,
-        fecha_envio
-      }, 201);
-
-    } catch (firebaseError) {
-      console.error('Error en Firebase:', firebaseError);
-      
-      // Guardar en base de datos local como respaldo
-      try {
-        const backupMessage = await MensajeBackup.create({
-          id_red,
-          id_usuario,
-          contenido,
-          fecha_envio: new Date(fecha_envio),
-          estado: 'firebase_failed'
-        });
-        
-        console.log('Mensaje guardado en backup DB:', backupMessage.id);
-        return successResponse(res, 'Mensaje enviado con backup', {
-          idMensaje: `backup_${backupMessage.id}`,
-          fecha_envio
-        }, 201);
-        
-      } catch (dbError) {
-        console.error('Error guardando backup en DB:', dbError);
-        return errorResponse(res, 'Error crítico al guardar mensaje', 500);
-      }
-    }
+    return successResponse(res, 'Mensaje enviado correctamente', {
+      idMensaje: mensajeId,
+      ...nuevoMensaje
+    });
 
   } catch (error) {
-    console.error('Error crítico en enviarMensaje:', error);
+    console.error('Error en enviarMensaje:', error);
     return errorResponse(res, 'Error interno al enviar el mensaje');
   }
 };
 
-
-/**
- * Obtiene los mensajes de un chat de comunidad
- */
 export const obtenerMensajes = async (req, res) => {
   try {
     const { id_red } = req.params;
     const { id_usuario } = req.user;
     const { limite = 50, desde } = req.query;
 
-    const esMiembro = await UsuarioRed.findOne({
-      where: { id_usuario, id_red }
-    });
-
+    const esMiembro = await UsuarioRed.findOne({ where: { id_usuario, id_red } });
     if (!esMiembro) {
       return errorResponse(res, 'No tienes acceso a esta comunidad', 403);
     }
@@ -138,15 +81,17 @@ export const obtenerMensajes = async (req, res) => {
     const snapshot = await mensajesQuery.once('value');
     const mensajes = snapshot.val() || {};
 
-    // Convertir objeto a array
     const mensajesArray = Object.keys(mensajes).map(id => ({
       id,
       ...mensajes[id]
     }));
 
-    mensajesArray.sort((a, b) => b.fecha_envio - a.fecha_envio);
+    mensajesArray.sort((a, b) => a.fecha_envio - b.fecha_envio);
 
-    return successResponse(res, 'Mensajes obtenidos', mensajesArray); // Enviar array directamente
+    return successResponse(res, 'Mensajes obtenidos', {
+      success: true,
+      mensajes: mensajesArray
+    });
 
   } catch (error) {
     console.error('Error en obtenerMensajes:', error);
@@ -154,16 +99,12 @@ export const obtenerMensajes = async (req, res) => {
   }
 };
 
-/**
- * Verifica si un usuario es miembro de una comunidad y genera token de Firebase
- */
 export const verificarMembresia = async (req, res) => {
   try {
     const { id_red } = req.params;
     const { id_usuario } = req.user;
 
     const membresia = await UsuarioRed.findOne({ where: { id_usuario, id_red } });
-
     if (!membresia) {
       return errorResponse(res, 'No eres miembro de esta comunidad', 403);
     }
@@ -177,34 +118,29 @@ export const verificarMembresia = async (req, res) => {
     }
 
     const firebaseUid = `ext_${id_usuario}`;
+    let userRecord;
 
     try {
-      await auth.getUser(firebaseUid);
-      await auth.setCustomUserClaims(firebaseUid, {
-        id_red,
-        id_usuario,
-        rol: membresia.rol,
-        backendAuth: true
-      });
+      userRecord = await auth.getUser(firebaseUid);
     } catch (error) {
       if (error.code === 'auth/user-not-found') {
-        await auth.createUser({
+        userRecord = await auth.createUser({
           uid: firebaseUid,
           email: usuario.email || `${id_usuario}@qfinder.com`,
           displayName: `${usuario.nombre_usuario} ${usuario.apellido_usuario}`,
           disabled: false
         });
-
-        await auth.setCustomUserClaims(firebaseUid, {
-          id_red,
-          id_usuario,
-          rol: membresia.rol,
-          backendAuth: true
-        });
       } else {
         throw error;
       }
     }
+
+    await auth.setCustomUserClaims(firebaseUid, {
+      id_red,
+      id_usuario,
+      rol: membresia.rol,
+      backendAuth: true
+    });
 
     const firebaseToken = await auth.createCustomToken(firebaseUid, {
       id_red,
@@ -214,10 +150,11 @@ export const verificarMembresia = async (req, res) => {
     });
 
     return successResponse(res, 'Membresía verificada', {
+      success: true,
       firebaseToken,
-      rol: membresia.rol,
       id_red,
-      id_usuario
+      id_usuario,
+      rol: membresia.rol
     });
 
   } catch (error) {
@@ -226,11 +163,7 @@ export const verificarMembresia = async (req, res) => {
   }
 };
 
-/**
- * Envía notificaciones push a los miembros de la comunidad (excepto al remitente)
- * @private
- */
-const enviarNotificacionesPush = async ({ comunidadId, comunidadNombre, mensajeId, mensaje, remitenteId }) => {
+const enviarNotificacionesPush = async ({ comunidadId, remitenteId, mensajeId, mensaje }) => {
   try {
     const miembros = await UsuarioRed.findAll({
       where: {
@@ -243,20 +176,21 @@ const enviarNotificacionesPush = async ({ comunidadId, comunidadNombre, mensajeI
       }]
     });
 
-    const miembrosANotificar = miembros.filter(m =>
+    const miembrosANotificar = miembros.filter(m => 
       m.Usuario?.fcm_token && m.Usuario?.notificaciones_activas
     );
 
-    if (miembrosANotificar.length === 0) {
-      console.log('No hay miembros para notificar');
-      return;
-    }
+    if (miembrosANotificar.length === 0) return;
+
+    const comunidad = await Red.findByPk(comunidadId, {
+      attributes: ['nombre_red']
+    });
 
     const notification = {
       notification: {
-        title: `💬 ${comunidadNombre}`,
-        body: mensaje.contenido.length > 100
-          ? `${mensaje.contenido.substring(0, 100)}...`
+        title: `💬 ${comunidad.nombre_red}`,
+        body: mensaje.contenido.length > 100 
+          ? `${mensaje.contenido.substring(0, 100)}...` 
           : mensaje.contenido,
         image: mensaje.fotoPerfil || null
       },
@@ -265,23 +199,13 @@ const enviarNotificacionesPush = async ({ comunidadId, comunidadNombre, mensajeI
         comunidadId: comunidadId.toString(),
         mensajeId,
         senderId: remitenteId.toString(),
-        click_action: 'FLUTTER_NOTIFICATION_CLICK',
-        timestamp: Date.now().toString()
+        click_action: 'FLUTTER_NOTIFICATION_CLICK'
       },
       android: {
         priority: 'high',
         notification: {
           sound: 'default',
           channel_id: 'chat_messages'
-        }
-      },
-      apns: {
-        payload: {
-          aps: {
-            sound: 'default',
-            badge: 1,
-            'mutable-content': 1
-          }
         }
       }
     };
@@ -294,31 +218,14 @@ const enviarNotificacionesPush = async ({ comunidadId, comunidadNombre, mensajeI
         token: miembro.Usuario.fcm_token
       }));
 
-      const response = await messaging.sendEach(messages);
-      console.log(`Notificaciones enviadas: ${response.successCount}, fallidas: ${response.failureCount}`);
-
-      if (response.failureCount > 0) {
-        response.responses.forEach((resp, idx) => {
-          if (!resp.success) {
-            console.error(`Error enviando notificación a ${batch[idx].Usuario.id_usuario}:`, resp.error);
-          }
-        });
-      }
+      await messaging.sendEach(messages);
     }
 
     await db.ref(`chats/${comunidadId}/mensajes/${mensajeId}`).update({
-      estado: 'notified',
       notificaciones_enviadas: miembrosANotificar.length
     });
 
   } catch (error) {
     console.error('Error en enviarNotificacionesPush:', error);
-    try {
-      await db.ref(`chats/${comunidadId}/mensajes/${mensajeId}`).update({
-        estado: 'notification_failed'
-      });
-    } catch (innerError) {
-      console.error('Error al actualizar el estado del mensaje tras fallo de notificación:', innerError);
-    }
   }
 };
