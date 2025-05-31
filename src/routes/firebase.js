@@ -16,7 +16,10 @@ router.post('/token/:id_red', verifyToken, async (req, res) => {
             backendAuth: true
         });
 
-        res.json({ success: true, token });
+        res.json({ 
+    success: true, 
+    firebaseToken: token // <- Este es el token JWT real
+});
     } catch (error) {
         res.status(500).json({ 
             success: false, 
