@@ -5,7 +5,7 @@ import { register, listarPacientes, getPacienteById, actualizarPaciente, elimina
  } from '../controllers/pacienteController.js';
 import validateSchema from "../middlewares/validatoreSchema.js"
 import {PacienteSchema, ActPacienteSchema, ActPaciente2} from "../schema/pacienteSchema.js";
-import { verifyToken } from '../middlewares/verifyToken.js';
+import { verifyToken, verifyTokenWeb } from '../middlewares/verifyToken.js';
 import { checkEpisodioPermissions } from '../middlewares/episodioPermissions.middleware.js';
 import { validateAdmin } from '../middlewares/validateAdmin.js';
 const router = express.Router();
@@ -20,39 +20,51 @@ router.get('/listarPacientes',
     listarPacientes
 );
 router.get('/listarPacientes/:id_paciente',
-     verifyToken, 
-        checkEpisodioPermissions(['Administrador', 'Usuario']),
-     getPacienteById
+    verifyToken, 
+    checkEpisodioPermissions(['Usuario']),
+    getPacienteById
     );
 router.put('/actualizarPaciente/:id_paciente', 
     verifyToken, 
-    checkEpisodioPermissions(['Administrador', 'Usuario']), 
+    checkEpisodioPermissions([ 'Usuario']), 
     validateSchema(ActPacienteSchema), 
     actualizarPaciente
 );
 router.delete('/eliminarPaciente/:id_paciente', 
     verifyToken, 
-    checkEpisodioPermissions(['Administrador', 'Usuario']),
+    checkEpisodioPermissions([ 'Usuario']),
     eliminarPaciente
 );
 
 //ADMINISTRADOR
+
 router.get('/todosPacientes', 
-    verifyToken,
+    verifyTokenWeb,
     validateAdmin,
     listarTodosPacientes
 )
+router.get('/listarPacientes2/:id_usuario',
+    verifyTokenWeb, 
+    validateAdmin, 
+    checkEpisodioPermissions(['Administrador']),
+    listarPacientes
+);
 router.post('/registrarPaciente2/:id_usuario',
-    verifyToken,
+    verifyTokenWeb,
     validateAdmin,
     validateSchema(PacienteSchema),
     registerPaciente2
 );
 router.put('/actualizarPaciente2/:id_paciente', 
-    verifyToken, 
+    verifyTokenWeb, 
     validateAdmin, 
     validateSchema(ActPaciente2), 
     actualizarPaciente2
+);
+router.delete('/eliminarPaciente2/:id_paciente',
+    verifyTokenWeb, 
+    validateAdmin, 
+    eliminarPaciente
 );
 
 export default router;
