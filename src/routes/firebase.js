@@ -4,7 +4,6 @@ import { auth, messaging } from '../config/firebase-admin.js';
 
 const router = express.Router();
 
-// Endpoint existente para generar token
 router.post('/token/:id_red', verifyToken, async (req, res) => {
     try {
         const { id_red } = req.params;
@@ -18,7 +17,7 @@ router.post('/token/:id_red', verifyToken, async (req, res) => {
 
         res.json({ 
     success: true, 
-    firebaseToken: token // <- Este es el token JWT real
+    firebaseToken: token 
 });
     } catch (error) {
         res.status(500).json({ 
