@@ -47,10 +47,6 @@ export const cambiarContrasena = async (req, res) => {
 
 
   try {
-    if (!token) {
-      return res.status(401).json({ mensaje: 'Token no encontrado en cookies.' });
-    }
-
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const correo = decoded.correo;
 
@@ -76,6 +72,41 @@ export const cambiarContrasena = async (req, res) => {
     return res.status(401).json({ mensaje: 'Token inválido o expirado.' });
   }
 };
+
+// export const cambiarContrasena = async (req, res) => {
+//   const { nuevaContrasena } = req.body;
+//   const token = req.cookies.resetToken;
+
+//   try {
+//     if (!token) {
+//       return res.status(401).json({ mensaje: 'Token no encontrado en cookies.' });
+//     }
+
+//     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+//     const correo = decoded.correo;
+
+//     const usuario = await Usuario.findOne({ where: { correo_usuario: correo } });
+
+//     if (!usuario) {
+//       return res.status(404).json({ mensaje: 'Usuario no encontrado.' });
+//     }
+
+//     const hash = await bcrypt.hash(nuevaContrasena, 10);
+//     usuario.contrasena_usuario = hash;
+//     usuario.codigo_verificacion = null;
+//     usuario.codigo_expiracion = null;
+
+//     await usuario.save();
+
+//     // ✅ Eliminar cookie después de uso
+//     res.clearCookie('resetToken');
+
+//     res.status(200).json({ mensaje: 'Contraseña actualizada correctamente.' });
+//   } catch (error) {
+//     console.error('Error al cambiar contraseña:', error);
+//     return res.status(401).json({ mensaje: 'Token inválido o expirado.' });
+//   }
+// };
 
   
 export const verificarCodigo = async (req, res) => {

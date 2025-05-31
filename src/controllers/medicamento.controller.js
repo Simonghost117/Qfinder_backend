@@ -2,30 +2,41 @@ import Medicamento from '../models/medicamento.model.js';
 
 export const crearMedicamento = async (req, res) => {
   try {
-    const { id_usuario } = req.user;
-    console.log(id_usuario);
+    const datos = req.body;
+    console.log("Datos recibidos para crear medicamento:", datos);
 
-    const { nombre, descripcion, tipo } = req.body;
-
-    const nuevo = await Medicamento.create({
-      id_usuario,
-      nombre,
-      descripcion,
-      tipo
-    });
-    res.status(201).json({ message: 'Medicamento creado exitosamente', data: nuevo });
+    if (Array.isArray(datos)) {
+      // Si es un arreglo, crear múltiples registros
+      const nuevosMedicamentos = await Medicamento.bulkCreate(datos);
+      res.status(201).json({
+        message: "Medicamentos creados exitosamente",
+        data: nuevosMedicamentos
+      });
+    } else {
+      // Si es un solo objeto, crear un solo registro
+      const nuevoMedicamento = await Medicamento.create(datos);
+      res.status(201).json({
+        message: "Medicamento creado exitosamente",
+        data: nuevoMedicamento
+      });
+    }
   } catch (error) {
-    res.status(500).json({ message: 'Error al crear medicamento', error: error.message });
+    res.status(500).json({
+      message: "Error al crear medicamento",
+      error: error.message
+    });
   }
 };
 
 export const listarMedicamentos = async (req, res) => {
   try {
-    const { id_usuario } = req.user; // Extraemos el usuario autenticado
+    // const { id_usuario } = req.user; // Extraemos el usuario autenticado
 
-    const medicamentos = await Medicamento.findAll({
-      where: { id_usuario } // Solo los del usuario actual
-    });
+    const medicamentos = await Medicamento.findAll(
+    //   {
+    //   where: { id_usuario } // Solo los del usuario actual
+    // }
+  );
 
     res.status(200).json(medicamentos);
   } catch (error) {

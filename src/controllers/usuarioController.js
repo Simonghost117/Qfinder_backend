@@ -3,6 +3,7 @@ import Usuario from '../models/usuario.model.js';
 import { createAccessToken } from '../libs/jwt.js';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
+import { imgBase64 } from '../utils/imgBase64.js';
 dotenv.config();
 
 
@@ -13,8 +14,10 @@ import {
   generateAndStoreCode,
   verifyCode,
   sendVerificationEmail,
-  clearPendingRegistration
+  clearPendingRegistration,
+  buscarNombre
 } from '../services/usuarioService.js';
+import { or } from 'sequelize';
 
 export const register = async (req, res) => {
   try {
@@ -117,7 +120,7 @@ export const verifyUser = async (req, res) => {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict'
     });*/
-    res.cookie("token", token, {
+     res.cookie("token", token, {
       httpOnly: process.env.NODE_ENV !== "development",
       secure: true,
       sameSite: "none",
@@ -185,11 +188,24 @@ export const login = async (req, res) => {
           rol: usuario.tipo_usuario
         });
 
-        res.cookie("token", token, {
-          httpOnly: process.env.NODE_ENV !== "development",
-          secure: false,
-          sameSite: "none",
-        });
+       res.cookie('token', token, {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  maxAge: 30 * 24 * 60 * 60 * 1000, // 30 días en milisegundos
+  domain: '.qfinder-production.up.railway.app', // ¡Atención al punto inicial!
+  path: '/',
+  priority: 'high'
+});
+
+    // 4. Configurar cookie de sesión (connect.sid) si usas express-session
+    req.session.userId = usuario.id_usuario; // Esto activará la cookie de sesión
+
+  //        res.cookie("token", token, {
+  // httpOnly: false, // For testing only
+  // secure: false,   // Important for localhost (no https)
+  // sameSite: "lax", // "none" requires secure=true
+  //   });
         // Enviar el token en la cabecera Authorization
         res.setHeader("Authorization", `Bearer ${token}`);
         
@@ -220,6 +236,9 @@ export const logout = async (req, res) => {
 export const listarUsers = async (req, res) => {
     try {
         const usuarios = await Usuario.findAll();
+        if (!usuarios) {
+            return res.status(404).json({ message: 'No se encontraron usuarios' });
+        }
         res.status(200).json(usuarios.map(usuario => ({
             id_usuario: usuario.id_usuario,
             nombre_usuario: usuario.nombre_usuario,
@@ -239,7 +258,7 @@ export const listarUsers = async (req, res) => {
 
 export const actualizarUser = async (req, res) => {
   try {
-    const { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario, correo_usuario, contrasena_usuario } = req.body;
+    const { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario, correo_usuario, imagen_usuario } = req.body;
 
     const { id } = req.usuario;
     console.log("Contenido de req.usuario:", req.usuario);
@@ -249,11 +268,20 @@ export const actualizarUser = async (req, res) => {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
-    const dataToUpdate = { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario, correo_usuario };
-    if (contrasena_usuario) {
-      const salt = await bcrypt.genSalt(10);
-      dataToUpdate.contrasena_usuario = await bcrypt.hash(contrasena_usuario, salt);
-    }
+    // if (contrasena_usuario) {
+    //   const salt = await bcrypt.genSalt(10);
+    //   dataToUpdate.contrasena_usuario = await bcrypt.hash(contrasena_usuario, salt);
+    // }
+    let nueva_imagen;
+        try {
+          nueva_imagen = await manejarImagenes(imagen_usuario, usuario.imagen_usuario);
+        } catch (error) {
+          return res.status(400).json({ 
+            success: false,
+            message: error.message 
+          });
+        }
+    const dataToUpdate = { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario, correo_usuario, imagen_usuario: nueva_imagen };
 
     await Usuario.update(dataToUpdate, {
       where: { id_usuario: id },
@@ -304,10 +332,227 @@ export const perfilUser = async (req, res) => {
       direccion_usuario: usuario.direccion_usuario,
       telefono_usuario: usuario.telefono_usuario,
       correo_usuario: usuario.correo_usuario,
+      imagen_usuario: usuario.imagen_usuario
    
     });
   } catch (error) {
     console.error('Error al obtener el perfil del usuario:', error);
     res.status(500).json({ message: 'Error al obtener el perfil del usuario', error });
+  }
+}
+
+export const listarUsuarios = async (req, res) => {
+  try { 
+    const usuarios = await Usuario.findAll(
+      {
+      where: {
+        tipo_usuario: 'Usuario'
+      }, order: [['id_usuario', 'ASC']]
+      }
+  );
+    res.status(200).json(usuarios.map(usuario => ({
+      id_usuario: usuario.id_usuario,
+      nombre_usuario: usuario.nombre_usuario,
+      apellido_usuario: usuario.apellido_usuario,
+      identificacion_usuario: usuario.identificacion_usuario,
+      direccion_usuario: usuario.direccion_usuario,
+      telefono_usuario: usuario.telefono_usuario,
+      correo_usuario: usuario.correo_usuario,
+      tipo_usuario: usuario.tipo_usuario,
+      estado_usuario: usuario.estado_usuario
+    })));
+  } catch (error) {
+    console.log('Error al listar los usuarios', error);
+    res.status(500).json({ message: "Erro interno del servidor al listar los usuarios"})
+  }
+}
+export const listarAdmin = async (req, res) => {
+  try {
+    const usuarios = await Usuario.findAll(
+      {
+      where: {
+        tipo_usuario: 'Administrador'
+      }, order: [['id_usuario', 'ASC']]
+      }
+  );
+    res.status(200).json(usuarios.map(usuario => ({
+      id_usuario: usuario.id_usuario,
+      nombre_usuario: usuario.nombre_usuario,
+      apellido_usuario: usuario.apellido_usuario,
+      identificacion_usuario: usuario.identificacion_usuario,
+      direccion_usuario: usuario.direccion_usuario,
+      telefono_usuario: usuario.telefono_usuario,
+      correo_usuario: usuario.correo_usuario,
+      tipo_usuario: usuario.tipo_usuario,
+      estado_usuario: usuario.estado_usuario
+    })));
+  } catch (error) {
+    console.log('Error al listar los usuarios', error);
+    res.status(500).json({ message: "Erro interno del servidor al listar los administradores"})
+  }
+}
+
+export const actualizarUsuario = async (req, res) => {
+  try {
+    const { id_usuario } = req.params;
+    const { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, tipo_usuario, imagen_usuario} = req.body;
+    const usuario = await Usuario.findAll({
+      where: {
+        id_usuario: id_usuario
+      }
+    })
+    if (!usuario) {
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
+    const dataToUpdate = { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, tipo_usuario };
+    await Usuario.update(dataToUpdate, {
+      where: { id_usuario: id_usuario },
+    });
+    res.status(200).json({ message: 'Información del usuario actualizada exitosamente' });
+  } catch(error) {
+    console.error('Error al actualizar el usuario', error);
+    res.status(500).json({ message: "Error en el servidor al actualizar el usuario" });
+  }
+}
+
+export const eliminarUsuario = async (req, res) => {
+  try {
+    const { id_usuario } = req.params;
+    if (!id_usuario) {
+      return res.status(400).json({ message: "ID de usuario no proporcionado" });
+    }
+    const usuario = await Usuario.findByPk(id_usuario);
+    if(!usuario) {
+      return res.status(404).json({ message: "Usuario no encontrado"});
+    }
+    await Usuario.destroy({
+      where: { id_usuario: id_usuario }
+    })
+    res.status(200).json({ message: "Usuario eliminado exitosamente"})
+  } catch (error) {
+    console.error('Error interno al eliminar el usuario', error);
+    res.status(500).json({ message: "Error interno al eliminar el usuario"})
+  }
+}
+
+export const buscarUserNombre = async (req, res) => {
+  try {
+    const { nombre_usuario } = req.body;
+    const usuarios = await buscarNombre(nombre_usuario);
+    if (usuarios.length === 0 || !usuarios) {
+      return res.status(404).json({ message: "No se encontraron usuarios con ese nombre" });
+    }
+    res.status(200).json(usuarios);
+  } catch (error) {
+    console.error('Error al buscar el usuario por nombre', error);
+    res.status(500).json({ message: "Error interno al buscar el usuario por nombre" });
+  }
+}
+
+export const registerUsuario = async (req, res) => {
+  try {
+    const { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, contrasena_usuario, tipo_usuario } = req.body;
+
+    const userData = {
+      nombre_usuario,
+      apellido_usuario,
+      identificacion_usuario,
+      direccion_usuario,
+      telefono_usuario,
+      contrasena_usuario,
+      tipo_usuario: tipo_usuario || 'Usuario', // Por defecto 'Usuario'
+    };
+    
+    // 1. Validar duplicados en BD (solo el correo)
+    const existe = await Usuario.findOne({ where: { correo_usuario } });
+    if (existe) {
+      return res.status(400).json({ error: 'El correo ya está registrado' });
+    }
+
+    const idExiste = await Usuario.findOne({ where: { identificacion_usuario: userData.identificacion_usuario } });
+    if (idExiste) {
+      return res.status(400).json({ error: 'El número de identificación ya está registrado' });
+    }
+    const passwordHash = await bcrypt.hash(contrasena_usuario, 10);
+
+    const usuario = await Usuario.create({
+      ...userData,
+      correo_usuario,
+      contrasena_usuario: passwordHash,
+    });
+    
+    res.status(200).json({ 
+      message: 'Usuario registrado exitosamente',
+      usuario: {
+        id_usuario: usuario.id_usuario,
+        nombre_usuario: usuario.nombre_usuario,
+        apellido_usuario: usuario.apellido_usuario,
+        identificacion_usuario: usuario.identificacion_usuario,
+        direccion_usuario: usuario.direccion_usuario,
+        telefono_usuario: usuario.telefono_usuario,
+        correo_usuario: usuario.correo_usuario,
+        tipo_usuario: usuario.tipo_usuario,
+      }
+      
+    });
+    
+  } catch (error) {
+    res.status(500).json({ 
+      error: 'Error en registro', 
+      details: error.message 
+    });
+  }
+}
+
+export const actualizarAdmin = async (req, res) => {
+  try {
+    const { id_usuario } = req.usuario;
+    const { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, imagen_usuario } = req.body;
+
+    const usuario = await Usuario.findByPk(id_usuario);
+    if (!usuario) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
+
+    let nueva_imagen;
+    try {
+      nueva_imagen = await imgBase64(imagen_usuario, usuario.imagen_usuario);
+    } catch (error) {
+      return res.status(400).json({ 
+        success: false,
+        message: error.message 
+      });
+    }
+
+    const dataToUpdate = { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, imagen_usuario: nueva_imagen };
+
+    await Usuario.update(dataToUpdate, {
+      where: { id_usuario: id_usuario },
+    });
+
+    res.status(200).json({ message: 'Información del administrador actualizada exitosamente' });
+  } catch (error) {
+    console.error('Error al actualizar el administrador:', error);
+    res.status(500).json({ message: 'Error al actualizar el administrador', error });
+  }
+}
+
+export const eliminarAdmin = async (req, res) => {
+  try {
+    const { id_usuario } = req.usuario;
+
+    const usuario = await Usuario.findByPk(id_usuario);
+    if (!usuario) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
+
+    await Usuario.destroy({
+      where: { id_usuario: id_usuario },
+    });
+
+    res.status(200).json({ message: 'Administrador eliminado exitosamente' });
+  } catch (error) {
+    console.error('Error al eliminar el administrador:', error);
+    res.status(500).json({ message: 'Error al eliminar el administrador', error });
   }
 }

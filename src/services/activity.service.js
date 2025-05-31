@@ -22,13 +22,46 @@ export const createActivity = async (id_paciente, data) => {
   
 
 // Obtener todas las actividades
+// controllers/activity.controller.js
+
 export const getAllActivities = async (id_paciente) => {
-  return await ActividadCuidado.findAll({
-    where: { id_paciente },
-    order: [["fecha_actividad", "DESC"]], 
-  });
+  console.log('🔍 [getAllActivities] Buscando actividades para paciente ID:', id_paciente);
+  
+  try {
+    const actividades = await ActividadCuidado.findAll({
+      where: { id_paciente },
+      order: [["fecha_actividad", "DESC"]],
+      raw: true
+    });
+
+    // Mapear los campos para coincidir con el frontend
+    const actividadesFormateadas = actividades.map(act => ({
+      id_actividad: act.id_actividad,
+      titulo: act.tipo_actividad || 'Sin título',
+      descripcion: act.descripcion || 'Sin descripción',
+      fecha: act.fecha_actividad ? formatDate(act.fecha_actividad) : null,
+      hora: act.fecha_actividad ? formatTime(act.fecha_actividad) : null,
+      estado: act.estado || 'pendiente',
+      id_paciente: act.id_paciente
+    }));
+
+    console.log('✅ [getAllActivities] Actividades formateadas:', actividadesFormateadas);
+    return actividadesFormateadas;
+    
+  } catch (error) {
+    console.error('❌ [getAllActivities] Error:', error);
+    throw error;
+  }
 };
 
+// Funciones auxiliares para formatear fecha y hora
+function formatDate(date) {
+  return new Date(date).toISOString().split('T')[0]; // Formato YYYY-MM-DD
+}
+
+function formatTime(date) {
+  return new Date(date).toTimeString().split(' ')[0].substring(0, 5); // Formato HH:MM
+}
 // Obtener una actividad por ID
 export const getActivityById = async (id_paciente, id_actividad) => {
   return await Paciente.findOne({
@@ -57,3 +90,14 @@ export const deleteActivity = async (id_paciente, id_actividad) => {
     id_paciente: id_paciente, 
     id_actividad: id_actividad } });
 };
+
+export const todasActividades = async (id_usuario) => {
+  try { 
+    return await ActividadCuidado.findAll({
+      where: { id_usuario },
+
+    })
+  } catch (error) {
+    throw error;
+  }
+}
