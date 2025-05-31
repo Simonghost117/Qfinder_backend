@@ -8,8 +8,6 @@ import chatRoutes from './routes/chatRoutes.js';
 import cookieParser from 'cookie-parser';
 import session from 'express-session';
 import { EventEmitter } from 'events';
-
-import  startAllJobs  from './jobs/cronJobs.js';
 startAllJobs();
 // Configuración de entorno
 dotenv.config();
