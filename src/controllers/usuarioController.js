@@ -3,7 +3,7 @@ import Usuario from '../models/usuario.model.js';
 import { createAccessToken } from '../libs/jwt.js';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
-import { imgBase64 } from '../utils/imgBase64.js';
+import { manejarImagenes } from '../utils/imgBase64.js';
 dotenv.config();
 
 
