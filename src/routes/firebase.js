@@ -1,44 +1,58 @@
 import express from 'express';
 import { verifyToken } from '../middlewares/verifyToken.js';
-import { auth, messaging } from '../config/firebase-admin.js';
+import { auth } from '../config/firebase-admin.js'; // Removí messaging si no se usa
 
 const router = express.Router();
+
 router.post('/token/:id_red', verifyToken, async (req, res) => {
+  // Inicializar campo token incluso en errores
+  const errorResponse = {
+    success: false,
+    firebaseToken: "",
+    message: ""
+  };
+
   try {
-    const { id_red } = req.params;
     const { id_usuario } = req.user;
+    const idRedParam = req.params.id_red;
 
     // Validar parámetros
-    if (!id_red || !id_usuario) {
-      return res.status(400).json({ success: false, message: 'Parámetros inválidos' });
+    if (!idRedParam || !id_usuario) {
+      errorResponse.message = 'Parámetros inválidos';
+      return res.status(400).json(errorResponse);
     }
 
-    // Generar token seguro
+    // Convertir y validar ID de red
+    const idRedNum = parseInt(idRedParam);
+    if (isNaN(idRedNum)) {
+      errorResponse.message = 'id_red debe ser un número válido';
+      return res.status(400).json(errorResponse);
+    }
+
+    // Generar token
     const firebaseUid = `ext_${id_usuario}`;
     const token = await auth.createCustomToken(firebaseUid, {
-      id_red: parseInt(id_red),
+      id_red: idRedNum,
       id_usuario: parseInt(id_usuario),
       backendAuth: true
     });
 
-    // Validar token antes de enviar
-    if (!token || token.length < 100) {
+    // Validar token
+    if (!token || typeof token !== "string" || token.split('.').length !== 3) {
       throw new Error('Token generado inválido');
     }
 
-    // DEBUG: Solo registrar longitud (NUNCA el token completo)
-    console.log(`Token generado (longitud: ${token.length})`);
+    console.log(`[TOKEN] Red:${idRedNum}, User:${id_usuario}, Longitud:${token.length}`);
     
-    res.json({ 
+    return res.json({ 
       success: true, 
       firebaseToken: token 
     });
+    
   } catch (error) {
     console.error('Error generando token:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Error al generar token: ' + error.message 
-    });
+    errorResponse.message = 'Error al generar token: ' + error.message;
+    return res.status(500).json(errorResponse);
   }
 });
 
