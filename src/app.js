@@ -59,7 +59,7 @@ import pacienteMedicamentoRoutes from './routes/pacienteMedicamento.routes.js';
 import authRoutes from './routes/authRoutes.js'
 import membresiaRoutes from './routes/membresiaRed.routes.js'
 import { startAllJobs } from './jobs/cronJobs.js';
-
+import firebaseRoutes from './routes/firebase.js';
 // Después de inicializar tu aplicación
 
 // Endpoint raíz informativo
@@ -103,7 +103,8 @@ app.use('/api/codigoQr', codigoQr)//🟢 codigo qr
 app.use('/api/medicamentos', medicamentoRoutes);//🟢 medicamento
 app.use('/api/paciente-medicamento', pacienteMedicamentoRoutes);
 app.use('/api/chat', chatRoutes);
-app.use('/api/firebase', authRoutes); //🟢 episodios salud
+app.use('/api/firebase', authRoutes); 
+app.use('/api/firebase', firebaseRoutes); //🟢 episodios salud
 // app.use('/api/medicos', medicoRoutes); // Validaciones - CRUD (YA NO SE NECESITA pero conservado)
 // app.use('/api/reportes', routerReport); // No se va a usar (comentado pero conservado)
 // app.use('/api/panel', panelRoutes);

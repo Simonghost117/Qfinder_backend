@@ -63,3 +63,5 @@ router.post('/register-fcm', verifyToken, async (req, res) => {
         });
     }
 });
+
+export default router;
