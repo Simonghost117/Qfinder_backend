@@ -268,19 +268,20 @@ export const actualizarUser = async (req, res) => {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
-    const dataToUpdate = { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario, correo_usuario, imagen_usuario };
     // if (contrasena_usuario) {
     //   const salt = await bcrypt.genSalt(10);
     //   dataToUpdate.contrasena_usuario = await bcrypt.hash(contrasena_usuario, salt);
     // }
-    if (imagen_usuario) {
-      try {
-        dataToUpdate.imagen_usuario = await imgBase64(imagen_usuario);
-      } catch (error) {
-        console.error('Error procesando imagen:', error);
-        return res.status(400).json({ message: 'Error al procesar la imagen' });
-      }
-    }
+    let nueva_imagen;
+        try {
+          nueva_imagen = await manejarImagenes(imagen_usuario, usuario.imagen_usuario);
+        } catch (error) {
+          return res.status(400).json({ 
+            success: false,
+            message: error.message 
+          });
+        }
+    const dataToUpdate = { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario, correo_usuario, imagen_usuario: nueva_imagen };
 
     await Usuario.update(dataToUpdate, {
       where: { id_usuario: id },
@@ -331,6 +332,7 @@ export const perfilUser = async (req, res) => {
       direccion_usuario: usuario.direccion_usuario,
       telefono_usuario: usuario.telefono_usuario,
       correo_usuario: usuario.correo_usuario,
+      imagen_usuario: usuario.imagen_usuario
    
     });
   } catch (error) {
@@ -393,7 +395,7 @@ export const listarAdmin = async (req, res) => {
 export const actualizarUsuario = async (req, res) => {
   try {
     const { id_usuario } = req.params;
-    const { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, tipo_usuario} = req.body;
+    const { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, tipo_usuario, imagen_usuario} = req.body;
     const usuario = await Usuario.findAll({
       where: {
         id_usuario: id_usuario
@@ -499,5 +501,58 @@ export const registerUsuario = async (req, res) => {
       error: 'Error en registro', 
       details: error.message 
     });
+  }
+}
+
+export const actualizarAdmin = async (req, res) => {
+  try {
+    const { id_usuario } = req.usuario;
+    const { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, imagen_usuario } = req.body;
+
+    const usuario = await Usuario.findByPk(id_usuario);
+    if (!usuario) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
+
+    let nueva_imagen;
+    try {
+      nueva_imagen = await imgBase64(imagen_usuario, usuario.imagen_usuario);
+    } catch (error) {
+      return res.status(400).json({ 
+        success: false,
+        message: error.message 
+      });
+    }
+
+    const dataToUpdate = { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, imagen_usuario: nueva_imagen };
+
+    await Usuario.update(dataToUpdate, {
+      where: { id_usuario: id_usuario },
+    });
+
+    res.status(200).json({ message: 'Información del administrador actualizada exitosamente' });
+  } catch (error) {
+    console.error('Error al actualizar el administrador:', error);
+    res.status(500).json({ message: 'Error al actualizar el administrador', error });
+  }
+}
+
+export const eliminarAdmin = async (req, res) => {
+  try {
+    const { id_usuario } = req.usuario;
+
+    const usuario = await Usuario.findByPk(id_usuario);
+    if (!usuario) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
+
+    await Usuario.destroy({
+      where: { id_usuario: id_usuario },
+    });
+
+    res.status(200).json({ message: 'Administrador eliminado exitosamente' });
+  } catch (error) {
+    console.error('Error al eliminar el administrador:', error);
+    res.status(500).json({ message: 'Error al eliminar el administrador', error });
   }
 }
