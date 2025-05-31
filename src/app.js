@@ -36,6 +36,8 @@ app.use(morgan('dev'));
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+// Añade al inicio de tu app.js:
+app.set('trust proxy', 1); // Necesario para Railway
 
 // Configuración de archivos estáticos
 app.use('/uploads', express.static('uploads'));
@@ -46,12 +48,12 @@ import pacienteRoutes from './routes/pacienteRoutes.js';
 import familiarRoutes from './routes/familiarRoutes.js';
 import redesRoutes from './routes/redes.routes.js';
 import routerEpisodioSalud from './routes/episodioSalud.routes.js';
-// import routerReport from './routes/reporteSalud.routes.js';
-// import panelRoutes from './routes/panel.routes.js';
+import routerReport from './routes/reporteSalud.routes.js';
+import panelRoutes from './routes/panel.routes.js';
 import cuidadoPersonalRoutes from './routes/cuidadoPersonalRoutes.js';
 import actividadRouter from './routes/activity.router.js';
 import RegSintomas from './routes/monitorerSintomasRouter.js';
-// import medicoRoutes from './routes/medico.routes.js';
+import medicoRoutes from './routes/medico.routes.js';
 import CitaMedica from './routes/citaMedica.routes.js';
 import codigoQr from './routes/codigoQr.routes.js';
 import medicamentoRoutes from './routes/medicamento.routes.js';
@@ -61,6 +63,7 @@ import membresiaRoutes from './routes/membresiaRed.routes.js'
 import { startAllJobs } from './jobs/cronJobs.js';
 import firebaseRoutes from './routes/firebase.js';
 // Después de inicializar tu aplicación
+
 
 // Endpoint raíz informativo
 app.get('/', (req, res) => {
@@ -108,6 +111,6 @@ app.use('/api/firebase', firebaseRoutes); //🟢 episodios salud
 // app.use('/api/medicos', medicoRoutes); // Validaciones - CRUD (YA NO SE NECESITA pero conservado)
 // app.use('/api/reportes', routerReport); // No se va a usar (comentado pero conservado)
 // app.use('/api/panel', panelRoutes);
-startAllJobs();
+
 // Exportación de la app
 export default app;

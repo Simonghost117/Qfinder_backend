@@ -47,3 +47,25 @@ export const imgBase64 = async (image, mimeType) => {
   }
 };
 
+export const manejarImagenes = async (imagenRecibida, imagenActual) => {
+  let nuevaImagen = imagenActual; // Mantener la imagen actual por defecto
+  
+  if (imagenRecibida && typeof imagenRecibida === "string") {
+    const esBase64 = imagenRecibida.startsWith("data:image/");
+    const esURL = imagenRecibida.startsWith("http://") || imagenRecibida.startsWith("https://");
+
+    if (!esBase64 && !esURL) {
+      try {
+        nuevaImagen = await imgBase64(imagenRecibida); // Procesar archivo local
+      } catch (error) {
+        console.error("Error procesando imagen:", error);
+        throw new Error("Error al procesar la imagen");
+      }
+    } else {
+      nuevaImagen = imagenRecibida; // Mantener si es Base64 o URL
+    }
+  }
+
+  return nuevaImagen;
+};
+
