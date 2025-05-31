@@ -104,6 +104,7 @@ export const listarPacientes = async (req, res) => {
       fecha_nacimiento: p.fecha_nacimiento,
       sexo: p.sexo,
       diagnostico_principal: p.diagnostico_principal,
+      imagen_paciente: p.imagen_paciente,
       es_cuidador_principal: p.Familiars?.some(f => f.cuidador_principal) || false,
       parentesco: p.Familiars?.[0]?.parentesco || 'tutor'
     }));
