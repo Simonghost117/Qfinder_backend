@@ -36,7 +36,6 @@ const nuevoMensaje = {
   idUsuario: id_usuario.toString(),
   nombreUsuario,
   contenido: contenido.trim(),
-  fotoPerfil: usuario.foto_perfil || null,
   fecha_envio,  // Usar mismo nombre que Android
   estado: 'enviado',
   comunidad: nombreComunidad, // Agregar comunidad
