@@ -1,4 +1,4 @@
-import { db, auth, messaging } from '../config/firebase-admin.js';
+import { db, auth } from '../config/firebase-admin.js';
 import Usuario from '../models/usuario.model.js';
 import UsuarioRed from '../models/UsuarioRed.js';
 import Red from '../models/Red.js';
@@ -21,7 +21,7 @@ export const enviarMensaje = async (req, res) => {
     }
 
     const usuario = await Usuario.findByPk(id_usuario, {
-      attributes: ['nombre_usuario', 'apellido_usuario']
+      attributes: ['nombre_usuario', 'apellido_usuario', 'foto_perfil']
     });
 
     if (!usuario) {
@@ -31,6 +31,7 @@ export const enviarMensaje = async (req, res) => {
     const nombreUsuario = `${usuario.nombre_usuario} ${usuario.apellido_usuario}`;
     const fecha_envio = Date.now();
 
+    // Crear objeto de mensaje (aún no guardar en Firebase)
     const nuevoMensaje = {
       idUsuario: id_usuario.toString(),
       nombreUsuario,
@@ -40,17 +41,17 @@ export const enviarMensaje = async (req, res) => {
       estado: 'enviado'
     };
 
-    const mensajeRef = db.ref(`chats/${id_red}/mensajes`).push();
-    await mensajeRef.set(nuevoMensaje);
-    const mensajeId = mensajeRef.key;
-
-    // Enviar notificaciones push
+    // 1. Enviar primero las notificaciones SIN el ID de Firebase
     await enviarNotificacionesPush({
       comunidadId: id_red,
       remitenteId: id_usuario,
-      mensajeId,
       mensaje: nuevoMensaje
     });
+
+    // 2. Guardar el mensaje en Firebase DESPUÉS de las notificaciones
+    const mensajeRef = db.ref(`chats/${id_red}/mensajes`).push();
+    await mensajeRef.set(nuevoMensaje);
+    const mensajeId = mensajeRef.key;
 
     return successResponse(res, 'Mensaje enviado correctamente', {
       idMensaje: mensajeId,
@@ -163,7 +164,7 @@ export const verificarMembresia = async (req, res) => {
   }
 };
 
-const enviarNotificacionesPush = async ({ comunidadId, remitenteId, mensajeId, mensaje }) => {
+const enviarNotificacionesPush = async ({ comunidadId, remitenteId, mensaje }) => {
   try {
     const miembros = await UsuarioRed.findAll({
       where: {
@@ -172,13 +173,13 @@ const enviarNotificacionesPush = async ({ comunidadId, remitenteId, mensajeId, m
       },
       include: [{
         model: Usuario,
-        as: 'usuario', // Usando el alias definido en la asociación
-        attributes: ['id_usuario', 'fcm_token']
+        as: 'usuario',
+        attributes: ['id_usuario', 'fcm_token', 'notificaciones_activas']
       }]
     });
 
     const miembrosANotificar = miembros.filter(m => 
-      m.Usuario?.fcm_token && m.Usuario?.notificaciones_activas
+      m.usuario?.fcm_token && m.usuario?.notificaciones_activas
     );
 
     if (miembrosANotificar.length === 0) return;
@@ -198,8 +199,8 @@ const enviarNotificacionesPush = async ({ comunidadId, remitenteId, mensajeId, m
       data: {
         type: 'chat',
         comunidadId: comunidadId.toString(),
-        mensajeId,
         senderId: remitenteId.toString(),
+        contenidoPreview: mensaje.contenido.substring(0, 100),
         click_action: 'FLUTTER_NOTIFICATION_CLICK'
       },
       android: {
@@ -216,15 +217,11 @@ const enviarNotificacionesPush = async ({ comunidadId, remitenteId, mensajeId, m
       const batch = miembrosANotificar.slice(i, i + batchSize);
       const messages = batch.map(miembro => ({
         ...notification,
-        token: miembro.Usuario.fcm_token
+        token: miembro.usuario.fcm_token
       }));
 
       await messaging.sendEach(messages);
     }
-
-    await db.ref(`chats/${comunidadId}/mensajes/${mensajeId}`).update({
-      notificaciones_enviadas: miembrosANotificar.length
-    });
 
   } catch (error) {
     console.error('Error en enviarNotificacionesPush:', error);
