@@ -1,6 +1,7 @@
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getDatabase } from 'firebase-admin/database';
+import admin from 'firebase-admin';
 import { getMessaging } from 'firebase-admin/messaging';
 
 // Configuración desde variables de entorno
@@ -33,6 +34,12 @@ const app = initializeApp({
   databaseURL: databaseURL 
 });
 
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    databaseURL: process.env.FIREBASE_DATABASE_URL || "https://qfinder-community-default-rtdb.firebaseio.com"
+  });
+}
 
 // Exporta los servicios
 export const auth = admin.auth();
