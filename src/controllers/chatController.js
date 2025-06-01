@@ -1,4 +1,4 @@
-import { db, auth } from '../config/firebase-admin.js';
+import { db, auth, messaging } from '../config/firebase-admin.js';
 import Usuario from '../models/usuario.model.js';
 import UsuarioRed from '../models/UsuarioRed.js';
 import Red from '../models/Red.js';
@@ -15,11 +15,13 @@ export const enviarMensaje = async (req, res) => {
       return errorResponse(res, 'El contenido del mensaje no puede estar vacío', 400);
     }
 
+    // Verificar membresía del usuario
     const membresia = await UsuarioRed.findOne({ where: { id_usuario, id_red } });
     if (!membresia) {
       return errorResponse(res, 'No tienes permisos para enviar mensajes en esta comunidad', 403);
     }
 
+    // Obtener información del usuario
     const usuario = await Usuario.findByPk(id_usuario, {
       attributes: ['nombre_usuario', 'apellido_usuario']
     });
@@ -28,27 +30,37 @@ export const enviarMensaje = async (req, res) => {
       return errorResponse(res, 'Usuario no encontrado', 404);
     }
 
+    // Obtener información de la comunidad (red)
+    const comunidad = await Red.findByPk(id_red, {
+      attributes: ['nombre_red']
+    });
+
+    if (!comunidad) {
+      return errorResponse(res, 'Comunidad no encontrada', 404);
+    }
+
     const nombreUsuario = `${usuario.nombre_usuario} ${usuario.apellido_usuario}`;
     const fecha_envio = Date.now();
 
-    // Crear objeto de mensaje (aún no guardar en Firebase)
-const nuevoMensaje = {
-  idUsuario: id_usuario.toString(),
-  nombreUsuario,
-  contenido: contenido.trim(),
-  fecha_envio,  // Usar mismo nombre que Android
-  estado: 'enviado',
-  comunidad: nombreComunidad, // Agregar comunidad
-  hora: new Date(fecha_envio).toLocaleTimeString() // Agregar hora formateada
-};
-    // 1. Enviar primero las notificaciones SIN el ID de Firebase
+    // Crear objeto de mensaje
+    const nuevoMensaje = {
+      idUsuario: id_usuario.toString(),
+      nombreUsuario,
+      contenido: contenido.trim(),
+      fecha_envio,
+      estado: 'enviado',
+      comunidad: comunidad.nombre_red, // Usar el nombre real de la comunidad
+      hora: new Date(fecha_envio).toLocaleTimeString()
+    };
+
+    // 1. Enviar notificaciones push
     await enviarNotificacionesPush({
       comunidadId: id_red,
       remitenteId: id_usuario,
       mensaje: nuevoMensaje
     });
 
-    // 2. Guardar el mensaje en Firebase DESPUÉS de las notificaciones
+    // 2. Guardar el mensaje en Firebase
     const mensajeRef = db.ref(`chats/${id_red}/mensajes`).push();
     await mensajeRef.set(nuevoMensaje);
     const mensajeId = mensajeRef.key;
@@ -70,11 +82,13 @@ export const obtenerMensajes = async (req, res) => {
     const { id_usuario } = req.user;
     const { limite = 50, desde } = req.query;
 
+    // Verificar membresía
     const esMiembro = await UsuarioRed.findOne({ where: { id_usuario, id_red } });
     if (!esMiembro) {
       return errorResponse(res, 'No tienes acceso a esta comunidad', 403);
     }
 
+    // Obtener mensajes de Firebase
     let mensajesQuery = db.ref(`chats/${id_red}/mensajes`).orderByChild('fecha_envio');
     if (desde) mensajesQuery = mensajesQuery.startAt(parseInt(desde));
     mensajesQuery = mensajesQuery.limitToLast(parseInt(limite));
@@ -82,6 +96,7 @@ export const obtenerMensajes = async (req, res) => {
     const snapshot = await mensajesQuery.once('value');
     const mensajes = snapshot.val() || {};
 
+    // Convertir a array y ordenar
     const mensajesArray = Object.keys(mensajes).map(id => ({
       id,
       ...mensajes[id]
@@ -105,11 +120,13 @@ export const verificarMembresia = async (req, res) => {
     const { id_red } = req.params;
     const { id_usuario } = req.user;
 
+    // Verificar membresía
     const membresia = await UsuarioRed.findOne({ where: { id_usuario, id_red } });
     if (!membresia) {
       return errorResponse(res, 'No eres miembro de esta comunidad', 403);
     }
 
+    // Obtener información del usuario
     const usuario = await Usuario.findByPk(id_usuario, {
       attributes: ['nombre_usuario', 'apellido_usuario', 'email']
     });
@@ -118,6 +135,7 @@ export const verificarMembresia = async (req, res) => {
       return errorResponse(res, 'Usuario no encontrado', 404);
     }
 
+    // Crear o actualizar usuario en Firebase Auth
     const firebaseUid = `ext_${id_usuario}`;
     let userRecord;
 
@@ -136,6 +154,7 @@ export const verificarMembresia = async (req, res) => {
       }
     }
 
+    // Establecer claims personalizados
     await auth.setCustomUserClaims(firebaseUid, {
       id_red,
       id_usuario,
@@ -143,6 +162,7 @@ export const verificarMembresia = async (req, res) => {
       backendAuth: true
     });
 
+    // Generar token personalizado
     const firebaseToken = await auth.createCustomToken(firebaseUid, {
       id_red,
       id_usuario,
@@ -166,6 +186,7 @@ export const verificarMembresia = async (req, res) => {
 
 const enviarNotificacionesPush = async ({ comunidadId, remitenteId, mensaje }) => {
   try {
+    // Obtener miembros de la comunidad (excepto el remitente)
     const miembros = await UsuarioRed.findAll({
       where: {
         id_red: comunidadId,
@@ -178,23 +199,25 @@ const enviarNotificacionesPush = async ({ comunidadId, remitenteId, mensaje }) =
       }]
     });
 
+    // Filtrar miembros que pueden recibir notificaciones
     const miembrosANotificar = miembros.filter(m => 
       m.usuario?.fcm_token && m.usuario?.notificaciones_activas
     );
 
     if (miembrosANotificar.length === 0) return;
 
+    // Obtener nombre de la comunidad
     const comunidad = await Red.findByPk(comunidadId, {
       attributes: ['nombre_red']
     });
 
+    // Preparar payload de notificación
     const notification = {
       notification: {
         title: `💬 ${comunidad.nombre_red}`,
         body: mensaje.contenido.length > 100 
           ? `${mensaje.contenido.substring(0, 100)}...` 
           : mensaje.contenido,
-        image: mensaje.fotoPerfil || null
       },
       data: {
         type: 'chat',
@@ -212,6 +235,7 @@ const enviarNotificacionesPush = async ({ comunidadId, remitenteId, mensaje }) =
       }
     };
 
+    // Enviar notificaciones en lotes
     const batchSize = 500;
     for (let i = 0; i < miembrosANotificar.length; i += batchSize) {
       const batch = miembrosANotificar.slice(i, i + batchSize);
