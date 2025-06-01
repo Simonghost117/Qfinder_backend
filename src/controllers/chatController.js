@@ -32,15 +32,16 @@ export const enviarMensaje = async (req, res) => {
     const fecha_envio = Date.now();
 
     // Crear objeto de mensaje (aún no guardar en Firebase)
-    const nuevoMensaje = {
-      idUsuario: id_usuario.toString(),
-      nombreUsuario,
-      contenido: contenido.trim(),
-      fotoPerfil: usuario.foto_perfil || null,
-      fecha_envio,
-      estado: 'enviado'
-    };
-
+const nuevoMensaje = {
+  idUsuario: id_usuario.toString(),
+  nombreUsuario,
+  contenido: contenido.trim(),
+  fotoPerfil: usuario.foto_perfil || null,
+  fecha_envio,  // Usar mismo nombre que Android
+  estado: 'enviado',
+  comunidad: nombreComunidad, // Agregar comunidad
+  hora: new Date(fecha_envio).toLocaleTimeString() // Agregar hora formateada
+};
     // 1. Enviar primero las notificaciones SIN el ID de Firebase
     await enviarNotificacionesPush({
       comunidadId: id_red,
