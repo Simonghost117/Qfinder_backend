@@ -217,7 +217,7 @@ const enviarNotificacionesPush = async ({ comunidadId, remitenteId, mensaje }) =
       include: [{
         model: Usuario,
         as: 'usuario',
-        attributes: ['id_usuario', 'fcm_token', 'notificaciones_activas'],
+        attributes: ['id_usuario', 'fcm_token'],
         where: {
           fcm_token: { [Op.not]: null }
         }
