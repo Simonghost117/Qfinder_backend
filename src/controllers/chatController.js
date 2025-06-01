@@ -219,8 +219,7 @@ const enviarNotificacionesPush = async ({ comunidadId, remitenteId, mensaje }) =
         as: 'usuario',
         attributes: ['id_usuario', 'fcm_token', 'notificaciones_activas'],
         where: {
-          fcm_token: { [Op.not]: null },
-          notificaciones_activas: true
+          fcm_token: { [Op.not]: null }
         }
       }]
     });
