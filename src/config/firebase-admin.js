@@ -37,7 +37,7 @@ if (missingFields.length > 0) {
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
-    databaseURL: "https://qfinder-community-default-rtdb.firebaseio.com"
+    databaseURL: "https://qfinder-comunity-default-rtdb.firebaseio.com"
   });
 }
 
