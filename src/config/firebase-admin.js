@@ -33,12 +33,6 @@ const app = initializeApp({
   databaseURL: databaseURL 
 });
 
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    databaseURL: process.env.FIREBASE_DATABASE_URL || "https://qfinder-community-default-rtdb.firebaseio.com"
-  });
-}
 
 // Exporta los servicios
 export const auth = admin.auth();
