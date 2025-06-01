@@ -4,7 +4,7 @@ import Usuario from '../models/usuario.model.js';
 import UsuarioRed from '../models/UsuarioRed.js';
 import Red from '../models/Red.js';
 import logger from '../utils/logger.js';
-
+import { Op } from 'sequelize';
 export class ChatNotificationService {
   /**
    * Configura listeners para nuevas comunidades
