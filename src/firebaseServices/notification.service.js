@@ -1,7 +1,7 @@
 import { messaging } from '../config/firebase-admin.js';
 import logger from '../utils/logger.js';
 import Usuario from '../models/usuario.model.js';
-
+import { Op } from 'sequelize';
 export class NotificationService {
   /**
    * Envía una notificación push a un dispositivo específico
