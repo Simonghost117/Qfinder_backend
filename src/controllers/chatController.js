@@ -41,29 +41,39 @@ export const enviarMensaje = async (req, res) => {
 
     const nombreUsuario = `${usuario.nombre_usuario} ${usuario.apellido_usuario}`;
     const fecha_envio = Date.now();
+    const mensajeId = `msg_${fecha_envio}_${Math.random().toString(36).substr(2, 8)}`;
 
     // Crear objeto de mensaje
     const nuevoMensaje = {
+      id: mensajeId,
       idUsuario: id_usuario.toString(),
       nombreUsuario,
       contenido: contenido.trim(),
       fecha_envio,
       estado: 'enviado',
-      comunidad: comunidad.nombre_red, // Usar el nombre real de la comunidad
+      comunidad: comunidad.nombre_red,
       hora: new Date(fecha_envio).toLocaleTimeString()
     };
 
-    // 1. Enviar notificaciones push
-    await enviarNotificacionesPush({
-      comunidadId: id_red,
-      remitenteId: id_usuario,
-      mensaje: nuevoMensaje
+    // 1. Guardar el mensaje en Firebase con transacción para evitar duplicados
+    const mensajeRef = db.ref(`chats/${id_red}/mensajes/${mensajeId}`);
+    
+    await mensajeRef.transaction((currentData) => {
+      if (currentData === null) {
+        return nuevoMensaje;
+      }
+      return; // Abortar si ya existe
     });
 
-    // 2. Guardar el mensaje en Firebase
-    const mensajeRef = db.ref(`chats/${id_red}/mensajes`).push();
-    await mensajeRef.set(nuevoMensaje);
-    const mensajeId = mensajeRef.key;
+    // 2. Enviar notificaciones (solo si se creó el mensaje)
+    const snapshot = await mensajeRef.once('value');
+    if (snapshot.exists()) {
+      await enviarNotificacionesPush({
+        comunidadId: id_red,
+        remitenteId: id_usuario,
+        mensaje: nuevoMensaje
+      });
+    }
 
     return successResponse(res, 'Mensaje enviado correctamente', {
       idMensaje: mensajeId,
@@ -186,6 +196,18 @@ export const verificarMembresia = async (req, res) => {
 
 const enviarNotificacionesPush = async ({ comunidadId, remitenteId, mensaje }) => {
   try {
+    // Verificar si ya se notificó este mensaje
+    const notificacionesRef = db.ref(`notificaciones_enviadas/${comunidadId}/${mensaje.id}`);
+    const snapshotNotif = await notificacionesRef.once('value');
+    
+    if (snapshotNotif.exists()) {
+      console.log(`Notificación para mensaje ${mensaje.id} ya fue enviada`);
+      return;
+    }
+
+    // Marcar como notificado
+    await notificacionesRef.set(true);
+
     // Obtener miembros con tokens válidos
     const miembros = await UsuarioRed.findAll({
       where: {
