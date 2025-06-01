@@ -186,7 +186,7 @@ export const verificarMembresia = async (req, res) => {
 
 const enviarNotificacionesPush = async ({ comunidadId, remitenteId, mensaje }) => {
   try {
-    // Obtener miembros de la comunidad (excepto el remitente)
+    // Obtener miembros con tokens válidos
     const miembros = await UsuarioRed.findAll({
       where: {
         id_red: comunidadId,
@@ -195,35 +195,33 @@ const enviarNotificacionesPush = async ({ comunidadId, remitenteId, mensaje }) =
       include: [{
         model: Usuario,
         as: 'usuario',
-        attributes: ['id_usuario', 'fcm_token', 'notificaciones_activas']
+        attributes: ['id_usuario', 'fcm_token', 'notificaciones_activas'],
+        where: {
+          fcm_token: { [Op.not]: null },
+          notificaciones_activas: true
+        }
       }]
     });
 
-    // Filtrar miembros que pueden recibir notificaciones
-    const miembrosANotificar = miembros.filter(m => 
-      m.usuario?.fcm_token && m.usuario?.notificaciones_activas
-    );
-
-    if (miembrosANotificar.length === 0) return;
+    if (miembros.length === 0) return;
 
     // Obtener nombre de la comunidad
     const comunidad = await Red.findByPk(comunidadId, {
       attributes: ['nombre_red']
     });
 
-    // Preparar payload de notificación
-    const notification = {
+    // Preparar notificación
+    const message = {
       notification: {
         title: `💬 ${comunidad.nombre_red}`,
         body: mensaje.contenido.length > 100 
           ? `${mensaje.contenido.substring(0, 100)}...` 
-          : mensaje.contenido,
+          : mensaje.contenido
       },
       data: {
         type: 'chat',
         comunidadId: comunidadId.toString(),
         senderId: remitenteId.toString(),
-        contenidoPreview: mensaje.contenido.substring(0, 100),
         click_action: 'FLUTTER_NOTIFICATION_CLICK'
       },
       android: {
@@ -237,17 +235,32 @@ const enviarNotificacionesPush = async ({ comunidadId, remitenteId, mensaje }) =
 
     // Enviar notificaciones en lotes
     const batchSize = 500;
-    for (let i = 0; i < miembrosANotificar.length; i += batchSize) {
-      const batch = miembrosANotificar.slice(i, i + batchSize);
-      const messages = batch.map(miembro => ({
-        ...notification,
-        token: miembro.usuario.fcm_token
-      }));
+    const tokens = miembros.map(m => m.usuario.fcm_token).filter(t => t);
+    
+    for (let i = 0; i < tokens.length; i += batchSize) {
+      const batch = tokens.slice(i, i + batchSize);
+      
+      // Usar sendMulticast para mejor manejo de errores
+      const response = await messaging.sendMulticast({
+        ...message,
+        tokens: batch
+      });
 
-      await messaging.sendEach(messages);
+      // Manejar respuestas fallidas
+      response.responses.forEach((resp, idx) => {
+        if (!resp.success) {
+          console.error(`Error enviando a token ${batch[idx]}:`, resp.error);
+          // Opcional: Eliminar token inválido de la base de datos
+        }
+      });
     }
 
   } catch (error) {
     console.error('Error en enviarNotificacionesPush:', error);
+    // Manejar específicamente el error de credenciales
+    if (error.code === 'messaging/mismatched-credential') {
+      console.error('ERROR CRÍTICO: Las credenciales de Firebase no coinciden');
+      // Aquí podrías notificar a los administradores
+    }
   }
 };
