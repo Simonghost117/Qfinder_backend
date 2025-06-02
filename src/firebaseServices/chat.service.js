@@ -67,13 +67,13 @@ export class ChatNotificationService {
         }
 
         // Enviar notificaciones
-        // await this.sendChatNotifications({
-        //   comunidadId,
-        //   comunidadNombre: comunidad.nombre_red,
-        //   miembros,
-        //   mensaje,
-        //   mensajeId: snapshot.key
-        // });
+        await this.sendChatNotifications({
+          comunidadId,
+          comunidadNombre: comunidad.nombre_red,
+          miembros,
+          mensaje,
+          mensajeId: snapshot.key
+        });
         
         // Marcar mensaje como notificado
         await snapshot.ref.update({ estado: 'notified' });
@@ -116,41 +116,41 @@ export class ChatNotificationService {
   /**
    * Envía notificaciones de chat
    */
-  // static async sendChatNotifications({ comunidadId, comunidadNombre, miembros, mensaje, mensajeId }) {
-  //   const tokens = miembros.map(m => m.fcm_token).filter(t => t);
+  static async sendChatNotifications({ comunidadId, comunidadNombre, miembros, mensaje, mensajeId }) {
+    const tokens = miembros.map(m => m.fcm_token).filter(t => t);
     
-  //   if (tokens.length === 0) {
-  //     logger.info('No valid FCM tokens to notify');
-  //     return;
-  //   }
+    if (tokens.length === 0) {
+      logger.info('No valid FCM tokens to notify');
+      return;
+    }
 
-  //   try {
-  //     const title = `💬 ${comunidadNombre}`;
-  //     const body = mensaje.contenido.length > 100 
-  //       ? `${mensaje.contenido.substring(0, 100)}...` 
-  //       : mensaje.contenido;
+    try {
+      const title = `💬 ${comunidadNombre}`;
+      const body = mensaje.contenido.length > 100 
+        ? `${mensaje.contenido.substring(0, 100)}...` 
+        : mensaje.contenido;
 
-  //     const result = await NotificationService.sendToMultiple(tokens, {
-  //       title,
-  //       body,
-  //       data: {
-  //         type: 'chat',
-  //         comunidadId,
-  //         mensajeId,
-  //         senderId: mensaje.idUsuario,
-  //         click_action: 'FLUTTER_NOTIFICATION_CLICK'
-  //       }
-  //     });
+      const result = await NotificationService.sendToMultiple(tokens, {
+        title,
+        body,
+        data: {
+          type: 'chat',
+          comunidadId,
+          mensajeId,
+          senderId: mensaje.idUsuario,
+          click_action: 'FLUTTER_NOTIFICATION_CLICK'
+        }
+      });
 
-  //     logger.info(`Chat notifications sent for message ${mensajeId}`, {
-  //       successCount: result.successCount,
-  //       failureCount: result.failureCount
-  //     });
+      logger.info(`Chat notifications sent for message ${mensajeId}`, {
+        successCount: result.successCount,
+        failureCount: result.failureCount
+      });
 
-  //   } catch (error) {
-  //     logger.error('Error sending chat notifications:', error);
-  //   }
-  // }
+    } catch (error) {
+      logger.error('Error sending chat notifications:', error);
+    }
+  }
 
   /**
    * Limpieza periódica de tokens inválidos
