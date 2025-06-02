@@ -194,94 +194,94 @@ export const verificarMembresia = async (req, res) => {
   }
 };
 
-const enviarNotificacionesPush = async ({ comunidadId, remitenteId, mensaje }) => {
-  try {
-    // Verificar si ya se notificó este mensaje
-    const notificacionesRef = db.ref(`notificaciones_enviadas/${comunidadId}/${mensaje.id}`);
-    const snapshotNotif = await notificacionesRef.once('value');
+// const enviarNotificacionesPush = async ({ comunidadId, remitenteId, mensaje }) => {
+//   try {
+//     // Verificar si ya se notificó este mensaje
+//     const notificacionesRef = db.ref(`notificaciones_enviadas/${comunidadId}/${mensaje.id}`);
+//     const snapshotNotif = await notificacionesRef.once('value');
     
-    if (snapshotNotif.exists()) {
-      console.log(`Notificación para mensaje ${mensaje.id} ya fue enviada`);
-      return;
-    }
+//     if (snapshotNotif.exists()) {
+//       console.log(`Notificación para mensaje ${mensaje.id} ya fue enviada`);
+//       return;
+//     }
 
-    // Marcar como notificado
-    await notificacionesRef.set(true);
+//     // Marcar como notificado
+//     await notificacionesRef.set(true);
 
-    // Obtener miembros con tokens válidos
-    const miembros = await UsuarioRed.findAll({
-      where: {
-        id_red: comunidadId,
-        id_usuario: { [Op.ne]: remitenteId }
-      },
-      include: [{
-        model: Usuario,
-        as: 'usuario',
-        attributes: ['id_usuario', 'fcm_token'],
-        where: {
-          fcm_token: { [Op.not]: null }
-        }
-      }]
-    });
+//     // Obtener miembros con tokens válidos
+//     const miembros = await UsuarioRed.findAll({
+//       where: {
+//         id_red: comunidadId,
+//         id_usuario: { [Op.ne]: remitenteId }
+//       },
+//       include: [{
+//         model: Usuario,
+//         as: 'usuario',
+//         attributes: ['id_usuario', 'fcm_token'],
+//         where: {
+//           fcm_token: { [Op.not]: null }
+//         }
+//       }]
+//     });
 
-    if (miembros.length === 0) return;
+//     if (miembros.length === 0) return;
 
-    // Obtener nombre de la comunidad
-    const comunidad = await Red.findByPk(comunidadId, {
-      attributes: ['nombre_red']
-    });
+//     // Obtener nombre de la comunidad
+//     const comunidad = await Red.findByPk(comunidadId, {
+//       attributes: ['nombre_red']
+//     });
 
-    // Preparar notificación
-    const message = {
-      notification: {
-        title: `💬 ${comunidad.nombre_red}`,
-        body: mensaje.contenido.length > 100 
-          ? `${mensaje.contenido.substring(0, 100)}...` 
-          : mensaje.contenido
-      },
-      data: {
-        type: 'chat',
-        comunidadId: comunidadId.toString(),
-        senderId: remitenteId.toString(),
-        click_action: 'FLUTTER_NOTIFICATION_CLICK'
-      },
-      android: {
-        priority: 'high',
-        notification: {
-          sound: 'default',
-          channel_id: 'chat_messages'
-        }
-      }
-    };
+//     // Preparar notificación
+//     const message = {
+//       notification: {
+//         title: `💬 ${comunidad.nombre_red}`,
+//         body: mensaje.contenido.length > 100 
+//           ? `${mensaje.contenido.substring(0, 100)}...` 
+//           : mensaje.contenido
+//       },
+//       data: {
+//         type: 'chat',
+//         comunidadId: comunidadId.toString(),
+//         senderId: remitenteId.toString(),
+//         click_action: 'FLUTTER_NOTIFICATION_CLICK'
+//       },
+//       android: {
+//         priority: 'high',
+//         notification: {
+//           sound: 'default',
+//           channel_id: 'chat_messages'
+//         }
+//       }
+//     };
 
-    // Enviar notificaciones en lotes
-    const batchSize = 500;
-    const tokens = miembros.map(m => m.usuario.fcm_token).filter(t => t);
+//     // Enviar notificaciones en lotes
+//     const batchSize = 500;
+//     const tokens = miembros.map(m => m.usuario.fcm_token).filter(t => t);
     
-    for (let i = 0; i < tokens.length; i += batchSize) {
-      const batch = tokens.slice(i, i + batchSize);
+//     for (let i = 0; i < tokens.length; i += batchSize) {
+//       const batch = tokens.slice(i, i + batchSize);
       
-      // Usar sendMulticast para mejor manejo de errores
-      const response = await messaging.sendMulticast({
-        ...message,
-        tokens: batch
-      });
+//       // Usar sendMulticast para mejor manejo de errores
+//       const response = await messaging.sendMulticast({
+//         ...message,
+//         tokens: batch
+//       });
 
-      // Manejar respuestas fallidas
-      response.responses.forEach((resp, idx) => {
-        if (!resp.success) {
-          console.error(`Error enviando a token ${batch[idx]}:`, resp.error);
-          // Opcional: Eliminar token inválido de la base de datos
-        }
-      });
-    }
+//       // Manejar respuestas fallidas
+//       response.responses.forEach((resp, idx) => {
+//         if (!resp.success) {
+//           console.error(`Error enviando a token ${batch[idx]}:`, resp.error);
+//           // Opcional: Eliminar token inválido de la base de datos
+//         }
+//       });
+//     }
 
-  } catch (error) {
-    console.error('Error en enviarNotificacionesPush:', error);
-    // Manejar específicamente el error de credenciales
-    if (error.code === 'messaging/mismatched-credential') {
-      console.error('ERROR CRÍTICO: Las credenciales de Firebase no coinciden');
-      // Aquí podrías notificar a los administradores
-    }
-  }
-};
+//   } catch (error) {
+//     console.error('Error en enviarNotificacionesPush:', error);
+//     // Manejar específicamente el error de credenciales
+//     if (error.code === 'messaging/mismatched-credential') {
+//       console.error('ERROR CRÍTICO: Las credenciales de Firebase no coinciden');
+//       // Aquí podrías notificar a los administradores
+//     }
+//   }
+// };
