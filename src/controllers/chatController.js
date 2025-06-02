@@ -66,14 +66,14 @@ export const enviarMensaje = async (req, res) => {
     });
 
     // 2. Enviar notificaciones (solo si se creó el mensaje)
-    const snapshot = await mensajeRef.once('value');
-    if (snapshot.exists()) {
-      await enviarNotificacionesPush({
-        comunidadId: id_red,
-        remitenteId: id_usuario,
-        mensaje: nuevoMensaje
-      });
-    }
+    // const snapshot = await mensajeRef.once('value');
+    // if (snapshot.exists()) {
+    //   await enviarNotificacionesPush({
+    //     comunidadId: id_red,
+    //     remitenteId: id_usuario,
+    //     mensaje: nuevoMensaje
+    //   });
+    // }
 
     return successResponse(res, 'Mensaje enviado correctamente', {
       idMensaje: mensajeId,
