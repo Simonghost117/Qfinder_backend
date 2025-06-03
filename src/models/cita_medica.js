@@ -13,11 +13,15 @@ import sequelize from '../config/db.js';
       allowNull: false,
       field: 'id_paciente'
     },
-    fecha_cita: {
-      type: DataTypes.DATE,
-      allowNull: false,
-      field: 'fecha_cita'
+     fecha_cita: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        get() {
+            const rawValue = this.getDataValue('fecha_cita');
+            return rawValue ? new Date(rawValue.getTime() - (rawValue.getTimezoneOffset() * 60000)) : null;
+        }
     },
+
     motivo_cita: {
       type: DataTypes.TEXT,  
       allowNull: false,
