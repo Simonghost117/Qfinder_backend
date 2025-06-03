@@ -13,10 +13,13 @@ import sequelize from '../config/db.js';
       allowNull: false,
       field: 'id_paciente'
     },
-    fecha_cita: {
-      type: DataTypes.DATE,
-      allowNull: false,
-      field: 'fecha_cita'
+      fecha_cita: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        get() {
+            const rawValue = this.getDataValue('fecha_cita');
+            return rawValue ? new Date(rawValue.getTime() - (rawValue.getTimezoneOffset() * 60000)) : null;
+        }
     },
     titulo: {
       type: DataTypes.STRING,  
@@ -33,11 +36,14 @@ import sequelize from '../config/db.js';
       allowNull: true,
       field: 'descripcion'
     },
-    fecha_recordatorio: {
-      type: DataTypes.DATE,
-      allowNull: false,
-      field: 'fecha_recordatorio'
-    },
+      fecha_recordatorio: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        get() {
+            const rawValue = this.getDataValue('fecha_recordatorio');
+            return rawValue ? new Date(rawValue.getTime() - (rawValue.getTimezoneOffset() * 60000)) : null;
+        }
+      },
     notificado_1h: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
