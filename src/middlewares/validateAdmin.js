@@ -6,10 +6,10 @@ export const validateAdmin = (req, res, next) => {
                 success: false,
                 error: 'No autenticado: Información de usuario no disponible',
                 code: 'UNAUTHENTICATED'
-        });
-    }
+            });
+        }
         const { tipo_usuario } = req.user; // Obtener el tipo de usuario del token
-
+        
         // Verificar si el usuario es administrador
         if (tipo_usuario !== 'Administrador') {
             return res.status(403).json({
@@ -17,7 +17,6 @@ export const validateAdmin = (req, res, next) => {
                 error: 'Acceso denegado: Se requieren privilegios de administrador'
             });
         }
-
         next();
     } catch (error) {
         console.error('Error en middleware validateAdmin:', error);
@@ -26,4 +25,4 @@ export const validateAdmin = (req, res, next) => {
             error: 'Error al verificar permisos de administrador'
         });
     }
-    }
+}

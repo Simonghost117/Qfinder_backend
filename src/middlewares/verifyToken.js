@@ -24,7 +24,7 @@ export const verifyToken = async (req, res, next) => {
     }
 
     // Sincronizar con Firebase Auth
-    try {
+    /*try {
       await auth.getUserByEmail(usuario.correo_usuario);
     } catch (error) {
       if (error.code === 'auth/user-not-found') {
@@ -35,7 +35,7 @@ export const verifyToken = async (req, res, next) => {
           disabled: false
         });
       }
-    }
+    }*/
 
     req.user = {
       id_usuario: usuario.id_usuario,

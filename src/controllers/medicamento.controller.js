@@ -14,13 +14,17 @@ export const crearMedicamento = async (req, res) => {
       });
     } else {
       // Si es un solo objeto, crear un solo registro
-      const nuevoMedicamento = await Medicamento.create(datos);
+      const nuevoMedicamento = await Medicamento.create({
+        ...datos,
+        id_usuario: req.user.id_usuario
+      });
       res.status(201).json({
         message: "Medicamento creado exitosamente",
         data: nuevoMedicamento
       });
     }
   } catch (error) {
+    console.log("Error al crear medicamento: ", error)
     res.status(500).json({
       message: "Error al crear medicamento",
       error: error.message
@@ -36,6 +40,7 @@ export const listarMedicamentos = async (req, res) => {
     //   {
     //   where: { id_usuario } // Solo los del usuario actual
     // }
+    { order: [["id_medicamento", "DESC"]] }
   );
 
     res.status(200).json(medicamentos);
