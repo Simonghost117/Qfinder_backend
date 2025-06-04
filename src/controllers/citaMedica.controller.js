@@ -2,24 +2,31 @@ import CitaMedica from '../models/cita_medica.js';
 
 export const crearCitaMedica = async (req, res) => {
     try {
-        const { id_paciente } = req.params; 
-        const { fecha_cita, titulo, estado_cita,descripcion, fecha_recordatorio } = req.body;
-    
+        const { id_paciente } = req.params;
+        let { fecha_cita, titulo, estado_cita, descripcion, fecha_recordatorio } = req.body;
+
+        // CORRECCIÓN: Asegurar el formato de fecha correcto
+        const ajustarFecha = (fechaString) => {
+            if (!fechaString) return null;
+            const fecha = new Date(fechaString);
+            return new Date(fecha.getTime() - (fecha.getTimezoneOffset() * 60000));
+        };
+
         const nuevaCita = await CitaMedica.create({
-        id_paciente,
-        fecha_cita,
-        titulo,
-        estado_cita,
-        descripcion,
-        fecha_recordatorio
+            id_paciente,
+            fecha_cita: ajustarFecha(fecha_cita),
+            titulo,
+            estado_cita,
+            descripcion,
+            fecha_recordatorio: ajustarFecha(fecha_recordatorio)
         });
-    
+
         res.status(201).json(nuevaCita);
     } catch (error) {
         console.error('Error al crear la cita médica:', error);
-        res.status(500).json({ message: 'Error interno del servidor' });
-    }
-    }
+        res.status(500).json({ message: 'Error interno del servidor' });
+    }
+}
 
     export const listarCitasMedicas = async (req, res) => {
         try {
