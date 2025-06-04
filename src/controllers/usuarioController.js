@@ -3,7 +3,7 @@ import Usuario from '../models/usuario.model.js';
 import { createAccessToken } from '../libs/jwt.js';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
-import { imgBase64 } from '../utils/imgBase64.js';
+import { imgBase64, manejarImagenes } from '../utils/imgBase64.js';
 dotenv.config();
 
 
@@ -404,7 +404,17 @@ export const actualizarUsuario = async (req, res) => {
     if (!usuario) {
       return res.status(404).json({ message: "Usuario no encontrado" });
     }
-    const dataToUpdate = { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, tipo_usuario };
+    // Manejo de imagen
+        let nueva_imagen;
+        try {
+          nueva_imagen = await manejarImagenes(imagen_usuario, usuario.imagen_usuario);
+        } catch (error) {
+          return res.status(400).json({ 
+            success: false,
+            message: error.message 
+          });
+        }
+    const dataToUpdate = { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, tipo_usuario, imagen_usuario: nueva_imagen };
     await Usuario.update(dataToUpdate, {
       where: { id_usuario: id_usuario },
     });
