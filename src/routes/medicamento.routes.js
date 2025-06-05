@@ -6,7 +6,7 @@ import {
   actualizarMedicamento,
   eliminarMedicamento
 } from '../controllers/medicamento.controller.js';
-import { verifyToken } from '../middlewares/verifyToken.js';
+import { verifyToken, verifyTokenWeb } from '../middlewares/verifyToken.js';
 import validateSchema from '../middlewares/validatoreSchema.js';
 import { medicamentoSchema } from '../schema/medicamentoSchema.js';
 import { validateAdmin } from '../middlewares/validateAdmin.js';
@@ -26,7 +26,7 @@ router.get('/listar/:id',
 //ADMINISTRADOR
 
 router.post('/crear', 
-  verifyToken, 
+  verifyTokenWeb, 
   validateAdmin,
   validateSchema(medicamentoSchema),
   crearMedicamento

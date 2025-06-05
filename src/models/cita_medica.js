@@ -13,18 +13,38 @@ import sequelize from '../config/db.js';
       allowNull: false,
       field: 'id_paciente'
     },
-      fecha_cita: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        get() {
-            const rawValue = this.getDataValue('fecha_cita');
-            return rawValue ? new Date(rawValue.getTime() - (rawValue.getTimezoneOffset() * 60000)) : null;
-        }
+    fecha_cita: {
+  type: DataTypes.DATEONLY,
+  allowNull: false,
+  get() {
+    // No aplicar conversión para DATEONLY (solo fecha)
+    return this.getDataValue('fecha_cita');
+  },
+  set(value) {
+    // Asegurar que se guarde exactamente la fecha recibida
+    this.setDataValue('fecha_cita', value);
+  }
+    },
+    //   fecha_cita: {
+    //     type: DataTypes.DATEONLY,
+    //     allowNull: false,
+    //     field: 'fecha_cita',
+    //     // get() {
+    //     //     const rawValue = this.getDataValue('fecha_cita');
+    //     //     return rawValue ? new Date(rawValue.getTime() - (rawValue.getTimezoneOffset() * 60000)) : null;
+    //     // }
+    // },
+    hora_cita:{
+      type: DataTypes.TIME,
+      allowNull: false,
+      get() {
+      return this.getDataValue('hora_cita'); // No necesita transformación
+    }
     },
     titulo: {
       type: DataTypes.STRING,  
       allowNull: false,
-      field: 'titulo'
+      field: 'titulo_cita',
     },
     estado_cita: {
       type: DataTypes.ENUM('programada', 'completada', 'cancelada'),

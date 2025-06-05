@@ -7,6 +7,12 @@ export const citaMedicaSchema = z.object({
   fecha_cita: z.string().refine(val => !isNaN(Date.parse(val)), {
     message: "Debe ser una fecha válida en formato ISO (YYYY-MM-DDTHH:MM:SSZ)",
   }),
+  hora_cita: z.string().refine(val => {
+    const timePattern = /^([01]\d|2[0-3]):([0-5]\d)$/; // Formato HH:mm
+    return timePattern.test(val);
+  }, {
+    message: "Debe ser una hora válida en formato HH:mm",
+  }),
   titulo: z.string()
     .min(5, "Debe tener al menos 5 caracteres")
     .max(100, "Pasaste el límite de caracteres"),

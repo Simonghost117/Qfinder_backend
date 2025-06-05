@@ -3,22 +3,24 @@ import CitaMedica from '../models/cita_medica.js';
 export const crearCitaMedica = async (req, res) => {
     try {
         const { id_paciente } = req.params;
-        let { fecha_cita, titulo, estado_cita, descripcion, fecha_recordatorio } = req.body;
+        let { fecha_cita, hora_cita, titulo, estado_cita, descripcion, fecha_recordatorio } = req.body;
 
-        // CORRECCIÓN: Asegurar el formato de fecha correcto
-        const ajustarFecha = (fechaString) => {
-            if (!fechaString) return null;
-            const fecha = new Date(fechaString);
-            return new Date(fecha.getTime() - (fecha.getTimezoneOffset() * 60000));
-        };
+        // // CORRECCIÓN: Asegurar el formato de fecha correcto
+        // const ajustarFecha = (fechaString) => {
+        //     if (!fechaString) return null;
+        //     const fecha = new Date(fechaString);
+        //     return new Date(fecha.getTime() - (fecha.getTimezoneOffset() * 60000));
+        // };
 
         const nuevaCita = await CitaMedica.create({
             id_paciente,
-            fecha_cita: ajustarFecha(fecha_cita),
+            fecha_cita,
+            hora_cita,
             titulo,
             estado_cita,
             descripcion,
-            fecha_recordatorio: ajustarFecha(fecha_recordatorio)
+            fecha_recordatorio
+            // : ajustarFecha(fecha_recordatorio)
         });
 
         res.status(201).json(nuevaCita);
