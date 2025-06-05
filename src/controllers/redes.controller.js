@@ -1,6 +1,7 @@
 import { creacionRed, actualiza, buscarRedPorNombre } from '../services/redes.service.js';
 import  Red  from '../models/Red.js';
 import { Op } from'sequelize';
+import { manejarImagenes } from '../utils/imgBase64.js';
 
 export const crearRed = async (req, res) => {
   try {
@@ -82,15 +83,15 @@ export const actualizarRed = async (req, res) => {
       return res.status(404).json({ message: 'Red no encontrada' });
     }
 
-    let nueva_imagen = red.imagen_red; 
-    
-        if (imagen_red) {
-          try {
-            nueva_imagen = await imgBase64(imagen_red); // Convertir imagen
-          } catch (error) {
-            console.error('Error procesando imagen:', error);
-            return res.status(400).json({ message: 'Error al procesar la imagen' });
-          }
+    // Manejo de imagen
+        let nueva_imagen;
+        try {
+          nueva_imagen = await manejarImagenes(imagen_red, red.imagen_red);
+        } catch (error) {
+          return res.status(400).json({ 
+            success: false,
+            message: error.message 
+          });
         }
 
     const redActualizada = await actualiza(id_red, nombre_red, descripcion_red, nueva_imagen);

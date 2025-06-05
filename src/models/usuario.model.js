@@ -46,7 +46,7 @@ const Usuario = sequelize.define('Usuario', {
     field: 'contrasena_usuario'
   },
   tipo_usuario: {
-    type: DataTypes.ENUM('Usuario', 'Medico', 'Administrador'),
+    type: DataTypes.ENUM('Usuario', 'Medico', 'Administrador', 'Super'),
     defaultValue: 'Usuario',
     field: 'tipo_usuario',
     allowNull: true
@@ -80,7 +80,12 @@ const Usuario = sequelize.define('Usuario', {
     type: DataTypes.STRING,
     allowNull: true,
     field: 'fcm_token'
-  }
+  },
+  membresia: {
+    type: DataTypes.ENUM('free', 'plus', 'pro'),
+    defaultValue: 'free',
+    field: 'membresia'
+  },
 }, {
   tableName: 'usuario',
   timestamps: false,
