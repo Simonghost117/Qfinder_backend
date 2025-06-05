@@ -10,7 +10,5 @@ export const asignarMedicamentoSchema = z.object({
     message: 'Fecha de fin inválida',
   }),
   dosis: z.string().max(255, 'La dosis es demasiado larga').optional(),
-  frecuencia: z.number({
-    required_error: 'La frecuencia es obligatoria',
-  }).int().min(1, 'La frecuencia debe ser al menos 1'),
+  frecuencia: z.string().max(255, 'La frecuencia es demasiado larga').optional(),
 });
