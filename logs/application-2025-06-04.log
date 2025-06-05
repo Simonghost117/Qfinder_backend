@@ -3691,3 +3691,36 @@
 2025-06-04 22:30:52 [33mwarn[39m: Community 31 not found in database
 2025-06-04 22:30:52 [33mwarn[39m: Community 32 not found in database
 2025-06-04 22:30:52 [33mwarn[39m: Community 33 not found in database
+2025-06-04 22:48:19 [32minfo[39m: Setting up chat listeners...
+2025-06-04 22:48:19 [32minfo[39m: Medication notification scheduler started
+2025-06-04 22:48:19 [32minfo[39m: Setting up chat listeners...
+2025-06-04 22:48:20 [32minfo[39m: Setting up listener for community: 1
+2025-06-04 22:48:20 [32minfo[39m: Setting up listener for community: 1
+2025-06-04 22:48:20 [32minfo[39m: Setting up listener for community: 1
+2025-06-04 22:48:20 [32minfo[39m: Chat listeners setup complete
+2025-06-04 22:48:20 [32minfo[39m: Setting up listener for community: 1
+2025-06-04 22:48:20 [32minfo[39m: Chat listeners setup complete
+2025-06-04 22:49:59 [32minfo[39m: New message in community 1 from user 5
+2025-06-04 22:49:59 [32minfo[39m: New message in community 1 from user 5
+2025-06-04 22:49:59 [32minfo[39m: New message in community 1 from user 5
+2025-06-04 22:49:59 [32minfo[39m: New message in community 1 from user 5
+2025-06-04 22:50:01 [32minfo[39m: Chat notifications sent for message msg_1749095399890_30c0unap
+2025-06-04 22:50:01 [32minfo[39m: Chat notifications sent for message msg_1749095399890_30c0unap
+2025-06-04 22:50:01 [32minfo[39m: Chat notifications sent for message msg_1749095399890_30c0unap
+2025-06-04 22:50:01 [32minfo[39m: Chat notifications sent for message msg_1749095399890_30c0unap
+2025-06-04 22:50:19 [32minfo[39m: New message in community 1 from user 5
+2025-06-04 22:50:19 [32minfo[39m: New message in community 1 from user 5
+2025-06-04 22:50:19 [32minfo[39m: New message in community 1 from user 5
+2025-06-04 22:50:19 [32minfo[39m: New message in community 1 from user 5
+2025-06-04 22:50:21 [32minfo[39m: Chat notifications sent for message msg_1749095420698_mswhv0gy
+2025-06-04 22:50:21 [32minfo[39m: Chat notifications sent for message msg_1749095420698_mswhv0gy
+2025-06-04 22:50:21 [32minfo[39m: Chat notifications sent for message msg_1749095420698_mswhv0gy
+2025-06-04 22:50:21 [32minfo[39m: Chat notifications sent for message msg_1749095420698_mswhv0gy
+2025-06-04 22:50:42 [32minfo[39m: New message in community 1 from user 4
+2025-06-04 22:50:42 [32minfo[39m: New message in community 1 from user 4
+2025-06-04 22:50:42 [32minfo[39m: New message in community 1 from user 4
+2025-06-04 22:50:42 [32minfo[39m: New message in community 1 from user 4
+2025-06-04 22:50:43 [32minfo[39m: Chat notifications sent for message msg_1749095443032_barx400d
+2025-06-04 22:50:43 [32minfo[39m: Chat notifications sent for message msg_1749095443032_barx400d
+2025-06-04 22:50:43 [32minfo[39m: Chat notifications sent for message msg_1749095443032_barx400d
+2025-06-04 22:50:43 [32minfo[39m: Chat notifications sent for message msg_1749095443032_barx400d

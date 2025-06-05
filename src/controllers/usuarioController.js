@@ -188,12 +188,12 @@ export const login = async (req, res) => {
           rol: usuario.tipo_usuario
         });
 
-       res.cookie('token', token, {
-   httpOnly: true,
-   secure: false, // Cambia a true en producción con HTTPS
-   sameSite: 'lax',
-   maxAge: 30 * 24 * 60 * 60 * 1000
-});
+         res.cookie("token", token, {
+          httpOnly: process.env.NODE_ENV !== "development",
+          secure: true,
+          sameSite: "none",
+          domain: process.env.NODE_ENV === "development" ? "localhost" : "https://qfinder-production.up.railway.app/"
+         });
 
 
     // 4. Configurar cookie de sesión (connect.sid) si usas express-session
