@@ -7,6 +7,7 @@ import { checkEpisodioPermissions } from "../middlewares/episodioPermissions.mid
 const router = Router();
 
 // Ruta para crear una nueva actividad con middleware de validación
+//🟢
 router.post("/crearActivdad/:id_paciente", 
     verifyToken,
     checkEpisodioPermissions(['Usuario']),
@@ -15,6 +16,7 @@ router.post("/crearActivdad/:id_paciente",
 );
 
 // Ruta para obtener todas las actividades
+//🟢
 router.get("/listarActividades/:id_paciente", 
     verifyToken,
     checkEpisodioPermissions(['Usuario']),

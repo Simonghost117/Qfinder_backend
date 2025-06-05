@@ -17,6 +17,7 @@ function wrap(method) {
 }
 
 // Crear episodio
+//🟢
 routerEpisodioSalud.post(
   '/episodioSalud/:id_paciente',
   verifyToken,
@@ -37,6 +38,7 @@ routerEpisodioSalud.get(
 );
 
 // Obtener todos los episodios de un paciente
+//🟢
 routerEpisodioSalud.get(
   '/episodioSalud/:id_paciente',
   verifyToken,
@@ -54,6 +56,7 @@ routerEpisodioSalud.get(
 );
 
 // Actualizar episodio
+//🟢
 routerEpisodioSalud.put(
   '/pacientes/:id_paciente/episodioSalud/:id_episodio', // <- ¡Nuevo parámetro!
   verifyToken,
@@ -63,6 +66,7 @@ routerEpisodioSalud.put(
   wrap(EpisodioSaludController.actualizarEpisodio)
 );
 // Eliminar episodio
+//🟢
 routerEpisodioSalud.delete(
   '/eliminarEpis/:id_paciente/:id_episodio',
   verifyToken,

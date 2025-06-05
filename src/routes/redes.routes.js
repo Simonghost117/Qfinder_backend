@@ -16,7 +16,16 @@ import { validateAdmin } from '../middlewares/validateAdmin.js';
 
 const router = express.Router();
 // En redes.routes.js
+//🟢
 router.get('/obtenerIdRed', verifyToken, obtenerIdRedPorNombre)
+//🔴
+router.post('/crearMovil',
+    verifyToken,
+//validacion plus, pro
+    validateSchema(redesSchema),
+    crearRed
+)
+//🟢
 router.get('/listarRedes',
     verifyToken,
     listarRedes
@@ -51,6 +60,7 @@ router.post('/crear',
 )
 router.put('/actualizarRedW/:id_red',
     verifyTokenWeb,
+    validateAdmin,
     validateSchema(redesSchema),
     actualizarRed
 )

@@ -13,12 +13,13 @@ import {
 import { esAdministradorRed } from '../middlewares/validacionesRed.js';
 
 const router = express.Router();
-
+//🟢
 router.post('/unirseRed/:id_red',
     verifyToken,
     unirseRed
 )
 //listar las redes a las que pertenece el usuario
+//🟢
 router.get('/listarRedPertenece',
     verifyToken,
     redesPertenecientes

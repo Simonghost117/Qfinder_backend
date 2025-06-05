@@ -14,6 +14,7 @@ import { validateAdmin } from '../middlewares/validateAdmin.js';
 const router = Router();
 
 //Autenticacion de rutas
+//🟢
 router.get('/listar', 
   verifyToken, 
   listarMedicamentos
