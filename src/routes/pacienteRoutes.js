@@ -67,4 +67,5 @@ router.delete('/eliminarPaciente2/:id_paciente',
     eliminarPaciente
 );
 
+
 export default router;

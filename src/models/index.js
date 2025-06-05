@@ -86,5 +86,5 @@ Colaborador.belongsTo(Paciente, { foreignKey: 'id_paciente' });
 
 
 // Exportar los modelos y la conexión de Sequelize
-const models = { Usuario, Paciente, Familiar, Medico, Red, PanelPersonalizado, CitaMedica, ActividadCuidado, UsuarioRed, Medicamento, PacienteMedicamento, CodigoQR };
+const models = { Usuario, Paciente, Familiar, Medico, Red, PanelPersonalizado, CitaMedica, ActividadCuidado, UsuarioRed, Medicamento, PacienteMedicamento, CodigoQR, Colaborador };
 export { sequelize, models };
