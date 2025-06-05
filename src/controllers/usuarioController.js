@@ -192,7 +192,7 @@ export const login = async (req, res) => {
           httpOnly: process.env.NODE_ENV !== "development",
           secure: true,
           sameSite: "none",
-          domain: process.env.NODE_ENV === "development" ? "localhost" : "https://qfinder-production.up.railway.app/"
+          domain: process.env.NODE_ENV === "development" ? "https://qfinder-production.up.railway.app/" : "localhost"
          });
 
 
