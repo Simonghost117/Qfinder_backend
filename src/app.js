@@ -23,7 +23,7 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'tu_secreto_super_seguro',
   resave: false,
   saveUninitialized: true,
-  cookie: { secure: true } // Cambia a true si usas HTTPS
+  cookie: { secure: false } // Cambia a true si usas HTTPS
 }));
 
 // Middlewares globales
