@@ -193,7 +193,7 @@ export const login = async (req, res) => {
             secure: true,
             sameSite: "none",
             domain: process.env.NODE_ENV === "development" ? "localhost" : "qfinder-production.up.railway.app",
-            expires: 24 * 60 * 60 * 1000
+            expires: new Date(Date.now() + 24 * 60 * 60 * 1000)
         });
 
 
