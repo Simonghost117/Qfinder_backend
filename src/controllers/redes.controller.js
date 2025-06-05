@@ -1,6 +1,7 @@
 import { creacionRed, actualiza, buscarRedPorNombre } from '../services/redes.service.js';
 import  Red  from '../models/Red.js';
 import { Op } from'sequelize';
+import { manejarImagenes } from '../utils/imgBase64.js';
 
 export const crearRed = async (req, res) => {
   try {
@@ -85,7 +86,7 @@ export const actualizarRed = async (req, res) => {
     // Manejo de imagen
         let nueva_imagen;
         try {
-          nueva_imagen = await manejarImagenes(imagen_paciente, paciente.imagen_paciente);
+          nueva_imagen = await manejarImagenes(imagen_red, red.imagen_red);
         } catch (error) {
           return res.status(400).json({ 
             success: false,

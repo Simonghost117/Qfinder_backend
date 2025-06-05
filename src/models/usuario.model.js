@@ -79,7 +79,12 @@ const Usuario = sequelize.define('Usuario', {
     type: DataTypes.STRING,
     allowNull: true,
     field: 'fcm_token'
-  }
+  },
+  membresia: {
+    type: DataTypes.ENUM('free', 'plus', 'pro'),
+    defaultValue: 'free',
+    field: 'membresia'
+  },
 }, {
   tableName: 'usuario',
   timestamps: false,
