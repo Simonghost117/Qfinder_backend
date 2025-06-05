@@ -19,28 +19,17 @@ const app = express();
 EventEmitter.defaultMaxListeners = 15;
 
 // Configuración de sesión
-app.use(cors({
-  origin: process.env.NODE_ENV === 'development' 
-    ? 'http://localhost:5173' 
-    : 'https://qfinder-deploy-4ktr.vercel.app',
-  credentials: true, // Permite enviar cookies entre dominios
-  exposedHeaders: ['set-cookie'] // Importante para cookies HTTP-only
-}));
-
-// Configuración mejorada de sesión
 app.use(session({
   secret: process.env.SESSION_SECRET || 'tu_secreto_super_seguro',
   resave: false,
-  saveUninitialized: false, // Cambiado a false por seguridad
-  cookie: { 
-    secure: process.env.NODE_ENV !== 'development',
-    sameSite: process.env.NODE_ENV === 'development' ? 'lax' : 'none',
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000, // 1 día
-    domain: process.env.NODE_ENV === 'development' 
-      ? undefined 
-      : '.vercel.app' // Dominio principal con punto
-  }
+  saveUninitialized: true,
+  cookie: { secure: true } // Cambia a true si usas HTTPS
+}));
+
+// Middlewares globales
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'https://qfinder-deploy-4ktr.vercel.app',
+  credentials: true
 }));
 app.use(helmet());
 app.use(morgan('dev'));
