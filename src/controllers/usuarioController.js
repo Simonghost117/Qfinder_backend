@@ -201,7 +201,6 @@ export const login = async (req, res) => {
             httpOnly: true,
             secure: true,
             sameSite: "none",
-            domain: process.env.NODE_ENV === "development" ? "localhost" : "qfinder-production.up.railway.app",
             maxAge: 60*60*1000
         });
 
