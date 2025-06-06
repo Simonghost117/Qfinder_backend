@@ -1,0 +1,35 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 30
+    },
+    "auditLog": "C:\\Users\\JHON HANZ\\Documents\\RIDER\\QfindeR\\Qfinder_backend\\logs\\.c9b647e48ffe6719241f510f39a8faf389d0d25d-audit.json",
+    "files": [
+        {
+            "date": 1748729583152,
+            "name": "C:\\Users\\JHON HANZ\\Documents\\RIDER\\QfindeR\\Qfinder_backend\\logs\\error-2025-05-31.log",
+            "hash": "252089d9fcf833a1a29c23a04be6a0538a340d6848f48c5b2fbf99a617a5ef38"
+        },
+        {
+            "date": 1748882234680,
+            "name": "C:\\Users\\JHON HANZ\\Documents\\RIDER\\QfindeR\\Qfinder_backend\\logs\\error-2025-06-02.log",
+            "hash": "5337b7db2568b5712bc63f9744dce33da05593b4dce68a6d91ade478ea8f5978"
+        },
+        {
+            "date": 1748957119974,
+            "name": "C:\\Users\\JHON HANZ\\Documents\\RIDER\\QfindeR\\Qfinder_backend\\logs\\error-2025-06-03.log",
+            "hash": "3545b7207f28f5c992ce063bad731d8c22b48a9f5ff604d07b1a5d90132011b9"
+        },
+        {
+            "date": 1749099313751,
+            "name": "C:\\Users\\JHON HANZ\\Documents\\RIDER\\QfindeR\\Qfinder_backend\\logs\\error-2025-06-04.log",
+            "hash": "74b909c4b78c8ac759ad938fa76d07b25f5bbfcb98498ad6be54f9cf4d67b5c9"
+        },
+        {
+            "date": 1749099617077,
+            "name": "C:\\Users\\JHON HANZ\\Documents\\RIDER\\QfindeR\\Qfinder_backend\\logs\\error-2025-06-05.log",
+            "hash": "64ffa2099eb2990fe6a20553b6c75365575f2cbedea38dde486345d5ceca6e5c"
+        }
+    ],
+    "hashType": "sha256"
+}

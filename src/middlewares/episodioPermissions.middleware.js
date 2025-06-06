@@ -1,6 +1,8 @@
 import Paciente from '../models/paciente.model.js';
 import { Familiar } from '../models/Familiar.js';
 import { handleError } from '../utils/errorHandler.js';
+import Colaborador from '../models/colaborador.model.js';
+
 
 export const checkEpisodioPermissions = (allowedRoles = ['Usuario', 'Familiar', 'Administrador']) => {
   return async (req, res, next) => {
@@ -80,7 +82,7 @@ export const checkEpisodioPermissions = (allowedRoles = ['Usuario', 'Familiar', 
       }
 
       // Verificar relación para Usuario/Familiar
-      const [esDueño, esFamiliar] = await Promise.all([
+      const [esDueño, esFamiliar, esColaborador] = await Promise.all([
         Paciente.findOne({ 
           where: { 
             id_paciente, 
@@ -93,12 +95,17 @@ export const checkEpisodioPermissions = (allowedRoles = ['Usuario', 'Familiar', 
             id_usuario: userId 
           },
           attributes: ['id_familiar', 'parentesco', 'cuidador_principal']
-        })
+        }),
+        Colaborador.findOne({
+         where: { 
+          id_paciente, 
+          id_usuario: userId }
+  })
       ]);
 
       console.log('Resultados verificación:', { esDueño: !!esDueño, esFamiliar: !!esFamiliar }); // Debug
 
-      if (!esDueño && !esFamiliar) {
+      if (!esDueño && !esFamiliar && !esColaborador) {
         console.error('Sin relación con el paciente:', { userId, id_paciente });
         return res.status(403).json({
           success: false,

@@ -1,3 +1,6 @@
+<<<<<<< HEAD
+2025-06-04 23:55:13 [32minfo[39m: Medication notification scheduler started
+=======
 2025-06-04 20:43:48 [32minfo[39m: Setting up chat listeners...
 2025-06-04 20:43:48 [32minfo[39m: Medication notification scheduler started
 2025-06-04 20:43:48 [32minfo[39m: Setting up chat listeners...
@@ -3724,3 +3727,4 @@
 2025-06-04 22:50:43 [32minfo[39m: Chat notifications sent for message msg_1749095443032_barx400d
 2025-06-04 22:50:43 [32minfo[39m: Chat notifications sent for message msg_1749095443032_barx400d
 2025-06-04 22:50:43 [32minfo[39m: Chat notifications sent for message msg_1749095443032_barx400d
+>>>>>>> e58b6235544f03b68f4e5017393f6383ecdc85d5
