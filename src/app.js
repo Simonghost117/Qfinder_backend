@@ -27,22 +27,9 @@ app.use(session({
 }));
 
 // Middlewares globales
-const allowedOrigins = [
-  'https://qfinder-deploy-4ktr.vercel.app',
-  'http://localhost:5173'
-];
-
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin) || process.env.FRONTEND_URL === origin) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Cookie']
+  origin: process.env.FRONTEND_URL || s,
+  credentials: true
 }));
 app.use(helmet());
 app.use(morgan('dev'));
@@ -71,7 +58,6 @@ import CitaMedica from './routes/citaMedica.routes.js';
 import codigoQr from './routes/codigoQr.routes.js';
 import medicamentoRoutes from './routes/medicamento.routes.js';
 import pacienteMedicamentoRoutes from './routes/pacienteMedicamento.routes.js';
-import colaboradorRoutes from './routes/colaborador.routes.js';
 import authRoutes from './routes/authRoutes.js'
 import membresiaRoutes from './routes/membresiaRed.routes.js'
 import { startAllJobs } from './jobs/cronJobs.js';
@@ -122,8 +108,6 @@ app.use('/api/paciente-medicamento', pacienteMedicamentoRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/firebase', authRoutes); 
 app.use('/api/firebase', firebaseRoutes); //🟢 episodios salud
-app.use('/api/colaboradores', colaboradorRoutes);
-
 // app.use('/api/medicos', medicoRoutes); // Validaciones - CRUD (YA NO SE NECESITA pero conservado)
 // app.use('/api/reportes', routerReport); // No se va a usar (comentado pero conservado)
 // app.use('/api/panel', panelRoutes);
