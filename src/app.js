@@ -28,7 +28,7 @@ app.use(session({
 
 // Middlewares globales
 app.use(cors({
-  origin: process.env.FRONTEND_URL || s,
+  origin: process.env.FRONTEND_URL || 'https://qfinder-deploy-4ktr.vercel.app',
   credentials: true
 }));
 app.use(helmet());
