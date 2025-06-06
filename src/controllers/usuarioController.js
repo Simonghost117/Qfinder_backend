@@ -3,7 +3,7 @@ import Usuario from '../models/usuario.model.js';
 import { createAccessToken } from '../libs/jwt.js';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
-import { imgBase64 } from '../utils/imgBase64.js';
+import { manejarImagenes } from '../utils/imgBase64.js';
 dotenv.config();
 
 
@@ -188,15 +188,15 @@ export const login = async (req, res) => {
           rol: usuario.tipo_usuario
         });
 
-       res.cookie('token', token, {
-  httpOnly: false,
-  secure: false,//process.env.NODE_ENV === 'production',
-  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-  maxAge: 30 * 24 * 60 * 60 * 1000, // 30 días en milisegundos
-  //domain: '.qfinder-production.up.railway.app', // ¡Atención al punto inicial!
-  path: '/',
-  priority: 'high'
-});
+
+         res.cookie("token", token, {
+            httpOnly: process.env.NODE_ENV !== "development",
+            secure: true,
+            sameSite: "none",
+            domain: process.env.NODE_ENV === "development" ? "localhost" : "qfinder-production.up.railway.app",
+            expires: new Date(Date.now() + 24 * 60 * 60 * 1000)
+        });
+
 
     // 4. Configurar cookie de sesión (connect.sid) si usas express-session
     req.session.userId = usuario.id_usuario; // Esto activará la cookie de sesión

@@ -1,12 +1,27 @@
 import PacienteMedicamento from '../models/pacienteMedicamento.model.js';
 import Paciente from '../models/paciente.model.js';
 import Medicamento from '../models/medicamento.model.js';
+import { parseFrequency } from '../utils/conversionFrecuencia.js';
 
 export const asignarMedicamento = async (req, res) => {
   try {
     const { id_paciente, id_medicamento, fecha_inicio, fecha_fin, dosis, frecuencia } = req.body;
-    const nuevo = await PacienteMedicamento.create({ id_paciente, id_medicamento, fecha_inicio, fecha_fin, dosis, frecuencia });
-    res.status(201).json({ success: true, data: nuevo });
+    
+    // Parsear y validar la frecuencia
+    const frequencyData = parseFrequency(frecuencia);
+    
+    // Crear el registro en la base de datos
+    const nuevoRegistro = await PacienteMedicamento.create({
+      id_paciente,
+      id_medicamento,
+      fecha_inicio: fecha_inicio || new Date(), // Si no se proporciona, usa fecha actual
+      fecha_fin,
+      dosis,
+      frecuencia: frequencyData.inHours,
+      // frequencyData.original, // Guardamos el formato original
+      // frecuencia_horas: frequencyData.inHours // Guardamos en horas para las notificaciones
+    });
+    res.status(201).json({ success: true, data: nuevoRegistro });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error al asignar medicamento', error: error.message });
   }

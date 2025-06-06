@@ -5,7 +5,10 @@ import admin from 'firebase-admin';
 import { getMessaging } from 'firebase-admin/messaging';
 import dotenv from 'dotenv';
 
-dotenv.config();
+
+// import dotenv from 'dotenv';
+// dotenv.config();
+
 // Configuración desde variables de entorno
 const serviceAccount = {
   type: process.env.FIREBASE_TYPE,
@@ -29,23 +32,25 @@ const missingFields = requiredFields.filter(field => !serviceAccount[field]);
 if (missingFields.length > 0) {
   throw new Error(`Faltan campos esenciales en la configuración de Firebase: ${missingFields.join(', ')}`);
 }
-const databaseURL = "https://qfinder-comunity-default-rtdb.firebaseio.com/"
+// const databaseURL = "https://qfinder-comunity-default-rtdb.firebaseio.com/"
 // Inicialización de Firebase
-const app = initializeApp({
-  credential: cert(serviceAccount),
-  databaseURL: databaseURL 
-});
+// const app = initializeApp({
+//   credential: cert(serviceAccount),
+//   databaseURL: databaseURL 
+// });
 
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
-    databaseURL: process.env.FIREBASE_DATABASE_URL || "https://qfinder-community-default-rtdb.firebaseio.com"
+    databaseURL: "https://qfinder-comunity-default-rtdb.firebaseio.com"
   });
 }
 
 // Exporta los servicios
 export const auth = admin.auth();
-export const db = getDatabase(app);
-// export const messaging = admin.messaging();
-export const messaging = getMessaging(app);
+export const db = admin.database();
+export const messaging = admin.messaging();
+// export const messaging = getMessaging(app);
+
 console.log('✅ Firebase Admin inicializado correctamente');  
+

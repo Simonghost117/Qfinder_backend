@@ -8,7 +8,7 @@ import {
     redNombre,
     obtenerIdRedPorNombre
  } from '../controllers/redes.controller.js';
-import { verifyToken } from '../middlewares/verifyToken.js';
+import { verifyToken, verifyTokenWeb } from '../middlewares/verifyToken.js';
 import validateSchema from '../middlewares/validatoreSchema.js';
 import { redesSchema } from '../schema/redesSchema.js';
 import { esAdministradorRed } from '../middlewares/validacionesRed.js';
@@ -16,7 +16,16 @@ import { validateAdmin } from '../middlewares/validateAdmin.js';
 
 const router = express.Router();
 // En redes.routes.js
+//🟢
 router.get('/obtenerIdRed', verifyToken, obtenerIdRedPorNombre)
+//🔴
+router.post('/crearMovil',
+    verifyToken,
+//validacion plus, pro
+    validateSchema(redesSchema),
+    crearRed
+)
+//🟢
 router.get('/listarRedes',
     verifyToken,
     listarRedes
@@ -44,9 +53,20 @@ router.get('/redNombre',
 
 //ADMINISTRADOR
 router.post('/crear',
-    verifyToken,
+    verifyTokenWeb,
     validateAdmin,
     validateSchema(redesSchema),
     crearRed
+)
+router.put('/actualizarRedW/:id_red',
+    verifyTokenWeb,
+    validateAdmin,
+    validateSchema(redesSchema),
+    actualizarRed
+)
+router.delete('/eliminarRedW/:id_red',
+    verifyTokenWeb,
+    validateAdmin,
+    eliminarRed
 )
 export default router;

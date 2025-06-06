@@ -38,7 +38,7 @@ const PacienteMedicamento = sequelize.define('PacienteMedicamento', {
     allowNull: true
   },
   frecuencia: {
-    type: DataTypes.STRING,
+    type: DataTypes.INTEGER,
     allowNull: true
   }, 
   // ultimo_recordatorio: {

@@ -17,6 +17,7 @@ import { checkEpisodioPermissions } from '../middlewares/episodioPermissions.mid
 const router = Router();
 
 // 👉 Asignar un medicamento a un paciente
+//🟢
 router.post(
   '/crear',
   verifyToken,
@@ -31,6 +32,7 @@ router.get('/', verifyToken, listarAsignaciones);
 // 👉 Listar asignaciones especificas de un paciente en particular
 // router.get('/:id', verifyToken, listarAsignaciones);
 // 👉 Listar asignaciones especificas de un 
+//🟢
 router.get('/asignaciones/:id_paciente', verifyToken, listarMedicamentosPorPaciente);
 
 // 👉 Actualizar una asignación específica

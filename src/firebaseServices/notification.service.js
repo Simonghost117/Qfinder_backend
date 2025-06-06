@@ -1,193 +1,511 @@
 import { messaging } from '../config/firebase-admin.js';
 import logger from '../utils/logger.js';
+import Usuario from '../models/usuario.model.js';
+import { Op } from 'sequelize';
 
 export class NotificationService {
+  /**
+   * Envía una notificación push a un dispositivo específico (SOLO DATA)
+   */
   static async sendPushNotification({ token, title, body, data = {}, imageUrl }) {
     if (!token) {
       logger.warn('No FCM token provided, skipping notification');
-      return;
+      return null;
+    }
+
+    // Validar el token antes de usarlo
+    const isValid = await this.validateToken(token);
+    if (!isValid) {
+      logger.warn(`Invalid token ${token.substring(0, 10)}..., skipping notification`);
+      await this.removeInvalidToken(token);
+      return null;
     }
 
     try {
+      // Usar payload SOLO DATA para evitar duplicados en segundo plano
       const message = {
         token,
-        notification: { 
-          title,
-          body,
-          ...(imageUrl && { imageUrl }) // Solo incluir imageUrl si está presente
-        },
         data: {
           ...data,
+          title: title || '',
+          body: body || '',
+          ...(imageUrl && { imageUrl }),
           click_action: 'FLUTTER_NOTIFICATION_CLICK',
         },
         android: {
           priority: 'high',
-          notification: {
-            sound: 'default',
-            channel_id: 'default_channel',
-            ...(imageUrl && { image: imageUrl })
-          }
         },
         apns: {
+          headers: {
+            'apns-priority': '10',
+          },
           payload: {
             aps: {
               sound: 'default',
-              ...(imageUrl && { 'mutable-content': 1 })
-            }
-          }
+            },
+          },
         },
-        ...(imageUrl && {
-          webpush: {
-            headers: {
-              image: imageUrl
-            }
-          }
-        })
       };
 
       const response = await messaging.send(message);
-      logger.info(`Notification sent successfully to ${token.substring(0, 10)}...`, { messageId: response });
+      logger.info(`Notification sent successfully to ${token.substring(0, 10)}...`, { 
+        messageId: response 
+      });
       return response;
     } catch (error) {
-      logger.error('Error sending notification:', error);
-      
-      // Manejo específico de tokens inválidos/no registrados
-      if (error.code === 'messaging/invalid-registration-token' || 
-          error.code === 'messaging/registration-token-not-registered') {
-        logger.warn('Removing invalid FCM token');
-        // Aquí deberías eliminar el token de tu base de datos
-        // Ejemplo: await UserModel.removeFcmToken(token);
-      }
-      
+      await this.handleNotificationError(error, token);
       throw error;
     }
   }
 
-  static async sendToTopic(topic, { title, body, data = {}, imageUrl }) {
-    try {
-      const message = {
-        topic,
-        notification: { 
-          title, 
-          body,
-          ...(imageUrl && { imageUrl })
-        },
-        data,
-        android: {
-          priority: 'high',
-          ...(imageUrl && {
-            notification: {
-              image: imageUrl
-            }
-          })
-        },
-        ...(imageUrl && {
-          apns: {
-            payload: {
-              aps: {
-                'mutable-content': 1
-              }
-            }
-          }
-        })
-      };
-
-      const response = await messaging.send(message);
-      logger.info(`Notification sent successfully to topic ${topic}`, { messageId: response });
-      return response;
-    } catch (error) {
-      logger.error('Error sending topic notification:', error);
-      throw error;
-    }
-  }
-
+  /**
+   * Envía notificaciones a múltiples dispositivos (SOLO DATA)
+   */
   static async sendToMultiple(tokens, { title, body, data = {}, imageUrl }) {
     if (!tokens || tokens.length === 0) {
       logger.warn('No FCM tokens provided for multiple send');
-      return;
+      return { successCount: 0, failureCount: 0 };
     }
 
-    // Firebase limita a 500 tokens por lote
+    // Filtrar tokens válidos
+    const validTokens = [];
+    const invalidTokens = [];
+
+    for (const token of tokens) {
+      if (await this.validateToken(token)) {
+        validTokens.push(token);
+      } else {
+        invalidTokens.push(token);
+      }
+    }
+
+    // Eliminar tokens inválidos de la base de datos
+    if (invalidTokens.length > 0) {
+      await this.removeInvalidTokens(invalidTokens);
+    }
+
+    if (validTokens.length === 0) {
+      return { successCount: 0, failureCount: tokens.length };
+    }
+
+    // Enviar en lotes de 500 (límite de Firebase)
     const batchSize = 500;
-    const batches = [];
-    
-    for (let i = 0; i < tokens.length; i += batchSize) {
-      batches.push(tokens.slice(i, i + batchSize));
-    }
-
     const results = [];
-    for (const batch of batches) {
+
+    for (let i = 0; i < validTokens.length; i += batchSize) {
+      const batch = validTokens.slice(i, i + batchSize);
+      
       try {
+        // Payload SOLO DATA para evitar duplicados
         const message = {
           tokens: batch,
-          notification: { 
-            title, 
-            body,
-            ...(imageUrl && { imageUrl })
+          data: {
+            ...data,
+            title: title || '',
+            body: body || '',
+            ...(imageUrl && { imageUrl }),
+            click_action: 'FLUTTER_NOTIFICATION_CLICK',
           },
-          data,
-          android: { 
+          android: {
             priority: 'high',
-            ...(imageUrl && {
-              notification: {
-                image: imageUrl
-              }
-            })
-          }
+          },
+          apns: {
+            headers: {
+              'apns-priority': '10',
+            },
+            payload: {
+              aps: {
+                sound: 'default',
+              },
+            },
+          },
         };
 
         const response = await messaging.sendEachForMulticast(message);
-        results.push({
-          successCount: response.successCount,
-          failureCount: response.failureCount,
-          responses: response.responses
-        });
+        results.push(response);
 
-        // Manejar tokens inválidos
-        response.responses.forEach((resp, index) => {
-          if (!resp.success) {
-            const token = batch[index];
-            logger.warn(`Failed to send to token ${token.substring(0, 10)}...: ${resp.error?.message}`);
-            
-            if (resp.error?.code === 'messaging/invalid-registration-token' || 
-                resp.error?.code === 'messaging/registration-token-not-registered') {
-              // Eliminar token inválido de la base de datos
-              // Ejemplo: await UserModel.removeFcmToken(token);
-            }
-          }
-        });
+        // Procesar respuestas para manejar errores específicos
+        await this.processBatchResponse(batch, response);
+        
       } catch (error) {
         logger.error('Error in batch send:', error);
+        // Manejar errores específicos de lote
+        if (this.isTokenError(error)) {
+          await this.removeInvalidTokens(batch);
+        }
         results.push({ error: error.message });
       }
     }
 
-    return results;
+    return this.aggregateResults(results, tokens.length);
   }
 
-  // Método adicional para manejar la limpieza de tokens inválidos
-  static async cleanInvalidTokens(tokens) {
-    const validTokens = [];
+  /**
+   * Valida un token FCM mediante una operación ligera
+   */
+  static async validateToken(token) {
+    try {
+      // Validación ligera sin enviar notificación real
+      await messaging.send({
+        token,
+        data: { validation: 'true' }
+      }, true);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Maneja errores de notificación
+   */
+  static async handleNotificationError(error, token) {
+    logger.error('Error sending notification:', error);
+    
+    if (this.isTokenError(error)) {
+      logger.warn(`Removing invalid FCM token: ${token.substring(0, 10)}...`);
+      await this.removeInvalidToken(token);
+    }
+  }
+
+  /**
+   * Verifica si el error es relacionado con tokens inválidos
+   */
+  static isTokenError(error) {
+    const tokenErrors = [
+      'messaging/invalid-registration-token',
+      'messaging/registration-token-not-registered',
+      'messaging/mismatched-credential'
+    ];
+    return tokenErrors.includes(error.code);
+  }
+
+  /**
+   * Elimina tokens inválidos de la base de datos
+   */
+  static async removeInvalidToken(token) {
+    try {
+      await Usuario.update(
+        { fcm_token: null },
+        { 
+          where: { fcm_token: token },
+          silent: true // No disparar hooks
+        }
+      );
+      logger.info(`Invalid token removed from database`);
+    } catch (dbError) {
+      logger.error('Error removing invalid token from database:', dbError);
+    }
+  }
+
+  static async removeInvalidTokens(tokens) {
+    try {
+      await Usuario.update(
+        { fcm_token: null },
+        { 
+          where: { fcm_token: { [Op.in]: tokens } },
+          silent: true
+        }
+      );
+      logger.info(`Removed ${tokens.length} invalid tokens from database`);
+    } catch (error) {
+      logger.error('Error removing invalid tokens:', error);
+    }
+  }
+
+  /**
+   * Procesa la respuesta de un envío por lotes
+   */
+  static async processBatchResponse(tokens, response) {
     const invalidTokens = [];
     
-    // Verificar cada token (puedes implementar lógica más sofisticada)
-    for (const token of tokens) {
-      try {
-        // Intenta enviar una notificación de prueba
-        await messaging.send({
-          token,
-          data: { test: '1' },
-          android: { priority: 'high' }
-        }, true); // El segundo parámetro indica que es un test
-        validTokens.push(token);
-      } catch (error) {
-        if (error.code === 'messaging/invalid-registration-token' || 
-            error.code === 'messaging/registration-token-not-registered') {
-          invalidTokens.push(token);
-        }
+    response.responses.forEach((resp, index) => {
+      if (!resp.success && this.isTokenError(resp.error)) {
+        const token = tokens[index];
+        invalidTokens.push(token);
+        logger.warn(`Invalid token detected: ${token.substring(0, 10)}...`);
       }
+    });
+
+    if (invalidTokens.length > 0) {
+      await this.removeInvalidTokens(invalidTokens);
     }
-    
-    return { validTokens, invalidTokens };
+  }
+
+  /**
+   * Agrega resultados de múltiples lotes
+   */
+  static aggregateResults(results, totalTokens) {
+    let successCount = 0;
+    let failureCount = 0;
+    const errors = [];
+
+    results.forEach(result => {
+      if (result.error) {
+        failureCount += result.tokens?.length || 1;
+        errors.push(result.error);
+      } else if (result.responses) {
+        successCount += result.successCount;
+        failureCount += result.failureCount;
+      }
+    });
+
+    return {
+      successCount,
+      failureCount,
+      totalTokens,
+      errors: errors.length > 0 ? errors : undefined
+    };
+  }
+
+  /**
+   * Envía notificación de alta prioridad para mensajes críticos
+   */
+  static async sendCriticalNotification({ token, title, body, data = {} }) {
+    return this.sendPushNotification({
+      token,
+      title,
+      body,
+      data: {
+        ...data,
+        priority: 'critical'
+      }
+    });
   }
 }
+// import { messaging } from '../config/firebase-admin.js';
+// import logger from '../utils/logger.js';
+// import Usuario from '../models/usuario.model.js';
+// import { Op } from 'sequelize';
+// export class NotificationService {
+//   /**
+//    * Envía una notificación push a un dispositivo específico
+//    */
+//   static async sendPushNotification({ token, title, body, data = {}, imageUrl }) {
+//     if (!token) {
+//       logger.warn('No FCM token provided, skipping notification');
+//       return null;
+//     }
+
+//     // Validar el token antes de usarlo
+//     const isValid = await this.validateToken(token);
+//     if (!isValid) {
+//       logger.warn(`Invalid token ${token.substring(0, 10)}..., skipping notification`);
+//       await this.removeInvalidToken(token);
+//       return null;
+//     }
+
+//     try {
+//       const message = {
+//         token,
+//         notification: { 
+//           title,
+//           body,
+//           ...(imageUrl && { image: imageUrl })
+//         },
+//         data: {
+//           ...data,
+//           click_action: 'FLUTTER_NOTIFICATION_CLICK',
+//         },
+//         android: {
+//           priority: 'high',
+//           notification: {
+//             sound: 'default',
+//             channel_id: 'default_channel',
+//             ...(imageUrl && { image: imageUrl })
+//           }
+//         }
+//       };
+
+//       const response = await messaging.send(message);
+//       logger.info(`Notification sent successfully to ${token.substring(0, 10)}...`, { 
+//         messageId: response 
+//       });
+//       return response;
+//     } catch (error) {
+//       await this.handleNotificationError(error, token);
+//       throw error;
+//     }
+//   }
+
+//   /**
+//    * Envía notificaciones a múltiples dispositivos con manejo de errores
+//    */
+//   static async sendToMultiple(tokens, { title, body, data = {}, imageUrl }) {
+//     if (!tokens || tokens.length === 0) {
+//       logger.warn('No FCM tokens provided for multiple send');
+//       return { successCount: 0, failureCount: 0 };
+//     }
+
+//     // Filtrar tokens válidos
+//     const validTokens = [];
+//     const invalidTokens = [];
+
+//     for (const token of tokens) {
+//       if (await this.validateToken(token)) {
+//         validTokens.push(token);
+//       } else {
+//         invalidTokens.push(token);
+//       }
+//     }
+
+//     // Eliminar tokens inválidos de la base de datos
+//     if (invalidTokens.length > 0) {
+//       await this.removeInvalidTokens(invalidTokens);
+//     }
+
+//     if (validTokens.length === 0) {
+//       return { successCount: 0, failureCount: tokens.length };
+//     }
+
+//     // Enviar en lotes de 500 (límite de Firebase)
+//     const batchSize = 500;
+//     const results = [];
+
+//     for (let i = 0; i < validTokens.length; i += batchSize) {
+//       const batch = validTokens.slice(i, i + batchSize);
+      
+//       try {
+//         const message = {
+//           tokens: batch,
+//           notification: { title, body },
+//           data: {
+//             ...data,
+//             click_action: 'FLUTTER_NOTIFICATION_CLICK'
+//           },
+//           android: {
+//             priority: 'high',
+//             notification: {
+//               sound: 'default',
+//               ...(imageUrl && { image: imageUrl })
+//             }
+//           }
+//         };
+
+//         const response = await messaging.sendEachForMulticast(message);
+//         results.push(response);
+
+//         // Procesar respuestas para manejar errores específicos
+//         this.processBatchResponse(batch, response);
+        
+//       } catch (error) {
+//         logger.error('Error in batch send:', error);
+//         results.push({ error: error.message });
+//       }
+//     }
+
+//     return this.aggregateResults(results, tokens.length);
+//   }
+
+//   /**
+//    * Valida un token FCM
+//    */
+//   static async validateToken(token) {
+//     try {
+//       // Envía una notificación de prueba (solo validación)
+//       await messaging.send({
+//         token,
+//         data: { validation: 'true' }
+//       }, true); // El segundo parámetro true indica que es solo validación
+//       return true;
+//     } catch (error) {
+//       return false;
+//     }
+//   }
+
+//   /**
+//    * Maneja errores de notificación
+//    */
+//   static async handleNotificationError(error, token) {
+//     logger.error('Error sending notification:', error);
+    
+//     if (this.isTokenError(error)) {
+//       logger.warn(`Removing invalid FCM token: ${token.substring(0, 10)}...`);
+//       await this.removeInvalidToken(token);
+//     }
+//   }
+
+//   /**
+//    * Verifica si el error es relacionado con tokens inválidos
+//    */
+//   static isTokenError(error) {
+//     const tokenErrors = [
+//       'messaging/invalid-registration-token',
+//       'messaging/registration-token-not-registered',
+//       'messaging/mismatched-credential'
+//     ];
+//     return tokenErrors.includes(error.code);
+//   }
+
+//   /**
+//    * Elimina tokens inválidos de la base de datos
+//    */
+//   static async removeInvalidToken(token) {
+//     try {
+//       await Usuario.update(
+//         { fcm_token: null },
+//         { where: { fcm_token: token } }
+//       );
+//       logger.info(`Invalid token removed from database`);
+//     } catch (dbError) {
+//       logger.error('Error removing invalid token from database:', dbError);
+//     }
+//   }
+
+//   static async removeInvalidTokens(tokens) {
+//     try {
+//       await Usuario.update(
+//         { fcm_token: null },
+//         { where: { fcm_token: { [Op.in]: tokens } } }
+//       );
+//       logger.info(`Removed ${tokens.length} invalid tokens from database`);
+//     } catch (error) {
+//       logger.error('Error removing invalid tokens:', error);
+//     }
+//   }
+
+//   /**
+//    * Procesa la respuesta de un envío por lotes
+//    */
+//   static async processBatchResponse(tokens, response) {
+//     const invalidTokens = [];
+    
+//     response.responses.forEach((resp, index) => {
+//       if (!resp.success && this.isTokenError(resp.error)) {
+//         const token = tokens[index];
+//         invalidTokens.push(token);
+//         logger.warn(`Invalid token detected: ${token.substring(0, 10)}...`);
+//       }
+//     });
+
+//     if (invalidTokens.length > 0) {
+//       await this.removeInvalidTokens(invalidTokens);
+//     }
+//   }
+
+//   /**
+//    * Agrega resultados de múltiples lotes
+//    */
+//   static aggregateResults(results, totalTokens) {
+//     let successCount = 0;
+//     let failureCount = 0;
+//     const errors = [];
+
+//     results.forEach(result => {
+//       if (result.error) {
+//         failureCount += result.tokens?.length || 1;
+//         errors.push(result.error);
+//       } else {
+//         successCount += result.successCount;
+//         failureCount += result.failureCount;
+//       }
+//     });
+
+//     return {
+//       successCount,
+//       failureCount,
+//       totalTokens,
+//       errors: errors.length > 0 ? errors : undefined
+//     };
+//   }
+// }
