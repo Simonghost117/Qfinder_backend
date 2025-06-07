@@ -10,7 +10,7 @@ import { ActividadCuidado } from './activity.model.js';
 import Medicamento from './medicamento.model.js';
 import PacienteMedicamento from './pacienteMedicamento.model.js';
 import CodigoQR from './codigoQr.model.js';
-
+import Subscription from './subscription.model.js';
 import UsuarioRed from './UsuarioRed.js'
 
 // Paciente.hasOne(CodigoQR, { foreignKey: "id_paciente", as: "codigo_qr" });  
@@ -29,7 +29,8 @@ Usuario.hasOne(Medico, { foreignKey: "id_usuario" });
 
 // // Después de definir todos los modelos
 // UsuarioRed.belongsTo(Usuario, { foreignKey: 'id_usuario', targetKey: 'id_usuario', as: 'usuario' });
-  
+  Usuario.hasOne(Subscription, { foreignKey: 'usuario_id' });
+Subscription.belongsTo(Usuario, { foreignKey: 'usuario_id' });
 // Usuario.hasMany(UsuarioRed, { foreignKey: 'id_usuario', as: 'redes' });
 
 // Usuario.belongsToMany(Red, { through: Red, foreignKey: "id_usuario" });
