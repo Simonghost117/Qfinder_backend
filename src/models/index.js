@@ -85,8 +85,9 @@ Colaborador.belongsTo(Usuario, { foreignKey: 'id_usuario' });
 Paciente.hasMany(Colaborador, { foreignKey: 'id_paciente' });
 Colaborador.belongsTo(Paciente, { foreignKey: 'id_paciente' });
 
-Usuario.hasOne(Subscription, { foreignKey: 'usuario_id' });
-Subscription.belongsTo(Usuario, { foreignKey: 'usuario_id' });
+Usuario.hasOne(Subscription, { foreignKey: 'id_usuario' });
+Subscription.belongsTo(Usuario, { foreignKey: 'id_usuario' });
+
 
 
 
