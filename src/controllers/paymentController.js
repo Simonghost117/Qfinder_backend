@@ -1,6 +1,6 @@
 import mercadopago from 'mercadopago';
 import dotenv from 'dotenv';
-import { Usuario, Subscription, Paciente, Cuidador } from '../models/index.js';
+import { Usuario, Subscription, Paciente,Colaborador } from '../models/index.js';
 import { SUBSCRIPTION_LIMITS, PLANS_MERCADOPAGO } from '../config/subscriptions.js';
 import crypto from 'crypto';
 
@@ -147,7 +147,9 @@ export const webhookHandler = async (req, res) => {
           { 
             estado_suscripcion: 'active',
             fecha_inicio: new Date(),
-            fecha_renovacion: new Date(new Date().setMonth(new Date().getMonth() + 1))
+            fecha_renovacion: new Date(new Date().setMonth(new Date().getMonth() + 1)),
+            limite_pacientes: SUBSCRIPTION_LIMITS[subscription.tipo_suscripcion].pacientes,
+            limite_cuidadores: SUBSCRIPTION_LIMITS[subscription.tipo_suscripcion].cuidadores
           },
           { where: { mercado_pago_id: paymentData.external_reference } }
         );
@@ -184,6 +186,15 @@ export const webhookHandler = async (req, res) => {
               { membresia: subscription.tipo_suscripcion },
               { where: { id_usuario: subscription.usuario_id } }
             );
+            
+            // Actualizar límites al activar
+            await Subscription.update(
+              {
+                limite_pacientes: SUBSCRIPTION_LIMITS[subscription.tipo_suscripcion].pacientes,
+                limite_cuidadores: SUBSCRIPTION_LIMITS[subscription.tipo_suscripcion].cuidadores
+              },
+              { where: { id_subscription: subscription.id_subscription } }
+            );
             break;
         }
       }
@@ -211,7 +222,9 @@ export const getSubscriptionStatus = async (req, res) => {
     if (!subscription) {
       return res.status(404).json({ 
         status: 'free',
-        message: 'Sin suscripción activa'
+        message: 'Sin suscripción activa',
+        patient_limit: SUBSCRIPTION_LIMITS.free.pacientes,
+        caregiver_limit: SUBSCRIPTION_LIMITS.free.cuidadores
       });
     }
 
@@ -234,7 +247,20 @@ export const getSubscriptionStatus = async (req, res) => {
     }
 
     const used_patients = await Paciente.count({ where: { usuario_id: userId } });
-    const used_caregivers = await Cuidador.count({ where: { usuario_id: userId } });
+    
+    // Calcular colaboradores totales
+    let used_caregivers = 0;
+    const pacientes = await Paciente.findAll({ 
+      where: { usuario_id: userId },
+      attributes: ['id_paciente']
+    });
+    
+    for (const paciente of pacientes) {
+      const count = await Colaborador.count({
+        where: { id_paciente: paciente.id_paciente }
+      });
+      used_caregivers += count;
+    }
 
     res.json({
       id: subscription.id_subscription,
