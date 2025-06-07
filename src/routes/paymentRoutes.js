@@ -1,6 +1,5 @@
 import express from 'express';
 import {
-  createPlan,
   createUserSubscription,
   webhookHandler,
   getSubscriptionStatus,
