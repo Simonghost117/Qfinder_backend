@@ -1,13 +1,20 @@
-import { MercadoPagoConfig } from 'mercadopago';
-
+import { MercadoPagoConfig, PreapprovalPlan, Preapproval } from 'mercadopago';
 import { models } from '../models/index.js';
 const { Usuario, Subscription, Paciente, Colaborador, Plan } = models;
 import { SUBSCRIPTION_LIMITS, PLANS_MERCADOPAGO } from '../config/subscriptions.js';
-import mercadopago from 'mercadopago';
-// Configuración de MercadoPago
-mercadopago.configure({
-  access_token: process.env.MERCADOPAGO_ACCESS_TOKEN
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+// Configuración de MercadoPago (v2)
+const client = new MercadoPagoConfig({
+  accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN,
+  options: { timeout: 5000 }
 });
+
+// Crear instancias de los servicios
+const preapprovalPlan = new PreapprovalPlan(client);
+const preapproval = new Preapproval(client);
 
 export const createSubscriptionPlan = async (req, res) => {
   try {
@@ -36,17 +43,22 @@ export const createSubscriptionPlan = async (req, res) => {
       back_url: process.env.MERCADOPAGO_BACK_URL
     };
 
-    const mpPlan = await mercadopago.preapproval_plan.create(planData);
+    // Crear plan usando la nueva API
+    const mpPlan = await preapprovalPlan.create({ body: planData });
     
-    PLANS_MERCADOPAGO[planType].id = mpPlan.response.id;
+    // Actualizar el plan con el ID generado
+    PLANS_MERCADOPAGO[planType].id = mpPlan.id;
     
     res.status(201).json({
-      id: mpPlan.response.id,
+      id: mpPlan.id,
       ...plan
     });
   } catch (error) {
     console.error('Error creando plan:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      error: error.message,
+      details: error.cause ? error.cause : null
+    });
   }
 };
 
@@ -87,11 +99,12 @@ export const createUserSubscription = async (req, res) => {
       reason: plan.description
     };
 
-    const mpSubscription = await mercadopago.preapproval.create(subscriptionData);
+    // Crear suscripción usando la nueva API
+    const mpSubscription = await preapproval.create({ body: subscriptionData });
     
     const newSubscription = await Subscription.create({
       usuario_id: userId,
-      mercado_pago_id: mpSubscription.response.id,
+      mercado_pago_id: mpSubscription.id,
       plan_id: plan.id,
       tipo_suscripcion: planType,
       estado_suscripcion: 'pending',
@@ -103,15 +116,15 @@ export const createUserSubscription = async (req, res) => {
 
     res.status(201).json({
       id: newSubscription.id_subscription,
-      mercado_pago_id: mpSubscription.response.id,
-      init_point: mpSubscription.response.init_point,
-      status: mpSubscription.response.status
+      mercado_pago_id: mpSubscription.id,
+      init_point: mpSubscription.init_point,
+      status: mpSubscription.status
     });
   } catch (error) {
     console.error('Error al crear suscripción:', error);
     res.status(500).json({ 
       error: error.message,
-      details: error.response?.body || null
+      details: error.cause ? error.cause : null
     });
   }
 };
@@ -136,9 +149,9 @@ export const getSubscriptionStatus = async (req, res) => {
       });
     }
 
-    // Verificar estado actual en MercadoPago
-    const mpSubscription = await mercadopago.preapproval.get(subscription.mercado_pago_id);
-    const status = mpSubscription.response.status;
+    // Verificar estado actual en MercadoPago usando la nueva API
+    const mpSubscription = await preapproval.get({ id: subscription.mercado_pago_id });
+    const status = mpSubscription.status;
 
     // Actualizar estado si es necesario
     if (subscription.estado_suscripcion !== status) {
@@ -163,7 +176,10 @@ export const getSubscriptionStatus = async (req, res) => {
     });
   } catch (error) {
     console.error('Error obteniendo estado:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(500).json({ 
+      error: 'Error interno del servidor',
+      details: error.message
+    });
   }
 };
 
@@ -179,9 +195,10 @@ export const cancelSubscription = async (req, res) => {
       return res.status(404).json({ error: 'No hay suscripción activa' });
     }
 
-    await mercadopago.preapproval.update({
+    // Cancelar suscripción usando la nueva API
+    await preapproval.update({
       id: subscription.mercado_pago_id,
-      status: 'cancelled'
+      body: { status: 'cancelled' }
     });
 
     await subscription.update({
@@ -200,6 +217,9 @@ export const cancelSubscription = async (req, res) => {
     });
   } catch (error) {
     console.error('Error cancelando suscripción:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      error: error.message,
+      details: error.cause ? error.cause : null
+    });
   }
 };
