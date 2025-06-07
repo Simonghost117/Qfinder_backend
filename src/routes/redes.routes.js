@@ -13,10 +13,26 @@ import validateSchema from '../middlewares/validatoreSchema.js';
 import { redesSchema } from '../schema/redesSchema.js';
 import { esAdministradorRed } from '../middlewares/validacionesRed.js';
 import { validateAdmin } from '../middlewares/validateAdmin.js';
+import { 
+    // requirePlusOrPro, 
+    verifyAccess } from '../middlewares/permissionsSuscription.js';
 
 const router = express.Router();
 // En redes.routes.js
+//🟢
 router.get('/obtenerIdRed', verifyToken, obtenerIdRedPorNombre)
+//🔴
+router.post('/crearMovil',
+    verifyToken,
+    // requirePlusOrPro(),
+    verifyAccess({ 
+    allowedRoles: ['Usuario', 'Administrador'],
+    blockFree: true // Esto activará el bloqueo para Free
+  }), 
+    validateSchema(redesSchema),
+    crearRed
+)
+//🟢
 router.get('/listarRedes',
     verifyToken,
     listarRedes
@@ -51,6 +67,7 @@ router.post('/crear',
 )
 router.put('/actualizarRedW/:id_red',
     verifyTokenWeb,
+    validateAdmin,
     validateSchema(redesSchema),
     actualizarRed
 )

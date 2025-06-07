@@ -1,6 +1,6 @@
 import { createPaciente, getPacientesByUsuario } from "../services/pacienteService.js";
 import { models } from "../models/index.js";
-const { Paciente, Familiar, CodigoQR } = models;
+const { Paciente, Familiar, CodigoQR, Colaborador } = models;
 import { generarQRPaciente } from "../controllers/codigoQrController.js";
 import Usuario from "../models/usuario.model.js";
 import { manejarImagenes } from "../utils/imgBase64.js";
@@ -89,14 +89,69 @@ export const register = async (req, res) => {
   }
 };
 
-// Listar pacientes por usuario
+// // Listar pacientes por usuario
+// export const listarPacientes = async (req, res) => {
+//   try {
+//     const id_usuario = req.usuario.id;
+  
+//     const pacientes = await getPacientesByUsuario(id_usuario);
+
+//     const pacientesFormateados = pacientes.map(p => ({
+//       id: p.id_paciente,
+//       nombre: p.nombre,
+//       apellido: p.apellido,
+//       identificacion: p.identificacion,
+//       fecha_nacimiento: p.fecha_nacimiento,
+//       sexo: p.sexo,
+//       diagnostico_principal: p.diagnostico_principal,
+//       imagen_paciente: p.imagen_paciente,
+//       es_cuidador_principal: p.Familiars?.some(f => f.cuidador_principal) || false,
+//       parentesco: p.Familiars?.[0]?.parentesco || 'tutor'
+//     }));
+
+//     res.status(200).json({
+//       success: true,
+//       data: pacientesFormateados
+//     });
+//   } catch (error) {
+//     console.error("Error en listarPacientes:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: 'Error al listar pacientes',
+//       error: process.env.NODE_ENV === 'development' ? error.message : null
+//     });
+//   }
+// };
 export const listarPacientes = async (req, res) => {
   try {
     const id_usuario = req.usuario.id;
-  
-    const pacientes = await getPacientesByUsuario(id_usuario);
 
-    const pacientesFormateados = pacientes.map(p => ({
+    // Pacientes registrados por el usuario
+    const pacientesPropios = await getPacientesByUsuario(id_usuario);
+
+    // Pacientes donde el usuario es colaborador
+    const colaboraciones = await Colaborador.findAll({
+      where: { id_usuario },
+      attributes: ['id_paciente']
+    });
+
+    const idsPacientesColaborador = colaboraciones.map(c => c.id_paciente);
+
+    const pacientesColaboradores = await Paciente.findAll({
+      where: { id_paciente: idsPacientesColaborador }
+    });
+
+    // Unificar y evitar duplicados si los hay
+    const pacientesUnificados = [...pacientesPropios];
+
+    pacientesColaboradores.forEach(p => {
+      if (!pacientesUnificados.some(pp => pp.id_paciente === p.id_paciente)) {
+        pacientesUnificados.push(p);
+      }
+    });
+
+    // Formatear pacientes
+    const pacientesFormateados = pacientesUnificados.map(p => ({
       id: p.id_paciente,
       nombre: p.nombre,
       apellido: p.apellido,

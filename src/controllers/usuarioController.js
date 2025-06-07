@@ -188,12 +188,20 @@ export const login = async (req, res) => {
           rol: usuario.tipo_usuario
         });
 
-         res.cookie("token", token, {
+
+         /*res.cookie("token", token, {
             httpOnly: process.env.NODE_ENV !== "development",
             secure: true,
             sameSite: "none",
             domain: process.env.NODE_ENV === "development" ? "localhost" : "qfinder-production.up.railway.app",
             expires: new Date(Date.now() + 24 * 60 * 60 * 1000)
+        });*/
+
+        res.cookie("token", token, {
+            httpOnly: true,
+            secure: true,
+            sameSite: "none",
+            maxAge: 60*60*1000
         });
 
 

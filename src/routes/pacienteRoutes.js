@@ -10,20 +10,24 @@ import { checkEpisodioPermissions } from '../middlewares/episodioPermissions.mid
 import { validateAdmin } from '../middlewares/validateAdmin.js';
 const router = express.Router();
 
+//🟢
 router.post('/register',
     verifyToken, 
     validateSchema(PacienteSchema), 
     register
 );
+//🟢
 router.get('/listarPacientes', 
     verifyToken, 
     listarPacientes
 );
+//🟢
 router.get('/listarPacientes/:id_paciente',
     verifyToken, 
     checkEpisodioPermissions(['Usuario']),
     getPacienteById
     );
+//🟢
 router.put('/actualizarPaciente/:id_paciente', 
     verifyToken, 
     checkEpisodioPermissions([ 'Usuario']), 
@@ -66,5 +70,6 @@ router.delete('/eliminarPaciente2/:id_paciente',
     validateAdmin, 
     eliminarPaciente
 );
+
 
 export default router;
