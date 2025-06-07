@@ -2,14 +2,15 @@ import express from 'express';
 import {
   createUserSubscription,
   getSubscriptionStatus,
-  cancelSubscription
+  cancelSubscription,
+  createSubscriptionPlan
 } from '../controllers/paymentController.js';
 import { verifyToken } from '../middlewares/verifyToken.js';
 
 const router = express.Router();
 
 // Admin: Crear planes
-router.post('/plans', verifyToken, createPlan);
+router.post('/plans', verifyToken,createSubscriptionPlan);
 
 // Cliente: Manejo de suscripciones
 router.post('/subscriptions', verifyToken, createUserSubscription);
