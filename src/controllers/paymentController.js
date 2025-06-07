@@ -4,20 +4,17 @@ const { Usuario, Subscription, Paciente, Colaborador, Plan } = models;
 import { SUBSCRIPTION_LIMITS, PLANS_MERCADOPAGO } from '../config/subscriptions.js';
 import dotenv from 'dotenv';
 
-// Extraer clases necesarias del módulo CommonJS
-const { MercadoPagoConfig, PreapprovalPlan, Preapproval } = mercadopago;
-
 dotenv.config();
 
 // Configuración de MercadoPago (v2)
-const client = new MercadoPagoConfig({
+const client = new mercadopago.MercadoPagoConfig({
   accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN,
   options: { timeout: 5000 }
 });
 
 // Crear instancias de los servicios
-const preapprovalPlan = new PreapprovalPlan(client);
-const preapproval = new Preapproval(client);
+const preapprovalPlan = new mercadopago.PreapprovalPlan(client);
+const preapproval = new mercadopago.Preapproval(client);
 
 export const createSubscriptionPlan = async (req, res) => {
   try {
