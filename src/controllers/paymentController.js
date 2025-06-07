@@ -1,4 +1,4 @@
-import { MercadoPagoConfig, PreapprovalPlan, Preapproval } from 'mercadopago';
+import { MercadoPagoConfig, PreapprovalPlan } from 'mercadopago';
 import { models } from '../models/index.js';
 const { Usuario, Subscription, Paciente, Colaborador, Plan } = models;
 import { SUBSCRIPTION_LIMITS, PLANS_MERCADOPAGO } from '../config/subscriptions.js';
