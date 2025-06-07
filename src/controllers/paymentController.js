@@ -1,6 +1,7 @@
 import mercadopago from 'mercadopago';
 import dotenv from 'dotenv';
-import { Usuario, Subscription, Paciente,Colaborador } from '../models/index.js';
+import { models } from '../models/index.js';
+const { Usuario, Subscription, Paciente, Colaborador } = models;
 import { SUBSCRIPTION_LIMITS, PLANS_MERCADOPAGO } from '../config/subscriptions.js';
 import crypto from 'crypto';
 

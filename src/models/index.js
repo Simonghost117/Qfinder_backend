@@ -93,5 +93,5 @@ Subscription.belongsTo(Usuario, { foreignKey: 'usuario_id' });
 
 
 // Exportar los modelos y la conexión de Sequelize
-const models = { Usuario, Paciente, Familiar, Medico, Red, PanelPersonalizado, CitaMedica, ActividadCuidado, UsuarioRed, Medicamento, PacienteMedicamento, CodigoQR, Colaborador };
+const models = { Usuario, Paciente, Familiar, Medico, Red, PanelPersonalizado, CitaMedica, ActividadCuidado, UsuarioRed, Medicamento, PacienteMedicamento, CodigoQR, Colaborador, Subscription };
 export { sequelize, models };
