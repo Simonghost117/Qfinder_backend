@@ -8,14 +8,14 @@ const Subscription = sequelize.define('Subscription', {
     primaryKey: true,
     field: 'id_subscription'
   },
-  usuario_id: {
+  id_usuario: { // <- CAMBIO AQUÍ
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
       model: 'usuario',
       key: 'id_usuario'
     },
-    field: 'usuario_id'
+    field: 'id_usuario' // <- COINCIDE CON LA DB
   },
   mercado_pago_id: {
     type: DataTypes.STRING(255),
