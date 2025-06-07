@@ -19,6 +19,7 @@ import Colaborador from './colaborador.model.js';
 // CodigoQR.belongsTo(Paciente, { foreignKey: "id_paciente", as: "paciente" });  
 
 
+
 // Definir relaciones entre los modelos
 Paciente.hasMany(Familiar, { foreignKey: 'id_paciente', as: 'familiares' });
 Familiar.belongsTo(Paciente, { foreignKey: 'id_paciente' });
@@ -31,8 +32,7 @@ Usuario.hasOne(Medico, { foreignKey: "id_usuario" });
 
 // // Después de definir todos los modelos
 // UsuarioRed.belongsTo(Usuario, { foreignKey: 'id_usuario', targetKey: 'id_usuario', as: 'usuario' });
-  Usuario.hasOne(Subscription, { foreignKey: 'usuario_id' });
-Subscription.belongsTo(Usuario, { foreignKey: 'usuario_id' });
+
 // Usuario.hasMany(UsuarioRed, { foreignKey: 'id_usuario', as: 'redes' });
 
 // Usuario.belongsToMany(Red, { through: Red, foreignKey: "id_usuario" });
@@ -84,6 +84,11 @@ Colaborador.belongsTo(Usuario, { foreignKey: 'id_usuario' });
 
 Paciente.hasMany(Colaborador, { foreignKey: 'id_paciente' });
 Colaborador.belongsTo(Paciente, { foreignKey: 'id_paciente' });
+
+Usuario.hasOne(Subscription, { foreignKey: 'usuario_id' });
+Subscription.belongsTo(Usuario, { foreignKey: 'usuario_id' });
+
+
 
 
 

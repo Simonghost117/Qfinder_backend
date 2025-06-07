@@ -7,12 +7,12 @@ export const SUBSCRIPTION_LIMITS = {
 export const PLANS_MERCADOPAGO = {
   plus: {
     id: null, // Se asignará al crear el plan
-    description: "Plan Plus - 5 pacientes",
+    description: "Plan Plus - 5 pacientes y 3 colaboradores",
     amount: 9.99
   },
   pro: {
     id: null, // Se asignará al crear el plan
-    description: "Plan Pro - 15 pacientes",
+    description: "Plan Pro - 15 pacientes y 10 colaboradores",
     amount: 19.99
   }
 };

@@ -6,16 +6,17 @@ import {
   getSubscriptionStatus,
   cancelSubscription
 } from '../controllers/paymentController.js';
+import { verifyToken } from '../middlewares/verifyToken.js';
 
 const router = express.Router();
 
-// Admin: Crear planes (opcional)
-router.post('/plans', createPlan);
+// Admin: Crear planes
+router.post('/plans', verifyToken, createPlan);
 
 // Cliente: Manejo de suscripciones
-router.post('/subscriptions', createUserSubscription);
-router.get('/subscriptions/:userId', getSubscriptionStatus);
-router.post('/subscriptions/cancel', cancelSubscription);
+router.post('/subscriptions', verifyToken, createUserSubscription);
+router.get('/subscriptions/:userId', verifyToken, getSubscriptionStatus);
+router.post('/subscriptions/cancel', verifyToken, cancelSubscription);
 
 // Webhook Mercado Pago
 router.post('/webhook', express.json(), webhookHandler);
