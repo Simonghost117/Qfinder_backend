@@ -1,4 +1,4 @@
-import mercadopago from 'mercadopago';
+import { MercadoPagoConfig } from 'mercadopago';
 import dotenv from 'dotenv';
 import crypto, { timingSafeEqual } from 'crypto';
 import { models } from '../models/index.js';
@@ -8,7 +8,7 @@ import { SUBSCRIPTION_LIMITS, PLANS_MERCADOPAGO } from '../config/subscriptions.
 dotenv.config();
 
 // Configuración SDK de MercadoPago (v2.x)
-mercadopago.configure({
+const mercadopago = new MercadoPagoConfig({
   access_token: process.env.MERCADOPAGO_ACCESS_TOKEN
 });
 
