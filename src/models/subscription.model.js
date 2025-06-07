@@ -1,6 +1,3 @@
-import { DataTypes } from 'sequelize';
-import sequelize from '../config/db.js';
-
 const Subscription = sequelize.define('Subscription', {
   id_subscription: {
     type: DataTypes.INTEGER,
@@ -8,14 +5,14 @@ const Subscription = sequelize.define('Subscription', {
     primaryKey: true,
     field: 'id_subscription'
   },
-  id_usuario: { // <- CAMBIO AQUÍ
+  id_usuario: {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
       model: 'usuario',
       key: 'id_usuario'
     },
-    field: 'id_usuario' // <- COINCIDE CON LA DB
+    field: 'id_usuario'
   },
   mercado_pago_id: {
     type: DataTypes.STRING(255),
@@ -76,9 +73,7 @@ const Subscription = sequelize.define('Subscription', {
       fields: ['mercado_pago_id']
     },
     {
-      fields: ['usuario_id']
+      fields: ['id_usuario']
     }
   ]
 });
-
-export default Subscription;
