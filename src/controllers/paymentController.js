@@ -239,3 +239,25 @@ export const cancelSubscription = async (req, res) => {
     });
   }
 };
+// Agrega esto al final de paymentController.js
+export const webhookHandler = async (req, res) => {
+  try {
+    console.log('Webhook recibido:', req.body);
+    
+    // Aquí procesarías los eventos de MercadoPago
+    const { type, data } = req.body;
+    
+    if (type === 'payment') {
+      console.log('Evento de pago:', data.id);
+      // Lógica para manejar pagos
+    } else if (type === 'subscription') {
+      console.log('Evento de suscripción:', data.id);
+      // Lógica para manejar suscripciones
+    }
+
+    res.sendStatus(200);
+  } catch (error) {
+    console.error('Error en webhook:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
