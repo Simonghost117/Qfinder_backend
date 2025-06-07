@@ -1,7 +1,6 @@
 import express from 'express';
 import {
   createUserSubscription,
-  webhookHandler,
   getSubscriptionStatus,
   cancelSubscription
 } from '../controllers/paymentController.js';
