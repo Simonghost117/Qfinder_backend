@@ -1,8 +1,11 @@
-import { MercadoPagoConfig, PreapprovalPlan } from 'mercadopago';
+import mercadopago from 'mercadopago';
 import { models } from '../models/index.js';
 const { Usuario, Subscription, Paciente, Colaborador, Plan } = models;
 import { SUBSCRIPTION_LIMITS, PLANS_MERCADOPAGO } from '../config/subscriptions.js';
 import dotenv from 'dotenv';
+
+// Extraer clases necesarias del módulo CommonJS
+const { MercadoPagoConfig, PreapprovalPlan, Preapproval } = mercadopago;
 
 dotenv.config();
 
