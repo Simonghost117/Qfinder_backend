@@ -1,3 +1,6 @@
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/db.js';
+
 const Subscription = sequelize.define('Subscription', {
   id_subscription: {
     type: DataTypes.INTEGER,
@@ -77,3 +80,6 @@ const Subscription = sequelize.define('Subscription', {
     }
   ]
 });
+
+
+export default Subscription;
