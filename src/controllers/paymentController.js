@@ -1,5 +1,9 @@
+
+import { models } from '../models/index.js';
+const { Usuario, Subscription, Paciente, Colaborador, Plan } = models;
+import { SUBSCRIPTION_LIMITS, PLANS_MERCADOPAGO } from '../config/subscriptions.js';
 import mercadopago from 'mercadopago';
-import { Usuario, Subscription } from '../models/index.js';
+
 import { SUBSCRIPTION_LIMITS, PLANS_MERCADOPAGO } from '../config/subscriptions.js';
 
 // Configuración de MercadoPago
