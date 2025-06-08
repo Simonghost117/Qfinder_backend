@@ -1,4 +1,7 @@
-import { MercadoPagoConfig, Preference, Payment, PreapprovalPlan, Preapproval } from 'mercadopago';
+// Importación compatible con CommonJS y ESM
+import mercadopagoPackage from 'mercadopago';
+const { MercadoPagoConfig, Preference, Payment, PreapprovalPlan, Preapproval } = mercadopagoPackage;
+
 import dotenv from 'dotenv';
 import Usuario from '../models/usuario.model.js';
 import Subscription from '../models/subscription.model.js';
@@ -9,18 +12,19 @@ import crypto from 'crypto';
 
 dotenv.config();
 
-// Configurar MercadoPago
+// ================= Configuración de MercadoPago =================
 const client = new MercadoPagoConfig({
   accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN,
   options: { integratorId: process.env.MERCADOPAGO_INTEGRATOR_ID || undefined }
 });
 
+// Clientes para cada servicio de MercadoPago
 const preference = new Preference(client);
 const payment = new Payment(client);
 const preapprovalPlan = new PreapprovalPlan(client);
 const preapproval = new Preapproval(client);
 
-// Función para verificar firma webhook
+// ================= Funciones Auxiliares =================
 const verifySignature = (payload, signature) => {
   const hash = crypto.createHmac('sha256', process.env.MERCADOPAGO_WEBHOOK_SECRET)
                      .update(JSON.stringify(payload))
@@ -28,6 +32,11 @@ const verifySignature = (payload, signature) => {
   return hash === signature;
 };
 
+// ================= Controladores =================
+
+/**
+ * Crea un plan de suscripción en MercadoPago
+ */
 export const createPlan = async (req, res) => {
   try {
     const { planType } = req.body;
@@ -56,12 +65,10 @@ export const createPlan = async (req, res) => {
     };
 
     const response = await preapprovalPlan.create({ body: planData });
-    const result = response;
-    
-    PLANS_MERCADOPAGO[planType].id = result.id;
+    PLANS_MERCADOPAGO[planType].id = response.id;
     
     res.status(201).json({
-      id: result.id,
+      id: response.id,
       ...plan
     });
   } catch (error) {
@@ -73,6 +80,9 @@ export const createPlan = async (req, res) => {
   }
 };
 
+/**
+ * Crea una suscripción para un usuario
+ */
 export const createUserSubscription = async (req, res) => {
   try {
     const { userId, planType, cardToken } = req.body;
@@ -82,22 +92,22 @@ export const createUserSubscription = async (req, res) => {
     }
 
     const plan = PLANS_MERCADOPAGO[planType];
-    
-    if (!plan || !plan.id) {
+    if (!plan?.id) {
       return res.status(400).json({ error: 'Plan no configurado' });
     }
 
     const user = await Usuario.findByPk(userId);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
+    // Verificar si ya tiene suscripción activa
     const existingSubscription = await Subscription.findOne({
       where: { usuario_id: userId, estado_suscripcion: 'active' }
     });
-    
     if (existingSubscription) {
-      return res.status(400).json({ error: 'Usuario ya tiene suscripción activa' });
+      return res.status(400).json({ error: 'El usuario ya tiene una suscripción activa' });
     }
 
+    // Crear suscripción en MercadoPago
     const subscriptionData = {
       preapproval_plan_id: plan.id,
       payer_email: user.correo_usuario,
@@ -109,11 +119,11 @@ export const createUserSubscription = async (req, res) => {
     };
 
     const response = await preapproval.create({ body: subscriptionData });
-    const result = response;
     
+    // Guardar en la base de datos
     const newSubscription = await Subscription.create({
       usuario_id: userId,
-      mercado_pago_id: result.id,
+      mercado_pago_id: response.id,
       plan_id: plan.id,
       tipo_suscripcion: planType,
       estado_suscripcion: 'pending',
@@ -125,9 +135,9 @@ export const createUserSubscription = async (req, res) => {
 
     res.status(201).json({
       id: newSubscription.id_subscription,
-      mercado_pago_id: result.id,
-      status: result.status,
-      init_point: result.init_point
+      mercado_pago_id: response.id,
+      status: response.status,
+      init_point: response.init_point
     });
   } catch (error) {
     console.error('Error al crear suscripción:', error);
@@ -138,6 +148,9 @@ export const createUserSubscription = async (req, res) => {
   }
 };
 
+/**
+ * Maneja los webhooks de MercadoPago
+ */
 export const webhookHandler = async (req, res) => {
   try {
     const signature = req.headers['x-signature-sha256'];
@@ -154,14 +167,12 @@ export const webhookHandler = async (req, res) => {
     let subscription;
 
     if (type === 'payment') {
-      const response = await payment.get({ id: data.id });
-      const paymentData = response;
-      
+      const paymentResponse = await payment.get({ id: data.id });
       subscription = await Subscription.findOne({
-        where: { mercado_pago_id: paymentData.external_reference }
+        where: { mercado_pago_id: paymentResponse.external_reference }
       });
 
-      if (paymentData.status === 'approved' && subscription) {
+      if (paymentResponse.status === 'approved' && subscription) {
         await Subscription.update(
           { 
             estado_suscripcion: 'active',
@@ -170,7 +181,7 @@ export const webhookHandler = async (req, res) => {
             limite_pacientes: SUBSCRIPTION_LIMITS[subscription.tipo_suscripcion].pacientes,
             limite_cuidadores: SUBSCRIPTION_LIMITS[subscription.tipo_suscripcion].cuidadores
           },
-          { where: { mercado_pago_id: paymentData.external_reference } }
+          { where: { mercado_pago_id: paymentResponse.external_reference } }
         );
         
         await Usuario.update(
@@ -185,36 +196,33 @@ export const webhookHandler = async (req, res) => {
       });
 
       if (subscription) {
-        const response = await preapproval.get({ id: data.id });
-        const mpSubscription = response;
-        const status = mpSubscription.status;
+        const subResponse = await preapproval.get({ id: data.id });
+        const status = subResponse.status;
 
         await Subscription.update(
           { estado_suscripcion: status },
           { where: { mercado_pago_id: data.id } }
         );
 
-        switch (status) {
-          case 'cancelled':
-            await Usuario.update(
-              { membresia: 'free' },
-              { where: { id_usuario: subscription.usuario_id } }
-            );
-            break;
-          case 'authorized':
-            await Usuario.update(
-              { membresia: subscription.tipo_suscripcion },
-              { where: { id_usuario: subscription.usuario_id } }
-            );
-            
-            await Subscription.update(
-              {
-                limite_pacientes: SUBSCRIPTION_LIMITS[subscription.tipo_suscripcion].pacientes,
-                limite_cuidadores: SUBSCRIPTION_LIMITS[subscription.tipo_suscripcion].cuidadores
-              },
-              { where: { id_subscription: subscription.id_subscription } }
-            );
-            break;
+        // Actualizar membresía del usuario según estado
+        if (status === 'cancelled') {
+          await Usuario.update(
+            { membresia: 'free' },
+            { where: { id_usuario: subscription.usuario_id } }
+          );
+        } else if (status === 'authorized') {
+          await Usuario.update(
+            { membresia: subscription.tipo_suscripcion },
+            { where: { id_usuario: subscription.usuario_id } }
+          );
+          
+          await Subscription.update(
+            {
+              limite_pacientes: SUBSCRIPTION_LIMITS[subscription.tipo_suscripcion].pacientes,
+              limite_cuidadores: SUBSCRIPTION_LIMITS[subscription.tipo_suscripcion].cuidadores
+            },
+            { where: { id_subscription: subscription.id_subscription } }
+          );
         }
       }
     }
@@ -229,6 +237,9 @@ export const webhookHandler = async (req, res) => {
   }
 };
 
+/**
+ * Obtiene el estado de la suscripción de un usuario
+ */
 export const getSubscriptionStatus = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -250,10 +261,10 @@ export const getSubscriptionStatus = async (req, res) => {
       });
     }
 
+    // Si está pendiente, verificar estado actual en MercadoPago
     if (subscription.estado_suscripcion === 'pending') {
       const response = await preapproval.get({ id: subscription.mercado_pago_id });
-      const mpSubscription = response;
-      const status = mpSubscription.status;
+      const status = response.status;
       
       await Subscription.update(
         { estado_suscripcion: status },
@@ -269,6 +280,7 @@ export const getSubscriptionStatus = async (req, res) => {
       }
     }
 
+    // Calcular uso actual
     const used_patients = await Paciente.count({ where: { usuario_id: userId } });
     
     let used_caregivers = 0;
@@ -278,10 +290,9 @@ export const getSubscriptionStatus = async (req, res) => {
     });
     
     for (const paciente of pacientes) {
-      const count = await Colaborador.count({
+      used_caregivers += await Colaborador.count({
         where: { id_paciente: paciente.id_paciente }
       });
-      used_caregivers += count;
     }
 
     res.json({
@@ -304,6 +315,9 @@ export const getSubscriptionStatus = async (req, res) => {
   }
 };
 
+/**
+ * Cancela una suscripción activa
+ */
 export const cancelSubscription = async (req, res) => {
   try {
     const { userId } = req.body;
@@ -313,14 +327,16 @@ export const cancelSubscription = async (req, res) => {
     });
 
     if (!subscription) {
-      return res.status(404).json({ error: 'No hay suscripción activa' });
+      return res.status(404).json({ error: 'No hay suscripción activa para cancelar' });
     }
 
+    // Cancelar en MercadoPago
     await preapproval.update({ 
       id: subscription.mercado_pago_id,
       body: { status: 'cancelled' }
     });
 
+    // Actualizar en base de datos
     await Subscription.update(
       { 
         estado_suscripcion: 'cancelled',
@@ -329,17 +345,18 @@ export const cancelSubscription = async (req, res) => {
       { where: { id_subscription: subscription.id_subscription } }
     );
 
+    // Degradar usuario a free
     await Usuario.update(
       { membresia: 'free' },
       { where: { id_usuario: userId } }
     );
 
     res.json({ 
-      message: 'Suscripción cancelada',
+      message: 'Suscripción cancelada exitosamente',
       cancellation_date: new Date()
     });
   } catch (error) {
-    console.error('Error cancelando:', error);
+    console.error('Error cancelando suscripción:', error);
     res.status(400).json({ 
       error: error.message,
       details: error.response?.body || null
@@ -347,6 +364,7 @@ export const cancelSubscription = async (req, res) => {
   }
 };
 
+// Exportar todos los controladores
 export default {
   createPlan,
   createUserSubscription,
