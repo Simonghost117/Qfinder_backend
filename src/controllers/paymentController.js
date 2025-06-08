@@ -125,3 +125,95 @@ export const createSubscriptionPlan = async (req, res) => {
     });
   }
 };
+export const createUserSubscription = async (req, res) => {
+  try {
+    const { userId, planType } = req.body;
+    
+    if (!userId || !planType) {
+      return res.status(400).json({ 
+        error: 'Faltan campos requeridos',
+        missing_fields: {
+          userId: !userId,
+          planType: !planType
+        }
+      });
+    }
+
+    if (!['plus', 'pro'].includes(planType)) {
+      return res.status(400).json({ error: 'Tipo de plan inválido' });
+    }
+
+    const plan = PLANS_MERCADOPAGO[planType];
+    
+    if (!plan || !plan.id) {
+      return res.status(400).json({ error: 'Plan no configurado' });
+    }
+
+    const user = await Usuario.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    const existingSubscription = await Subscription.findOne({
+      where: { 
+        usuario_id: userId,
+        estado_suscripcion: ['active', 'pending'] 
+      }
+    });
+    
+    if (existingSubscription) {
+      return res.status(400).json({ 
+        error: 'Usuario ya tiene suscripción activa o pendiente',
+        subscriptionId: existingSubscription.id_subscription
+      });
+    }
+
+    const subscriptionData = {
+      preapproval_plan_id: plan.id,
+      payer_email: user.correo_usuario,
+      external_reference: `USER_${userId}`,
+      reason: plan.description,
+      back_url: process.env.MERCADOPAGO_BACK_URL
+    };
+
+    const mpSubscription = await mercadopago.preapproval.create(subscriptionData);
+    
+    const newSubscription = await Subscription.create({
+      usuario_id: userId,
+      mercado_pago_id: mpSubscription.response.id,
+      plan_id: plan.id,
+      tipo_suscripcion: planType,
+      estado_suscripcion: 'pending',
+      limite_pacientes: SUBSCRIPTION_LIMITS[planType].pacientes,
+      limite_cuidadores: SUBSCRIPTION_LIMITS[planType].cuidadores,
+      fecha_inicio: new Date(),
+      fecha_renovacion: new Date(new Date().setMonth(new Date().getMonth() + 1))
+    });
+
+    res.status(201).json({
+      id: newSubscription.id_subscription,
+      mercado_pago_id: mpSubscription.response.id,
+      init_point: mpSubscription.response.init_point,
+      status: mpSubscription.response.status
+    });
+  } catch (error) {
+    console.error('Error al crear suscripción:', error);
+    
+    let errorMessage = 'Error interno del servidor';
+    let errorDetails = null;
+    
+    if (error.response && error.response.body) {
+      errorDetails = error.response.body;
+      if (error.response.body.message) {
+        errorMessage = error.response.body.message;
+      } else if (Array.isArray(error.response.body.cause)) {
+        errorMessage = error.response.body.cause[0].description;
+      }
+    }
+    
+    res.status(500).json({ 
+      error: errorMessage,
+      details: errorDetails
+    });
+  }
+};
