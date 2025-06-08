@@ -172,7 +172,7 @@ export const createUserSubscription = async (req, res) => {
     
     // Crear registro en la base de datos
     const newSubscription = await Subscription.create({
-      usuario_id: userId,
+      id_usuario: userId,
       mercado_pago_id: mpSubscription.id,
       plan_id: plan.id,
       tipo_suscripcion: planType,
