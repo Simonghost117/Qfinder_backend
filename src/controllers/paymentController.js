@@ -270,5 +270,91 @@ export const getSubscriptionStatus = async (req, res) => {
     });
   }
 };
+export const webhookHandler = async (req, res) => {
+  try {
+    const { type, data } = req.body;
+    
+    if (type === 'payment') {
+      const payment = await mercadopago.payment.findById(data.id);
+      const paymentData = payment.response;
+      
+      // Buscar por external_reference (formato: USER_123)
+      const externalReference = paymentData.external_reference;
+      if (!externalReference || !externalReference.startsWith('USER_')) {
+        return res.sendStatus(200);
+      }
+      
+      const userId = externalReference.split('_')[1];
+      const subscription = await Subscription.findOne({
+        where: { mercado_pago_id: paymentData.external_reference }
+      });
 
+      if (paymentData.status === 'approved' && subscription) {
+        await subscription.update({
+          estado_suscripcion: 'active',
+          fecha_inicio: new Date(),
+          fecha_renovacion: new Date(new Date().setMonth(new Date().getMonth() + 1))
+        });
+        
+        await Usuario.update(
+          { membresia: subscription.tipo_suscripcion },
+          { where: { id_usuario: subscription.usuario_id } }
+        );
+      }
+    } 
+    else if (type === 'subscription') {
+      const subscription = await Subscription.findOne({
+        where: { mercado_pago_id: data.id }
+      });
+
+      if (subscription) {
+        const mpSubscription = await mercadopago.preapproval.get(data.id);
+        const status = mpSubscription.response.status;
+
+        await subscription.update({ estado_suscripcion: status });
+
+        if (status === 'cancelled' || status === 'paused') {
+          await Usuario.update(
+            { membresia: 'free' },
+            { where: { id_usuario: subscription.usuario_id } }
+          );
+        }
+      }
+    }
+
+    res.sendStatus(200);
+  } catch (error) {
+    console.error('Error en webhook:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+// Función interna para crear planes
+const createSubscriptionPlanInternal = async (planType) => {
+  try {
+    const plan = PLANS_MERCADOPAGO[planType];
+    const planData = {
+      description: plan.description,
+      auto_recurring: {
+        frequency: 1,
+        frequency_type: "months",
+        repetitions: 12,
+        billing_day: 10,
+        billing_day_proportional: true,
+        transaction_amount: plan.amount,
+        currency_id: "USD"
+      },
+      payment_methods_allowed: {
+        payment_types: [{ id: "credit_card" }, { id: "debit_card" }]
+      },
+      back_url: process.env.MERCADOPAGO_BACK_URL
+    };
+
+    const mpPlan = await mercadopago.preapproval_plan.create(planData);
+    PLANS_MERCADOPAGO[planType].id = mpPlan.response.id;
+    console.log(`Plan ${planType} creado con ID: ${mpPlan.response.id}`);
+  } catch (error) {
+    console.error(`Error creando plan ${planType}:`, error);
+    throw new Error(`Error creando plan: ${error.message}`);
+  }
+};
 // Exportar las funciones del controlador
