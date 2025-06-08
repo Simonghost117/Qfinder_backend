@@ -8,22 +8,27 @@ import { MercadoPagoConfig, PreApproval, PreApprovalPlan } from 'mercadopago';
 // Configuración de variables de entorno
 dotenv.config();
 
-// Configuración robusta del cliente MercadoPago
 const createMercadoPagoClient = () => {
-  const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
+  const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN?.trim();
   
   if (!accessToken) {
     throw new Error('MERCADOPAGO_ACCESS_TOKEN no está definido en .env');
   }
 
-  const isSandbox = accessToken.startsWith('TEST-');
-  console.log(`Modo ${isSandbox ? 'Sandbox' : 'Producción'} detectado`);
+  // Validación más estricta del token
+  const tokenPattern = /^(TEST|APP_USR)-[a-zA-Z0-9]{32}-[a-zA-Z0-9]{6}-[a-zA-Z0-9]{40}$/;
+  if (!tokenPattern.test(accessToken)) {
+    throw new Error('Formato de token inválido. Debe seguir el patrón: TEST-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-xxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx');
+  }
+
+  console.log(`Configurando cliente MercadoPago con token: ${accessToken.substring(0, 10)}...`);
 
   return new MercadoPagoConfig({
-    access_token: accessToken,
+    accessToken: accessToken, // Usa camelCase (accessToken en lugar de access_token)
     options: {
       timeout: 15000,
-      idempotencyKey: `mp-${Date.now()}`
+      idempotencyKey: `mp-${Date.now()}`,
+      integratorId: process.env.MERCADOPAGO_INTEGRATOR_ID // Opcional
     }
   });
 };
