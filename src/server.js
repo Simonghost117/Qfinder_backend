@@ -7,7 +7,8 @@ import './config/firebase-admin.js';
 // server.js (corrección)
 import sequelize, { testConnection, syncModels } from './config/db.js';
 import { models } from "./models/index.js";
-
+import { createSubscriptionPlanInternal } from './controllers/paymentController.js';
+import { PLANS_MERCADOPAGO } from './config/subscriptions.js';
 import './config/db.js';
 // import './cron/notificador.js';
 
@@ -57,7 +58,23 @@ const startServer = async () => {
       // En producción, usa migraciones en lugar de sync()
       console.log("🚀 Modo producción: Usar migraciones en lugar de sync()");
     }
+// Crear planes al iniciar el servidor
+async function initializePlans() {
+  try {
+    console.log("Inicializando planes de suscripción...");
+    for (const planType in PLANS_MERCADOPAGO) {
+      if (!PLANS_MERCADOPAGO[planType].id) {
+        await createSubscriptionPlanInternal(planType);
+      }
+    }
+    console.log("Planes de suscripción inicializados correctamente");
+  } catch (error) {
+    console.error("Error inicializando planes:", error);
+  }
+}
 
+// Llamar después de conectar a la base de datos
+initializePlans();
     // 6. Inicio del servidor
     server.listen(PORT, () => {
       console.log(`Entorno: ${process.env.NODE_ENV}`);
