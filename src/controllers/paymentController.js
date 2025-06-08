@@ -1,7 +1,5 @@
-// Importación compatible con CommonJS y ESM
-import mercadopagoPackage from 'mercadopago';
-const { MercadoPagoConfig, Preference, Payment, PreapprovalPlan, Preapproval } = mercadopagoPackage;
-
+// Importación correcta para la última versión del SDK
+import mercadopago from 'mercadopago';
 import dotenv from 'dotenv';
 import Usuario from '../models/usuario.model.js';
 import Subscription from '../models/subscription.model.js';
@@ -12,19 +10,13 @@ import crypto from 'crypto';
 
 dotenv.config();
 
-// ================= Configuración de MercadoPago =================
-const client = new MercadoPagoConfig({
-  accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN,
-  options: { integratorId: process.env.MERCADOPAGO_INTEGRATOR_ID || undefined }
+// Configuración de MercadoPago (v2)
+mercadopago.configure({
+  access_token: process.env.MERCADOPAGO_ACCESS_TOKEN,
+  integrator_id: process.env.MERCADOPAGO_INTEGRATOR_ID || undefined
 });
 
-// Clientes para cada servicio de MercadoPago
-const preference = new Preference(client);
-const payment = new Payment(client);
-const preapprovalPlan = new PreapprovalPlan(client);
-const preapproval = new Preapproval(client);
-
-// ================= Funciones Auxiliares =================
+// Función para verificar firma webhook
 const verifySignature = (payload, signature) => {
   const hash = crypto.createHmac('sha256', process.env.MERCADOPAGO_WEBHOOK_SECRET)
                      .update(JSON.stringify(payload))
@@ -32,11 +24,7 @@ const verifySignature = (payload, signature) => {
   return hash === signature;
 };
 
-// ================= Controladores =================
-
-/**
- * Crea un plan de suscripción en MercadoPago
- */
+// Controladores (actualizados para SDK v2)
 export const createPlan = async (req, res) => {
   try {
     const { planType } = req.body;
@@ -64,11 +52,13 @@ export const createPlan = async (req, res) => {
       back_url: process.env.MERCADOPAGO_BACK_URL
     };
 
-    const response = await preapprovalPlan.create({ body: planData });
-    PLANS_MERCADOPAGO[planType].id = response.id;
+    const response = await mercadopago.preapproval_plan.create(planData);
+    const result = response.body;
+    
+    PLANS_MERCADOPAGO[planType].id = result.id;
     
     res.status(201).json({
-      id: response.id,
+      id: result.id,
       ...plan
     });
   } catch (error) {
@@ -80,9 +70,6 @@ export const createPlan = async (req, res) => {
   }
 };
 
-/**
- * Crea una suscripción para un usuario
- */
 export const createUserSubscription = async (req, res) => {
   try {
     const { userId, planType, cardToken } = req.body;
@@ -92,22 +79,22 @@ export const createUserSubscription = async (req, res) => {
     }
 
     const plan = PLANS_MERCADOPAGO[planType];
-    if (!plan?.id) {
+    
+    if (!plan || !plan.id) {
       return res.status(400).json({ error: 'Plan no configurado' });
     }
 
     const user = await Usuario.findByPk(userId);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-    // Verificar si ya tiene suscripción activa
     const existingSubscription = await Subscription.findOne({
       where: { usuario_id: userId, estado_suscripcion: 'active' }
     });
+    
     if (existingSubscription) {
-      return res.status(400).json({ error: 'El usuario ya tiene una suscripción activa' });
+      return res.status(400).json({ error: 'Usuario ya tiene suscripción activa' });
     }
 
-    // Crear suscripción en MercadoPago
     const subscriptionData = {
       preapproval_plan_id: plan.id,
       payer_email: user.correo_usuario,
@@ -118,12 +105,12 @@ export const createUserSubscription = async (req, res) => {
       back_url: process.env.MERCADOPAGO_BACK_URL
     };
 
-    const response = await preapproval.create({ body: subscriptionData });
+    const response = await mercadopago.preapproval.create(subscriptionData);
+    const result = response.body;
     
-    // Guardar en la base de datos
     const newSubscription = await Subscription.create({
       usuario_id: userId,
-      mercado_pago_id: response.id,
+      mercado_pago_id: result.id,
       plan_id: plan.id,
       tipo_suscripcion: planType,
       estado_suscripcion: 'pending',
@@ -135,9 +122,9 @@ export const createUserSubscription = async (req, res) => {
 
     res.status(201).json({
       id: newSubscription.id_subscription,
-      mercado_pago_id: response.id,
-      status: response.status,
-      init_point: response.init_point
+      mercado_pago_id: result.id,
+      status: result.status,
+      init_point: result.init_point
     });
   } catch (error) {
     console.error('Error al crear suscripción:', error);
