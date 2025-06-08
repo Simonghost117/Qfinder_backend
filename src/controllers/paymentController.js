@@ -107,11 +107,7 @@ export const createUserSubscription = async (req, res) => {
     if (!userId || !planType) {
       return res.status(400).json({ 
         success: false,
-        error: 'Faltan campos requeridos',
-        missing_fields: {
-          userId: !userId,
-          planType: !planType
-        }
+        error: 'Faltan campos requeridos: userId y planType'
       });
     }
 
@@ -164,7 +160,13 @@ export const createUserSubscription = async (req, res) => {
       payer_email: user.correo_usuario,
       external_reference: `USER_${userId}`,
       reason: plan.description,
-      back_url: process.env.MERCADOPAGO_BACK_URL
+      back_url: process.env.MERCADOPAGO_BACK_URL || 'https://tuapp.com/subscription/return',
+      auto_recurring: {
+        frequency: 1,
+        frequency_type: "months",
+        transaction_amount: plan.amount,
+        currency_id: plan.currency_id
+      }
     };
 
     // Crear suscripción en MercadoPago
@@ -194,7 +196,6 @@ export const createUserSubscription = async (req, res) => {
     console.error('Error al crear suscripción:', {
       message: error.message,
       status: error.status,
-      stack: error.stack,
       response: error.response?.data || 'No hay datos de respuesta'
     });
     
@@ -205,6 +206,7 @@ export const createUserSubscription = async (req, res) => {
     });
   }
 };
+
 
 /**
  * Obtiene el estado de la suscripción de un usuario
