@@ -1,4 +1,5 @@
-import { MercadoPagoConfig, PreapprovalPlan, Preapproval, Payment } from 'mercadopago';
+import mercadopago from 'mercadopago';
+const { MercadoPagoConfig, PreapprovalPlan, Preapproval, Payment } = mercadopago;
 import dotenv from 'dotenv';
 import  Usuario  from '../models/index.js';
 import Subscription from '../models/subscription.model.js';
