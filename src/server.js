@@ -7,6 +7,7 @@ import './config/firebase-admin.js';
 import sequelize, { testConnection } from './config/db.js';
 import mercadopago from 'mercadopago';
 import { configureMercadoPago } from './config/mercadopagoConfig.js';
+
 // Configuración de entorno
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
@@ -27,31 +28,18 @@ requiredEnvVars.forEach(varName => {
   }
 });
 
-// Configuración de MercadoPago
-console.log("🔧 Configurando MercadoPago...");
-try {
-  mercadopago.configure({
-    access_token: process.env.MERCADOPAGO_ACCESS_TOKEN,
-    integrator_id: process.env.MERCADOPAGO_INTEGRATOR_ID || null
-  });
-  
-  // Verificación simple de la conexión
-  await mercadopago.configurations.get(); // Método válido para verificar conexión
-  console.log("✅ MercadoPago configurado correctamente");
-} catch (error) {
-  console.error("❌ Error configurando MercadoPago:", error.message);
-  console.error("Verifica:");
-  console.error("1. Tu ACCESS_TOKEN es válido");
-  console.error("2. Tienes conexión a internet");
-  console.error("3. El token tiene los permisos adecuados");
-  process.exit(1);
-}
-
 const PORT = process.env.PORT || 3000;
 const server = http.createServer(app);
 
 const startServer = async () => {
   try {
+    // 1. Configurar MercadoPago primero
+    console.log("🔧 Configurando MercadoPago...");
+    if (!await configureMercadoPago()) {
+      throw new Error('Configuración de MercadoPago fallida');
+    }
+
+    // 2. Conectar a la base de datos
     console.log("\n🔌 Conectando a la base de datos...");
     const isConnected = await testConnection();
     if (!isConnected) {
@@ -59,16 +47,14 @@ const startServer = async () => {
     }
     console.log('✅ Conexión a la base de datos establecida');
 
+    // 3. Sincronizar modelos (solo desarrollo)
     if (process.env.NODE_ENV === 'development') {
       console.log("\n🛠 Sincronizando modelos de base de datos...");
       await sequelize.sync({ alter: true });
       console.log("✅ Base de datos sincronizada (modo desarrollo)");
     }
-console.log("🔧 Configurando MercadoPago...");
-if (!await configureMercadoPago()) {
-  console.error("❌ No se puede continuar sin MercadoPago");
-  process.exit(1);
-}
+
+    // 4. Iniciar servidor
     server.listen(PORT, () => {
       console.log(`\n🚀 Servidor escuchando en http://localhost:${PORT}`);
       console.log(`🔧 Entorno: ${process.env.NODE_ENV}`);
