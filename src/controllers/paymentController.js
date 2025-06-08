@@ -145,7 +145,7 @@ export const createUserSubscription = async (req, res) => {
     // Verificar suscripciones existentes
     const existingSubscription = await Subscription.findOne({
       where: { 
-        usuario_id: userId,
+        id_usuario: userId,
         estado_suscripcion: ['active', 'pending'] 
       }
     });
