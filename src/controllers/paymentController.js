@@ -60,7 +60,7 @@ export const createSubscriptionPlan = async (req, res) => {
         billing_day: 10,
         billing_day_proportional: true,
         transaction_amount: plan.amount,
-        currency_id: "USD"
+        currency_id:plan.currency_id || "COP"
       },
       payment_methods_allowed: {
         payment_types: [

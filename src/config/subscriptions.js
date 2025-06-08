@@ -6,13 +6,15 @@ export const SUBSCRIPTION_LIMITS = {
 
 export const PLANS_MERCADOPAGO = {
   plus: {
-    id: null, // Se asignará al crear el plan
+    id: null,
     description: "Plan Plus - 5 pacientes y 3 colaboradores",
-    amount: 9.99
+    amount: 20000, // $20,000 COP (mínimo de MercadoPago)
+    currency_id: "COP" // Moneda colombiana
   },
   pro: {
-    id: null, // Se asignará al crear el plan
+    id: null,
     description: "Plan Pro - 15 pacientes y 10 colaboradores",
-    amount: 19.99
+    amount: 50000, // $50,000 COP (ejemplo de plan superior)
+    currency_id: "COP"
   }
 };
