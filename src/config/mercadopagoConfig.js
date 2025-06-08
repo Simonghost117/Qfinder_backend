@@ -2,42 +2,34 @@ import mercadopago from 'mercadopago';
 
 export async function configureMercadoPago() {
   try {
-    // 1. Validación básica del token
+    const { MercadoPagoConfig } = mercadopago;
     const mpToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
+
+    // 1. Validar token
     if (!mpToken || mpToken.length < 30) {
-      throw new Error('Token inválido o faltante');
+      throw new Error('Token de MercadoPago inválido');
     }
 
-    // 2. Configuración
-    mercadopago.configure({
-      access_token: mpToken,
-      integrator_id: process.env.MERCADOPAGO_INTEGRATOR_ID || null
+    // 2. Configurar cliente
+    const client = new MercadoPagoConfig({
+      accessToken: mpToken,
+      options: {
+        integratorId: process.env.MERCADOPAGO_INTEGRATOR_ID || undefined
+      }
     });
 
-    // 3. Prueba real de conexión (nueva forma correcta)
-    const client = new mercadopago.MercadoPagoConfig({
-      accessToken: mpToken
-    });
+    // 3. Verificar conexión
     const paymentMethods = new mercadopago.PaymentMethods(client);
     const methods = await paymentMethods.list();
-
-    if (!methods || !Array.isArray(methods)) {
-      throw new Error('Respuesta inesperada de MercadoPago');
-    }
 
     console.log("✅ MercadoPago configurado. Métodos disponibles:", methods.length);
     return true;
 
   } catch (error) {
-    console.error("❌ Falla crítica en MercadoPago:", error.message);
-    
-    console.log("ℹ️ Debug info:", {
-      sdkVersion: mercadopago.version,
-      nodeVersion: process.version,
-      tokenPresent: !!process.env.MERCADOPAGO_ACCESS_TOKEN,
-      tokenLength: process.env.MERCADOPAGO_ACCESS_TOKEN?.length
+    console.error("❌ Error MercadoPago:", {
+      message: error.message,
+      status: error.status || 500
     });
-
     return false;
   }
 }
