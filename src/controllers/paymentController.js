@@ -1,4 +1,4 @@
-import mercadopago from 'mercadopago';
+
 import { models } from '../models/index.js';
 const { Usuario, Subscription } = models;
 import { SUBSCRIPTION_LIMITS } from '../config/subscriptions.js';
