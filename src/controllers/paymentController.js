@@ -1,4 +1,4 @@
-import mercadopago from 'mercadopago';
+import { MercadoPagoConfig, Preference, Payment, PreapprovalPlan, Preapproval } from 'mercadopago';
 import dotenv from 'dotenv';
 import Usuario from '../models/usuario.model.js';
 import Subscription from '../models/subscription.model.js';
@@ -10,10 +10,15 @@ import crypto from 'crypto';
 dotenv.config();
 
 // Configurar MercadoPago
-mercadopago.configure({
-  access_token: process.env.MERCADOPAGO_ACCESS_TOKEN,
-  integrator_id: process.env.MERCADOPAGO_INTEGRATOR_ID || undefined
+const client = new MercadoPagoConfig({
+  accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN,
+  options: { integratorId: process.env.MERCADOPAGO_INTEGRATOR_ID || undefined }
 });
+
+const preference = new Preference(client);
+const payment = new Payment(client);
+const preapprovalPlan = new PreapprovalPlan(client);
+const preapproval = new Preapproval(client);
 
 // Función para verificar firma webhook
 const verifySignature = (payload, signature) => {
@@ -50,8 +55,8 @@ export const createPlan = async (req, res) => {
       back_url: process.env.MERCADOPAGO_BACK_URL
     };
 
-    const response = await mercadopago.preapproval_plan.create(planData);
-    const result = response.body;
+    const response = await preapprovalPlan.create({ body: planData });
+    const result = response;
     
     PLANS_MERCADOPAGO[planType].id = result.id;
     
@@ -103,8 +108,8 @@ export const createUserSubscription = async (req, res) => {
       back_url: process.env.MERCADOPAGO_BACK_URL
     };
 
-    const response = await mercadopago.preapproval.create(subscriptionData);
-    const result = response.body;
+    const response = await preapproval.create({ body: subscriptionData });
+    const result = response;
     
     const newSubscription = await Subscription.create({
       usuario_id: userId,
@@ -149,8 +154,8 @@ export const webhookHandler = async (req, res) => {
     let subscription;
 
     if (type === 'payment') {
-      const response = await mercadopago.payment.get(data.id);
-      const paymentData = response.body;
+      const response = await payment.get({ id: data.id });
+      const paymentData = response;
       
       subscription = await Subscription.findOne({
         where: { mercado_pago_id: paymentData.external_reference }
@@ -180,8 +185,8 @@ export const webhookHandler = async (req, res) => {
       });
 
       if (subscription) {
-        const response = await mercadopago.preapproval.get(data.id);
-        const mpSubscription = response.body;
+        const response = await preapproval.get({ id: data.id });
+        const mpSubscription = response;
         const status = mpSubscription.status;
 
         await Subscription.update(
@@ -246,8 +251,8 @@ export const getSubscriptionStatus = async (req, res) => {
     }
 
     if (subscription.estado_suscripcion === 'pending') {
-      const response = await mercadopago.preapproval.get(subscription.mercado_pago_id);
-      const mpSubscription = response.body;
+      const response = await preapproval.get({ id: subscription.mercado_pago_id });
+      const mpSubscription = response;
       const status = mpSubscription.status;
       
       await Subscription.update(
@@ -311,8 +316,9 @@ export const cancelSubscription = async (req, res) => {
       return res.status(404).json({ error: 'No hay suscripción activa' });
     }
 
-    await mercadopago.preapproval.update(subscription.mercado_pago_id, {
-      status: 'cancelled'
+    await preapproval.update({ 
+      id: subscription.mercado_pago_id,
+      body: { status: 'cancelled' }
     });
 
     await Subscription.update(
