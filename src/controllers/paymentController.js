@@ -308,6 +308,22 @@ export const webhookHandler = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+// Añade esta función al final del archivo
+export const initializePlans = async () => {
+  console.log("⚙️ Inicializando planes de suscripción...");
+  try {
+    for (const planType in PLANS_MERCADOPAGO) {
+      if (!PLANS_MERCADOPAGO[planType].id) {
+        await createSubscriptionPlanInternal(planType);
+      }
+    }
+    console.log("✅ Planes de suscripción inicializados correctamente");
+    return true;
+  } catch (error) {
+    console.error("❌ Error inicializando planes:", error);
+    return false;
+  }
+};
 // Función interna para crear planes
 export const createSubscriptionPlanInternal = async (planType) => {
   try {
