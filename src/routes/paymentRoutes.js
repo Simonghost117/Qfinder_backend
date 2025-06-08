@@ -16,7 +16,6 @@ const router = express.Router();
 // Cliente: Manejo de suscripciones
 router.post('/subscriptions', verifyToken, createUserSubscription);
 router.get('/subscriptions/:userId', verifyToken, getSubscriptionStatus);
-router.post('/subscriptions/cancel', verifyToken, cancelSubscription);
 
 // Ruta para crear preferencia de Checkout Pro
 router.post('/checkout-pro', verifyToken, createCheckoutProPreference);
