@@ -6,7 +6,7 @@ import app from './app.js';
 import './config/firebase-admin.js';
 import sequelize, { testConnection } from './config/db.js';
 import { MercadoPagoConfig } from 'mercadopago';
-
+import { createSubscriptionPlanInternal } from './controllers/paymentController.js';
 // Configuración de entorno
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
