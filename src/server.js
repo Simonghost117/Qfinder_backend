@@ -6,8 +6,6 @@ import app from './app.js';
 import './config/firebase-admin.js';
 import sequelize, { testConnection } from './config/db.js';
 import { configureMercadoPago } from './config/mercadopagoConfig.js';
-import { initializePlans } from './controllers/paymentController.js';
-
 import mercadopago from 'mercadopago';
 
 // Configuración de entorno
@@ -31,26 +29,21 @@ requiredEnvVars.forEach(varName => {
   }
 });
 
-// Configuración de la base de datos
-const dbConfig = {
-  dialect: 'postgres',
-  dialectOptions: {
-    ssl: {
-      require: true,
-      rejectUnauthorized: false
-    }
-  }
-};
-
-// Configurar MercadoPago
+// Configuración de MercadoPago
 console.log("🔧 Configurando MercadoPago...");
-if (!configureMercadoPago()) {
-  console.error("❌ Configuración de MercadoPago fallida. Verifica:");
-  console.error("- MERCADOPAGO_ACCESS_TOKEN en .env");
-  console.error("- Permisos de la cuenta MercadoPago");
+mercadopago.configure({
+  access_token: process.env.MERCADOPAGO_ACCESS_TOKEN,
+  integrator_id: process.env.MERCADOPAGO_INTEGRATOR_ID || null
+});
+
+// Verificar conexión a MP (opcional)
+try {
+  await mercadopago.payment.methods();
+  console.log("✅ MercadoPago configurado correctamente");
+} catch (error) {
+  console.error("❌ Configuración de MercadoPago fallida:", error.message);
   process.exit(1);
 }
-console.log("✅ MercadoPago configurado correctamente");
 
 const PORT = process.env.PORT || 3000;
 const server = http.createServer(app);
@@ -58,23 +51,11 @@ const server = http.createServer(app);
 const startServer = async () => {
   try {
     console.log("\n🔌 Conectando a la base de datos...");
-        mercadopago.configure({
-      access_token: process.env.MERCADOPAGO_ACCESS_TOKEN,
-      integrator_id: process.env.MERCADOPAGO_INTEGRATOR_ID || null
-    });
     const isConnected = await testConnection();
     if (!isConnected) {
       throw new Error('❌ Conexión a la base de datos fallida');
     }
     console.log('✅ Conexión a la base de datos establecida');
-
-    // Inicialización de planes
-    console.log("\n⚙️ Inicializando planes de suscripción...");
-    const plansInitialized = await initializePlans();
-    if (!plansInitialized) {
-      throw new Error('❌ Fallo al inicializar planes de suscripción');
-    }
-    console.log("✅ Planes de suscripción listos");
 
     // Sincronización de la base de datos
     if (process.env.NODE_ENV === 'development') {
@@ -90,6 +71,9 @@ const startServer = async () => {
       console.log(`\n🚀 Servidor escuchando en http://localhost:${PORT}`);
       console.log("⏰ Sistema de notificaciones activo");
       console.log(`🔧 Entorno: ${process.env.NODE_ENV}`);
+      
+      // Opcional: Verificar planes después de iniciar
+      console.log("⚡️ Sistema listo para recibir solicitudes");
     });
   } catch (error) {
     console.error('\n❌ Error crítico al iniciar servidor:', error.message);
@@ -99,20 +83,15 @@ const startServer = async () => {
 };
 
 // Manejo de cierre limpio
-process.on('SIGTERM', () => {
-  console.log('\n🔻 Recibida señal SIGTERM. Cerrando servidor...');
+const shutdown = (signal) => {
+  console.log(`\n🔻 Recibida señal ${signal}. Cerrando servidor...`);
   server.close(() => {
     console.log('✅ Servidor cerrado correctamente');
     process.exit(0);
   });
-});
+};
 
-process.on('SIGINT', () => {
-  console.log('\n🔻 Recibida señal SIGINT. Cerrando servidor...');
-  server.close(() => {
-    console.log('✅ Servidor cerrado correctamente');
-    process.exit(0);
-  });
-});
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 startServer();
