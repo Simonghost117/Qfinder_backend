@@ -337,16 +337,26 @@ export const createSubscriptionPlanInternal = async (planType) => {
       back_url: process.env.MERCADOPAGO_BACK_URL
     };
 
-    // Usar el cliente preApprovalPlanClient que ya está inicializado
+    console.log('Intentando crear plan con datos:', JSON.stringify(planData, null, 2));
+
     const mpPlan = await preApprovalPlanClient.create({ body: planData });
     
-    // Actualizar el ID del plan en la configuración
+    if (!mpPlan || !mpPlan.id) {
+      throw new Error('Respuesta inválida de MercadoPago');
+    }
+
     PLANS_MERCADOPAGO[planType].id = mpPlan.id;
-    console.log(`Plan ${planType} creado con ID: ${mpPlan.id}`);
+    console.log(`Plan ${planType} creado exitosamente con ID: ${mpPlan.id}`);
     
     return mpPlan;
   } catch (error) {
-    console.error(`Error creando plan ${planType}:`, error);
+    console.error(`Error detallado creando plan ${planType}:`, {
+      message: error.message,
+      status: error.status,
+      stack: error.stack,
+      response: error.response?.data || 'No hay datos de respuesta'
+    });
+
     throw new Error(`Error creando plan: ${error.message}`);
   }
 };
