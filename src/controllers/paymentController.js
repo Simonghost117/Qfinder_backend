@@ -309,7 +309,7 @@ export const webhookHandler = async (req, res) => {
   }
 };
 // Función interna para crear planes
-const createSubscriptionPlanInternal = async (planType) => {
+export const createSubscriptionPlanInternal = async (planType) => {
   try {
     const plan = PLANS_MERCADOPAGO[planType];
     const planData = {
