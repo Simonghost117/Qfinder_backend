@@ -411,7 +411,7 @@ export const createSubscriptionPlanInternal = async (planType) => {
         billing_day: 10,
         billing_day_proportional: true,
         transaction_amount: plan.amount,
-        currency_id: "USD"
+        currency_id: plan.currency_id || "COP"
       },
       payment_methods_allowed: {
         payment_types: [
@@ -453,7 +453,7 @@ export const verifyMercadoPagoConnection = async (req, res) => {
         frequency: 1,
         frequency_type: "months",
         transaction_amount: 1,
-        currency_id: "USD"
+        currency_id: plan.currency_id || "COP"
       }
     };
 
