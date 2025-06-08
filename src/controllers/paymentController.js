@@ -4,9 +4,10 @@ const { Usuario, Subscription } = models;
 import { SUBSCRIPTION_LIMITS } from '../config/subscriptions.js';
 import dotenv from 'dotenv';
 import { PLANS_MERCADOPAGO } from '../config/subscriptions.js';
+import { MercadoPagoConfig } from 'mercadopago';
 dotenv.config();
 
-mercadopago.configure({
+const mercadopago = new MercadoPagoConfig({
   access_token: process.env.MERCADOPAGO_ACCESS_TOKEN
 });
 
