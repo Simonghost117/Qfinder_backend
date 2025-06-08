@@ -8,6 +8,8 @@ import sequelize, { testConnection } from './config/db.js';
 import { configureMercadoPago } from './config/mercadopagoConfig.js';
 import { initializePlans } from './controllers/paymentController.js';
 
+import mercadopago from 'mercadopago';
+
 // Configuración de entorno
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
