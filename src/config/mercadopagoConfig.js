@@ -1,11 +1,9 @@
-import mercadopago from 'mercadopago';
+import { MercadoPagoConfig, PaymentMethods } from 'mercadopago';
 
 export async function configureMercadoPago() {
   try {
-    const { MercadoPagoConfig } = mercadopago;
-    const mpToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
-
     // 1. Validar token
+    const mpToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
     if (!mpToken || mpToken.length < 30) {
       throw new Error('Token de MercadoPago inválido');
     }
@@ -19,7 +17,7 @@ export async function configureMercadoPago() {
     });
 
     // 3. Verificar conexión
-    const paymentMethods = new mercadopago.PaymentMethods(client);
+    const paymentMethods = new PaymentMethods(client);
     const methods = await paymentMethods.list();
 
     console.log("✅ MercadoPago configurado. Métodos disponibles:", methods.length);
@@ -28,7 +26,8 @@ export async function configureMercadoPago() {
   } catch (error) {
     console.error("❌ Error MercadoPago:", {
       message: error.message,
-      status: error.status || 500
+      status: error.status || 500,
+      stack: error.stack // Para debug detallado
     });
     return false;
   }
