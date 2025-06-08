@@ -6,13 +6,17 @@ export const SUBSCRIPTION_LIMITS = {
 
 export const PLANS_MERCADOPAGO = {
   plus: {
-    id: null, // Se asignará al crear el plan
     description: "Plan Plus - 5 pacientes y 3 colaboradores",
-    amount: 9.99
+    amount: 20000, // $20,000 COP
+    currency_id: "COP",
+    frequency: 1, // mensual
+    frequency_type: "months"
   },
   pro: {
-    id: null, // Se asignará al crear el plan
     description: "Plan Pro - 15 pacientes y 10 colaboradores",
-    amount: 19.99
+    amount: 50000, // $50,000 COP
+    currency_id: "COP",
+    frequency: 1, // mensual
+    frequency_type: "months"
   }
 };
