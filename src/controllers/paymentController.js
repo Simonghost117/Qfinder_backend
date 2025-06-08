@@ -20,56 +20,7 @@ console.log("✅ MercadoPago configurado:", {
 });
 
 // 2. Función interna para crear planes
-const createSubscriptionPlanInternal = async (planType) => {
-  try {
-    console.log(`🛠 Intentando crear plan ${planType}...`);
-    
-    const plan = PLANS_MERCADOPAGO[planType];
-    if (!plan) {
-      throw new Error(`Configuración no encontrada para el plan ${planType}`);
-    }
 
-    // Validar que el módulo de preapproval_plan existe
-    if (!mercadopago.preapproval_plan) {
-      throw new Error('Módulo preapproval_plan no disponible en el SDK');
-    }
-
-    const planData = {
-      description: plan.description,
-      auto_recurring: {
-        frequency: 1,
-        frequency_type: "months",
-        repetitions: 12,
-        billing_day: 10,
-        billing_day_proportional: true,
-        transaction_amount: plan.amount,
-        currency_id: "USD"
-      },
-      payment_methods_allowed: {
-        payment_types: [{ id: "credit_card" }, { id: "debit_card" }]
-      },
-      back_url: process.env.MERCADOPAGO_BACK_URL || "https://tudominio.com/return"
-    };
-
-    console.log(`📤 Enviando datos a MercadoPago para plan ${planType}...`);
-    const mpPlan = await mercadopago.preapproval_plan.create(planData);
-    
-    if (!mpPlan?.response?.id) {
-      throw new Error("Respuesta inválida de MercadoPago al crear plan");
-    }
-
-    PLANS_MERCADOPAGO[planType].id = mpPlan.response.id;
-    console.log(`✅ Plan ${planType} creado exitosamente (ID: ${mpPlan.response.id})`);
-    
-    return mpPlan.response.id;
-  } catch (error) {
-    console.error(`❌ Error al crear plan ${planType}:`, error.message);
-    if (error.response?.body) {
-      console.error("Detalles del error:", JSON.stringify(error.response.body, null, 2));
-    }
-    throw error;
-  }
-};
 
 // 3. Inicialización de Planes
 export const initializePlans = async () => {
@@ -371,7 +322,81 @@ export const cancelSubscription = async (req, res) => {
     });
   }
 };
+const createSubscriptionPlanInternal = async (planType) => {
+  try {
+    const plan = PLANS_MERCADOPAGO[planType];
+    const planData = {
+      description: plan.description,
+      auto_recurring: {
+        frequency: 1,
+        frequency_type: "months",
+        repetitions: 12,
+        billing_day: 10,
+        billing_day_proportional: true,
+        transaction_amount: plan.amount,
+        currency_id: "USD"
+      },
+      payment_methods_allowed: {
+        payment_types: [{ id: "credit_card" }, { id: "debit_card" }]
+      },
+      back_url: process.env.MERCADOPAGO_BACK_URL
+    };
 
+    const mpPlan = await mercadopago.preapproval_plan.create(planData);
+    PLANS_MERCADOPAGO[planType].id = mpPlan.response.id;
+    return mpPlan.response.id;
+  } catch (error) {
+    console.error(`Error creando plan ${planType}:`, error);
+    throw error;
+  }
+};
+
+// Función exportada para crear planes
+export const createSubscriptionPlan = async (req, res) => {
+  try {
+    const { planType } = req.body;
+    
+    if (!PLANS_MERCADOPAGO[planType]) {
+      return res.status(400).json({ error: 'Tipo de plan no válido' });
+    }
+
+    if (!PLANS_MERCADOPAGO[planType].id) {
+      await createSubscriptionPlanInternal(planType);
+    }
+
+    const plan = PLANS_MERCADOPAGO[planType];
+    const planData = {
+      description: plan.description,
+      auto_recurring: {
+        frequency: 1,
+        frequency_type: "months",
+        repetitions: 12,
+        billing_day: 10,
+        billing_day_proportional: true,
+        transaction_amount: plan.amount,
+        currency_id: "USD"
+      },
+      payment_methods_allowed: {
+        payment_types: [{ id: "credit_card" }, { id: "debit_card" }]
+      },
+      back_url: process.env.MERCADOPAGO_BACK_URL
+    };
+
+    const mpPlan = await mercadopago.preapproval_plan.create(planData);
+    PLANS_MERCADOPAGO[planType].id = mpPlan.response.id;
+    
+    res.status(201).json({
+      id: mpPlan.response.id,
+      ...plan
+    });
+  } catch (error) {
+    console.error('Error creando plan:', error);
+    res.status(500).json({ 
+      error: error.message,
+      details: error.response?.body || null
+    });
+  }
+};
 // 7. Webhook de MercadoPago
 export const webhookHandler = async (req, res) => {
   const eventId = req.headers['x-request-id'] || `webhook_${Date.now()}`;
