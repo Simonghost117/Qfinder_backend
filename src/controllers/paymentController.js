@@ -214,7 +214,7 @@ export const getSubscriptionStatus = async (req, res) => {
     const { userId } = req.params;
     
     const subscription = await Subscription.findOne({
-      where: { usuario_id: userId },
+      where: { id_usuario: userId },
       include: [{
         model: Usuario,
         attributes: ['id_usuario', 'nombre_usuario', 'correo_usuario', 'membresia']
@@ -280,7 +280,7 @@ export const cancelSubscription = async (req, res) => {
     // Buscar suscripción activa o pendiente
     const subscription = await Subscription.findOne({
       where: { 
-        usuario_id: userId,
+        id_usuario: userId,
         estado_suscripcion: ['active', 'pending'] 
       }
     });
@@ -356,7 +356,7 @@ export const webhookHandler = async (req, res) => {
         
         await Usuario.update(
           { membresia: subscription.tipo_suscripcion },
-          { where: { id_usuario: subscription.usuario_id } }
+          { where: { id_usuario: subscription.id_usuario } }
         );
       }
     } 
@@ -374,7 +374,7 @@ export const webhookHandler = async (req, res) => {
         if (status === 'cancelled' || status === 'paused') {
           await Usuario.update(
             { membresia: 'free' },
-            { where: { id_usuario: subscription.usuario_id } }
+            { where: { id_usuario: subscription.id_usuario } }
           );
         }
       }
