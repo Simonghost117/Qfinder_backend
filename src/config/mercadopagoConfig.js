@@ -1,11 +1,15 @@
-import { MercadoPagoConfig, PaymentMethods } from 'mercadopago';
+// Importación correcta para SDK v2.x
+import mercadopago from 'mercadopago';
+
+// Desestructuración después de importar
+const { MercadoPagoConfig, PaymentMethods } = mercadopago;
 
 export async function configureMercadoPago() {
   try {
     // 1. Validar token
     const mpToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
     if (!mpToken || mpToken.length < 30) {
-      throw new Error('Token de MercadoPago inválido');
+      throw new Error('Token de MercadoPago inválido o faltante');
     }
 
     // 2. Configurar cliente
