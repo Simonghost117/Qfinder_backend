@@ -217,4 +217,58 @@ export const createUserSubscription = async (req, res) => {
     });
   }
 };
+export const getSubscriptionStatus = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    const subscription = await Subscription.findOne({
+      where: { usuario_id: userId },
+      include: [{
+        model: Usuario,
+        attributes: ['id_usuario', 'nombre_usuario', 'correo_usuario', 'membresia']
+      }]
+    });
+
+    if (!subscription) {
+      return res.json({
+        status: 'free',
+        patient_limit: SUBSCRIPTION_LIMITS.free.pacientes,
+        caregiver_limit: SUBSCRIPTION_LIMITS.free.cuidadores
+      });
+    }
+
+    const mpSubscription = await mercadopago.preapproval.get(subscription.mercado_pago_id);
+    const status = mpSubscription.response.status;
+
+    if (subscription.estado_suscripcion !== status) {
+      await subscription.update({ estado_suscripcion: status });
+      
+      if (status === 'cancelled' || status === 'paused') {
+        await Usuario.update(
+          { membresia: 'free' },
+          { where: { id_usuario: userId } }
+        );
+      }
+    }
+
+    res.json({
+      id: subscription.id_subscription,
+      status: subscription.estado_suscripcion,
+      type: subscription.tipo_suscripcion,
+      start_date: subscription.fecha_inicio,
+      renewal_date: subscription.fecha_renovacion,
+      patient_limit: subscription.limite_pacientes,
+      caregiver_limit: subscription.limite_cuidadores,
+      used_patients: subscription.pacientes_usados || 0,
+      used_caregivers: subscription.cuidadores_usados || 0
+    });
+  } catch (error) {
+    console.error('Error obteniendo estado:', error);
+    res.status(500).json({ 
+      error: 'Error interno del servidor',
+      details: error.message
+    });
+  }
+};
+
 // Exportar las funciones del controlador
