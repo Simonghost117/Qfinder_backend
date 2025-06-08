@@ -14,27 +14,28 @@ export async function configureMercadoPago() {
       integrator_id: process.env.MERCADOPAGO_INTEGRATOR_ID || null
     });
 
-    // 3. Prueba real de conexión (versión segura)
-    const response = await mercadopago.payment_methods.list()
-      .catch(err => { throw new Error(`API MP no respondió: ${err.message}`) });
+    // 3. Prueba real de conexión (nueva forma correcta)
+    const client = new mercadopago.MercadoPagoConfig({
+      accessToken: mpToken
+    });
+    const paymentMethods = new mercadopago.PaymentMethods(client);
+    const methods = await paymentMethods.list();
 
-    if (!Array.isArray(response?.body)) {
+    if (!methods || !Array.isArray(methods)) {
       throw new Error('Respuesta inesperada de MercadoPago');
     }
 
-    console.log("✅ MercadoPago configurado. Métodos disponibles:", 
-      response.body.length);
+    console.log("✅ MercadoPago configurado. Métodos disponibles:", methods.length);
     return true;
 
   } catch (error) {
     console.error("❌ Falla crítica en MercadoPago:", error.message);
     
-    // Debug avanzado para Railway
-    console.log("ℹ️ Variables detectadas:", {
+    console.log("ℹ️ Debug info:", {
+      sdkVersion: mercadopago.version,
+      nodeVersion: process.version,
       tokenPresent: !!process.env.MERCADOPAGO_ACCESS_TOKEN,
-      tokenLength: process.env.MERCADOPAGO_ACCESS_TOKEN?.length,
-      nodeEnv: process.env.NODE_ENV,
-      railway: !!process.env.RAILWAY_ENVIRONMENT
+      tokenLength: process.env.MERCADOPAGO_ACCESS_TOKEN?.length
     });
 
     return false;
