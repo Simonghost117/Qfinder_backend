@@ -1,4 +1,4 @@
-import mercadopago from 'mercadopago';
+import { MercadoPagoConfig, PaymentMethods } from 'mercadopago';
 
 export async function configureMercadoPago() {
   try {
@@ -8,28 +8,30 @@ export async function configureMercadoPago() {
       throw new Error('Token de MercadoPago inválido');
     }
 
-    // 2. Configuración del SDK (versión actual)
-    mercadopago.configure({
-      access_token: mpToken,
-      integrator_id: process.env.MERCADOPAGO_INTEGRATOR_ID || null
+    // 2. Configuración del cliente
+    const client = new MercadoPagoConfig({
+      accessToken: mpToken,
+      options: {
+        integratorId: process.env.MERCADOPAGO_INTEGRATOR_ID || undefined
+      }
     });
 
-    // 3. Prueba de conexión alternativa
-    const response = await mercadopago.payment_methods.list()
-      .catch(err => { throw new Error(`API no respondió: ${err.message}`) });
-
-    if (!response || !response.body) {
+    // 3. Prueba de conexión
+    const paymentMethods = new PaymentMethods(client);
+    const methods = await paymentMethods.list();
+    
+    if (!methods || !Array.isArray(methods)) {
       throw new Error('Respuesta inválida de MercadoPago');
     }
 
-    console.log("✅ MercadoPago configurado correctamente");
+    console.log("✅ MercadoPago configurado correctamente. Métodos disponibles:", methods.length);
     return true;
 
   } catch (error) {
     console.error("❌ Error en MercadoPago:", {
       message: error.message,
-      status: error.status || 500,
-      stack: error.stack
+      code: error.status || 500,
+      details: error.cause || null
     });
     return false;
   }

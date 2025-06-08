@@ -5,8 +5,7 @@ import { fileURLToPath } from 'url';
 import app from './app.js';
 import './config/firebase-admin.js';
 import sequelize, { testConnection } from './config/db.js';
-import mercadopago from 'mercadopago';
-import { configureMercadoPago } from './config/mercadopagoConfig.js';
+import { MercadoPagoConfig } from 'mercadopago';
 
 // Configuración de entorno
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -28,6 +27,14 @@ requiredEnvVars.forEach(varName => {
   }
 });
 
+// Configuración de MercadoPago (esto debería estar en mercadopagoConfig.js)
+export const client = new MercadoPagoConfig({
+  accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN,
+  options: {
+    integratorId: process.env.MERCADOPAGO_INTEGRATOR_ID || undefined
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 const server = http.createServer(app);
 
@@ -35,9 +42,11 @@ const startServer = async () => {
   try {
     // 1. Configurar MercadoPago primero
     console.log("🔧 Configurando MercadoPago...");
-    if (!await configureMercadoPago()) {
-      throw new Error('Configuración de MercadoPago fallida');
+    // Aquí deberías verificar que la configuración es válida
+    if (!client.accessToken || client.accessToken.length < 30) {
+      throw new Error('❌ Configuración de MercadoPago inválida');
     }
+    console.log('✅ MercadoPago configurado correctamente');
 
     // 2. Conectar a la base de datos
     console.log("\n🔌 Conectando a la base de datos...");
