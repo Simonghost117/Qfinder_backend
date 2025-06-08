@@ -7,24 +7,22 @@ import { MercadoPagoConfig, PreApproval, PreApprovalPlan } from 'mercadopago';
 
 // Configuración de variables de entorno
 dotenv.config();
-
+const token = "TEST-358197303018633-060512-ccf1663185081e779360ba7d539ce364-390857873"
+// Configuración robusta del cliente MercadoPago
 const createMercadoPagoClient = () => {
-  const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN?.trim();
+  const accessToken = token || process.env.MERCADOPAGO_ACCESS_TOKEN;
   
   if (!accessToken) {
     throw new Error('MERCADOPAGO_ACCESS_TOKEN no está definido en .env');
   }
 
-  // Validación más estricta del token
-  const tokenPattern = /^(TEST|APP_USR)-[a-zA-Z0-9]{32}-[a-zA-Z0-9]{6}-[a-zA-Z0-9]{40}$/;
-  if (!tokenPattern.test(accessToken)) {
-    throw new Error('Formato de token inválido. Debe seguir el patrón: TEST-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-xxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx');
+  // Validación básica del token
+  if (!accessToken.startsWith('TEST-') && !accessToken.startsWith('APP_USR-')) {
+    throw new Error('Formato de token inválido. Debe comenzar con TEST- o APP_USR-');
   }
 
-  console.log(`Configurando cliente MercadoPago con token: ${accessToken.substring(0, 10)}...`);
-
   return new MercadoPagoConfig({
-    accessToken: accessToken, // Usa camelCase (accessToken en lugar de access_token)
+    accessToken: accessToken, // Nota: camelCase
     options: {
       timeout: 15000,
       idempotencyKey: `mp-${Date.now()}`,
