@@ -1,7 +1,7 @@
 import mercadopago from 'mercadopago';
 const { MercadoPagoConfig, PreapprovalPlan, Preapproval, Payment } = mercadopago;
 import dotenv from 'dotenv';
-import  {Usuario}  from '../models/index.js';
+import  Usuario  from '../models/usuario.model.js';
 import Subscription from '../models/subscription.model.js';
 import Paciente  from '../models/paciente.model.js';
 import Colaborador from '../models/colaborador.model.js';
