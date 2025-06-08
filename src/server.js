@@ -5,7 +5,6 @@ import { fileURLToPath } from 'url';
 import app from './app.js';
 import './config/firebase-admin.js';
 import sequelize, { testConnection } from './config/db.js';
-import { configureMercadoPago } from './config/mercadopagoConfig.js';
 import mercadopago from 'mercadopago';
 
 // Configuración de entorno
@@ -14,12 +13,11 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 // Validación de variables críticas
 const requiredEnvVars = [
-  'NODE_ENV', 
-  'DB_HOST', 
-  'DB_USER', 
-  'DB_PASSWORD', 
-  'MERCADOPAGO_ACCESS_TOKEN',
-  'MERCADOPAGO_BACK_URL'
+  'NODE_ENV',
+  'DB_HOST',
+  'DB_USER',
+  'DB_PASSWORD',
+  'MERCADOPAGO_ACCESS_TOKEN'
 ];
 
 requiredEnvVars.forEach(varName => {
@@ -31,17 +29,21 @@ requiredEnvVars.forEach(varName => {
 
 // Configuración de MercadoPago
 console.log("🔧 Configurando MercadoPago...");
-mercadopago.configure({
-  access_token: process.env.MERCADOPAGO_ACCESS_TOKEN,
-  integrator_id: process.env.MERCADOPAGO_INTEGRATOR_ID || null
-});
-
-// Verificar conexión a MP (opcional)
 try {
-  await mercadopago.payment.methods();
+  mercadopago.configure({
+    access_token: process.env.MERCADOPAGO_ACCESS_TOKEN,
+    integrator_id: process.env.MERCADOPAGO_INTEGRATOR_ID || null
+  });
+  
+  // Verificación simple de la conexión
+  await mercadopago.configurations.get(); // Método válido para verificar conexión
   console.log("✅ MercadoPago configurado correctamente");
 } catch (error) {
-  console.error("❌ Configuración de MercadoPago fallida:", error.message);
+  console.error("❌ Error configurando MercadoPago:", error.message);
+  console.error("Verifica:");
+  console.error("1. Tu ACCESS_TOKEN es válido");
+  console.error("2. Tienes conexión a internet");
+  console.error("3. El token tiene los permisos adecuados");
   process.exit(1);
 }
 
@@ -57,41 +59,32 @@ const startServer = async () => {
     }
     console.log('✅ Conexión a la base de datos establecida');
 
-    // Sincronización de la base de datos
     if (process.env.NODE_ENV === 'development') {
       console.log("\n🛠 Sincronizando modelos de base de datos...");
       await sequelize.sync({ alter: true });
       console.log("✅ Base de datos sincronizada (modo desarrollo)");
-    } else {
-      console.log("\n🚀 Modo producción: Usar migraciones para cambios en la base de datos");
     }
 
-    // Iniciar servidor
     server.listen(PORT, () => {
       console.log(`\n🚀 Servidor escuchando en http://localhost:${PORT}`);
-      console.log("⏰ Sistema de notificaciones activo");
       console.log(`🔧 Entorno: ${process.env.NODE_ENV}`);
-      
-      // Opcional: Verificar planes después de iniciar
-      console.log("⚡️ Sistema listo para recibir solicitudes");
     });
   } catch (error) {
-    console.error('\n❌ Error crítico al iniciar servidor:', error.message);
-    console.error(error.stack);
+    console.error('\n❌ Error al iniciar servidor:', error.message);
     process.exit(1);
   }
 };
 
-// Manejo de cierre limpio
-const shutdown = (signal) => {
-  console.log(`\n🔻 Recibida señal ${signal}. Cerrando servidor...`);
+// Manejo de cierre
+const gracefulShutdown = () => {
+  console.log('\n🔻 Cerrando servidor...');
   server.close(() => {
     console.log('✅ Servidor cerrado correctamente');
     process.exit(0);
   });
 };
 
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
 
 startServer();
