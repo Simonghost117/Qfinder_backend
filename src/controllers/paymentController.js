@@ -4,13 +4,16 @@ const { Usuario, Subscription } = models;
 import { SUBSCRIPTION_LIMITS } from '../config/subscriptions.js';
 import dotenv from 'dotenv';
 import { PLANS_MERCADOPAGO } from '../config/subscriptions.js';
-import { MercadoPagoConfig } from 'mercadopago';
+import { MercadoPagoConfig,PreApproval } from 'mercadopago';
+import { PreApprovalPlan } from 'mercadopago';
+
 dotenv.config();
 
 const mercadopago = new MercadoPagoConfig({
   access_token: process.env.MERCADOPAGO_ACCESS_TOKEN
 });
-
+const preApprovalPlanClient = new PreApprovalPlan(mercadopago);
+const preApprovalClient = new PreApproval(mercadopago);
 export const createSubscriptionPlan = async (req, res) => {
   try {
     const { planType } = req.body;
@@ -38,7 +41,8 @@ export const createSubscriptionPlan = async (req, res) => {
       back_url: process.env.MERCADOPAGO_BACK_URL
     };
 
-    const mpPlan = await mercadopago.preapproval_plan.create(planData);
+    const mpPlan = await preApprovalPlanClient.create({ body: planData });
+
     
     PLANS_MERCADOPAGO[planType].id = mpPlan.response.id;
     
@@ -105,8 +109,7 @@ export const createUserSubscription = async (req, res) => {
       reason: plan.description,
       back_url: process.env.MERCADOPAGO_BACK_URL
     };
-
-    const mpSubscription = await mercadopago.preapproval.create(subscriptionData);
+    const mpSubscription = await preApprovalClient.create({ body: subscriptionData });
     
     const newSubscription = await Subscription.create({
       usuario_id: userId,
@@ -167,8 +170,7 @@ export const getSubscriptionStatus = async (req, res) => {
         caregiver_limit: SUBSCRIPTION_LIMITS.free.cuidadores
       });
     }
-
-    const mpSubscription = await mercadopago.preapproval.get(subscription.mercado_pago_id);
+    const mpSubscription = await preApprovalClient.create({ body: subscriptionData });
     const status = mpSubscription.response.status;
 
     if (subscription.estado_suscripcion !== status) {
