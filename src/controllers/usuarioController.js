@@ -361,17 +361,37 @@ export const listarUsuarios = async (req, res) => {
       }, order: [['id_usuario', 'ASC']]
       }
   );
-    res.status(200).json(usuarios.map(usuario => ({
-      id_usuario: usuario.id_usuario,
-      nombre_usuario: usuario.nombre_usuario,
-      apellido_usuario: usuario.apellido_usuario,
-      identificacion_usuario: usuario.identificacion_usuario,
-      direccion_usuario: usuario.direccion_usuario,
-      telefono_usuario: usuario.telefono_usuario,
-      correo_usuario: usuario.correo_usuario,
-      tipo_usuario: usuario.tipo_usuario,
-      estado_usuario: usuario.estado_usuario
-    })));
+    // Opcional: añadir filtros dinámicos
+    if (req.query.estado) {
+      where.estado_usuario = req.query.estado;
+    }
+    
+    if (req.query.busqueda) {
+      where[Op.or] = [
+        { nombre_usuario: { [Op.like]: `%${req.query.busqueda}%` } },
+        { apellido_usuario: { [Op.like]: `%${req.query.busqueda}%` } },
+        { correo_usuario: { [Op.like]: `%${req.query.busqueda}%` } }
+      ];
+    }
+
+    const result = await PaginationService.paginate(Usuario, {
+      where,
+      order: [['id_usuario', 'DESC']],
+      req,
+      transformData: (usuarios) => usuarios.map(usuario => ({
+        id_usuario: usuario.id_usuario,
+        nombre_usuario: usuario.nombre_usuario,
+        apellido_usuario: usuario.apellido_usuario,
+        identificacion_usuario: usuario.identificacion_usuario,
+        direccion_usuario: usuario.direccion_usuario,
+        telefono_usuario: usuario.telefono_usuario,
+        correo_usuario: usuario.correo_usuario,
+        tipo_usuario: usuario.tipo_usuario,
+        estado_usuario: usuario.estado_usuario
+      }))
+    });
+
+    res.status(200).json(result);
   } catch (error) {
     console.log('Error al listar los usuarios', error);
     res.status(500).json({ message: "Erro interno del servidor al listar los usuarios"})
