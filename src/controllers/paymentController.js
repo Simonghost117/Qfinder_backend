@@ -1,6 +1,6 @@
 import { MercadoPagoConfig, PreapprovalPlan, Preapproval, Payment } from 'mercadopago';
 import dotenv from 'dotenv';
-import { Usuario, Subscription, Paciente, Cuidador, Colaborador } from '../models/index.js';
+import { Usuario, Subscription, Paciente, Colaborador } from '../models/index.js';
 import { SUBSCRIPTION_LIMITS, PLANS_MERCADOPAGO } from '../config/subscriptions.js';
 import crypto from 'crypto';
 
