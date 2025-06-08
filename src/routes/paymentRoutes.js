@@ -18,7 +18,10 @@ router.post('/subscriptions', verifyToken, createUserSubscription);
 router.get('/subscriptions/:userId', verifyToken, getSubscriptionStatus);
 router.post('/subscriptions/cancel', verifyToken, cancelSubscription);
 
-// Webhook Mercado Pago
-router.post('/webhook', express.json(), webhookHandler);
+// Ruta para crear preferencia de Checkout Pro
+router.post('/checkout-pro', verifyToken, createCheckoutProPreference);
+
+// Webhook Mercado Pago (sin autenticación)
+router.post('/webhook', express.json(), handleWebhook);
 
 export default router;
