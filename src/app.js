@@ -8,7 +8,7 @@ import chatRoutes from './routes/chatRoutes.js';
 import cookieParser from 'cookie-parser';
 import session from 'express-session';
 import { EventEmitter } from 'events';
-
+startAllJobs();
 // Configuración de entorno
 dotenv.config();
 
@@ -28,7 +28,7 @@ app.use(session({
 
 // Middlewares globales
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: process.env.FRONTEND_URL || 'https://qfinder-deploy-4ktr.vercel.app',
   credentials: true
 }));
 app.use(helmet());
@@ -60,6 +60,13 @@ import medicamentoRoutes from './routes/medicamento.routes.js';
 import pacienteMedicamentoRoutes from './routes/pacienteMedicamento.routes.js';
 import authRoutes from './routes/authRoutes.js'
 import membresiaRoutes from './routes/membresiaRed.routes.js'
+import { startAllJobs } from './jobs/cronJobs.js';
+import firebaseRoutes from './routes/firebase.js';
+// ... otras importaciones
+import paymentRoutes from './routes/paymentRoutes.js';
+
+// Después de inicializar tu aplicación
+
 
 // Endpoint raíz informativo
 app.get('/', (req, res) => {
@@ -102,7 +109,9 @@ app.use('/api/codigoQr', codigoQr)//🟢 codigo qr
 app.use('/api/medicamentos', medicamentoRoutes);//🟢 medicamento
 app.use('/api/paciente-medicamento', pacienteMedicamentoRoutes);
 app.use('/api/chat', chatRoutes);
-app.use('/api/firebase', authRoutes); //🟢 episodios salud
+app.use('/api/firebase', authRoutes); 
+app.use('/api/firebase', firebaseRoutes); //🟢 episodios salud
+app.use('/api/payments', paymentRoutes);
 // app.use('/api/medicos', medicoRoutes); // Validaciones - CRUD (YA NO SE NECESITA pero conservado)
 // app.use('/api/reportes', routerReport); // No se va a usar (comentado pero conservado)
 // app.use('/api/panel', panelRoutes);

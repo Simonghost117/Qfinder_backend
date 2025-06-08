@@ -1,18 +1,23 @@
-// En tu archivo chat.service.js
-import { db, messaging } from '../config/firebase-admin.js';
+import { db } from '../config/firebase-admin.js';
+import { NotificationService } from './notification.service.js';
 import Usuario from '../models/usuario.model.js';
 import UsuarioRed from '../models/UsuarioRed.js';
-
+import Red from '../models/Red.js';
+import logger from '../utils/logger.js';
+import { Op } from 'sequelize';
 export class ChatNotificationService {
+  /**
+   * Configura listeners para nuevas comunidades
+   */
   static async setupListeners() {
     try {
-      console.log('Setting up chat listeners...');
+      logger.info('Setting up chat listeners...');
       
-      // Escuchar nuevas comunidades creadas
       const comunidadesRef = db.ref('chats');
+      
+      // Listener para nuevas comunidades
       comunidadesRef.on('child_added', (snapshot) => {
-        const comunidadId = snapshot.key;
-        this.setupCommunityListeners(comunidadId);
+        this.setupCommunityListeners(snapshot.key);
       });
 
       // Configurar listeners para comunidades existentes
@@ -21,14 +26,17 @@ export class ChatNotificationService {
         this.setupCommunityListeners(comunidadSnapshot.key);
       });
 
-      console.log('Chat listeners setup complete');
+      logger.info('Chat listeners setup complete');
     } catch (error) {
-      console.error('Error setting up chat listeners:', error);
+      logger.error('Error setting up chat listeners:', error);
     }
   }
 
+  /**
+   * Configura listeners para una comunidad específica
+   */
   static setupCommunityListeners(comunidadId) {
-    console.log(`Setting up listener for community: ${comunidadId}`);
+    logger.info(`Setting up listener for community: ${comunidadId}`);
     
     const mensajesRef = db.ref(`chats/${comunidadId}/mensajes`);
     
@@ -38,84 +46,151 @@ export class ChatNotificationService {
       if (!mensaje || mensaje.estado === 'notified') return;
       
       try {
-        console.log(`New message in community ${comunidadId} from user ${mensaje.idUsuario}`);
+        logger.info(`New message in community ${comunidadId} from user ${mensaje.idUsuario}`);
         
-        // Obtener todos los miembros de la comunidad excepto el remitente
-        const miembros = await this.getCommunityMembers(comunidadId, mensaje.idUsuario);
+        // Obtener información de la comunidad
+        const comunidad = await Red.findByPk(comunidadId, {
+          attributes: ['nombre_red']
+        });
+
+        if (!comunidad) {
+          logger.warn(`Community ${comunidadId} not found in database`);
+          return;
+        }
+
+        // Obtener miembros para notificar
+        const miembros = await this.getMembersToNotify(comunidadId, mensaje.idUsuario);
         
+        if (miembros.length === 0) {
+          logger.info('No members to notify');
+          return;
+        }
+
         // Enviar notificaciones
-        await this.sendNotifications(miembros, comunidadId, mensaje, snapshot);
+        await this.sendChatNotifications({
+          comunidadId,
+          comunidadNombre: comunidad.nombre_red,
+          miembros,
+          mensaje,
+          mensajeId: snapshot.key
+        });
         
         // Marcar mensaje como notificado
         await snapshot.ref.update({ estado: 'notified' });
       } catch (error) {
-        console.error('Error processing chat message:', error);
+        logger.error('Error processing chat message:', error);
       }
     });
   }
 
-  static async getCommunityMembers(comunidadId, senderId) {
-    // Implementación mejorada para obtener miembros desde tu base de datos SQL
-    const miembros = await UsuarioRed.findAll({
-      where: { id_red: comunidadId },
-      include: [{
-        model: Usuario,
-        as: 'usuario', // Usando el alias definido en la asociación
-        attributes: ['id_usuario', 'fcm_token']
-      }]
-    });
+  /**
+   * Obtiene los miembros que deben recibir notificaciones
+   */
+  static async getMembersToNotify(comunidadId, senderId) {
+    try {
+      const miembros = await UsuarioRed.findAll({
+        where: { 
+          id_red: comunidadId,
+          id_usuario: { [Op.ne]: senderId }
+        },
+        include: [{
+          model: Usuario,
+          as: 'usuario',
+          attributes: ['id_usuario', 'fcm_token'],
+          where: {
+            fcm_token: { [Op.not]: null }
+          }
+        }]
+      });
 
-    return miembros
-      .filter(m => m.usuario.id_usuario.toString() !== senderId)
-      .map(m => ({
+      return miembros.map(m => ({
         id_usuario: m.usuario.id_usuario,
         fcm_token: m.usuario.fcm_token
       }));
+    } catch (error) {
+      logger.error('Error getting community members:', error);
+      return [];
+    }
   }
 
-  static async sendNotifications(miembros, comunidadId, mensaje, snapshot) {
-    const notificationPromises = miembros
-      .filter(miembro => miembro.fcm_token)
-      .map(miembro => {
-        const notification = {
-          token: miembro.fcm_token,
-          notification: {
-            title: `💬 Nuevo mensaje en ${comunidadId}`,
-            body: mensaje.contenido.length > 100 
-              ? mensaje.contenido.substring(0, 100) + '...' 
-              : mensaje.contenido
-          },
-          data: {
-            type: 'chat',
-            comunidadId,
-            mensajeId: snapshot.key,
-            senderId: mensaje.idUsuario,
-            click_action: 'FLUTTER_NOTIFICATION_CLICK'
-          },
-          android: {
-            priority: 'high'
-          },
-          apns: {
-            payload: {
-              aps: {
-                sound: 'default',
-                badge: 1
-              }
-            }
-          }
-        };
+  /**
+   * Envía notificaciones de chat
+   */
+  static async sendChatNotifications({ comunidadId, comunidadNombre, miembros, mensaje, mensajeId }) {
+    const tokens = miembros.map(m => m.fcm_token).filter(t => t);
+    
+    if (tokens.length === 0) {
+      logger.info('No valid FCM tokens to notify');
+      return;
+    }
 
-        return messaging.send(notification)
-          .then(() => {
-            console.log(`Notification sent to user ${miembro.id_usuario}`);
-            return true;
-          })
-          .catch(error => {
-            console.error(`Error sending notification to user ${miembro.id_usuario}:`, error);
-            return false;
-          });
+    try {
+      const title = `💬 ${comunidadNombre}`;
+      const body = mensaje.contenido.length > 100 
+        ? `${mensaje.contenido.substring(0, 100)}...` 
+        : mensaje.contenido;
+
+      const result = await NotificationService.sendToMultiple(tokens, {
+        title,
+        body,
+        data: {
+          type: 'chat',
+          comunidadId,
+          mensajeId,
+          senderId: mensaje.idUsuario,
+          click_action: 'FLUTTER_NOTIFICATION_CLICK'
+        }
       });
 
-    await Promise.all(notificationPromises);
+      logger.info(`Chat notifications sent for message ${mensajeId}`, {
+        successCount: result.successCount,
+        failureCount: result.failureCount
+      });
+
+    } catch (error) {
+      logger.error('Error sending chat notifications:', error);
+    }
+  }
+
+  /**
+   * Limpieza periódica de tokens inválidos
+   */
+  static async cleanUpInvalidTokens() {
+    try {
+      logger.info('Starting invalid FCM tokens cleanup...');
+      
+      const usersWithTokens = await Usuario.findAll({
+        where: { fcm_token: { [Op.not]: null } },
+        attributes: ['id_usuario', 'fcm_token']
+      });
+      
+      const invalidTokens = [];
+      
+      for (const user of usersWithTokens) {
+        try {
+          await NotificationService.validateToken(user.fcm_token);
+        } catch (error) {
+          invalidTokens.push(user.fcm_token);
+        }
+      }
+      
+      if (invalidTokens.length > 0) {
+        await NotificationService.removeInvalidTokens(invalidTokens);
+        logger.info(`Cleaned up ${invalidTokens.length} invalid tokens`);
+      } else {
+        logger.info('No invalid tokens found');
+      }
+    } catch (error) {
+      logger.error('Error during tokens cleanup:', error);
+    }
   }
 }
+
+// Configurar limpieza periódica (ejecutar una vez al día)
+const CLEANUP_INTERVAL = 24 * 60 * 60 * 1000; // 24 horas
+setInterval(() => {
+  ChatNotificationService.cleanUpInvalidTokens();
+}, CLEANUP_INTERVAL);
+
+// Iniciar el servicio al cargar el módulo
+ChatNotificationService.setupListeners();

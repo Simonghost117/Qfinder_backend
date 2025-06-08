@@ -4,7 +4,8 @@ export const episodioSchema = z.object({
   tipo: z.string().min(3).max(50),
   fecha_hora_inicio: z.coerce.date(),
   fecha_hora_fin: z.coerce.date().optional().nullable(),
-  severidad: z.enum(['baja', 'media', 'alta']).optional(), 
+  titulo: z.string().min(3).max(200),
+  // severidad: z.enum(['baja', 'media', 'alta']).optional(), 
   descripcion: z.string().min(10).max(500),
   intervenciones: z.string().optional()
 }).refine(data => {

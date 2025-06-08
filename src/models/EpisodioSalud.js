@@ -24,10 +24,14 @@ export const EpisodioSalud = sequelize.define('episodio_salud', {
         type: DataTypes.DATE,
         allowNull: true
     },
-    severidad: {
-        type: DataTypes.ENUM('baja', 'media', 'alta'),
-        allowNull: false,
+    titulo: {
+        type: DataTypes.STRING,
+        allowNull: false
     },
+    // severidad: {
+    //     type: DataTypes.ENUM('baja', 'media', 'alta'),
+    //     allowNull: false,
+    // },
     descripcion: {
         type: DataTypes.TEXT,
         allowNull: false

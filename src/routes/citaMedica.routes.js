@@ -6,7 +6,7 @@ import { verifyToken } from '../middlewares/verifyToken.js';
 import { checkEpisodioPermissions } from '../middlewares/episodioPermissions.middleware.js';
 
 const router = express.Router();
-
+//🟢
 router.post(
     '/crearCita/:id_paciente', 
     verifyToken,
@@ -14,18 +14,21 @@ router.post(
     validateSchema(citaMedicaSchema), 
     crearCitaMedica
 );
+//🟢
 router.get(
     '/listarCitas/:id_paciente',
     verifyToken,
     checkEpisodioPermissions(['Usuario']),
     listarCitasMedicas
 ); 
+//🟢
 router.get(
     '/listarCitasId/:id_paciente/:id_cita', 
     verifyToken,
     checkEpisodioPermissions(['Usuario']),
     listarCitasMedicasId
 ); 
+//🟢
 router.put(
     '/actualizarCita/:id_paciente/:id_cita',
     verifyToken,
@@ -33,6 +36,7 @@ router.put(
     validateSchema(citaMedicaSchema),
     actualizarCitaMedica
 );
+//🟢
 router.delete(
     '/eliminarCita/:id_paciente/:id_cita',
     verifyToken,
