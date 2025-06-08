@@ -1,9 +1,15 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
+import mercadopago from 'mercadopago';
 import { models } from '../models/index.js';
 import { SUBSCRIPTION_LIMITS, PLANS_MERCADOPAGO } from '../config/subscriptions.js';
 
 dotenv.config();
+
+// Configuración inicial de MercadoPago
+mercadopago.configure({
+  access_token: process.env.MERCADOPAGO_ACCESS_TOKEN
+});
 
 const { Usuario, Subscription } = models;
 const MP_BASE_URL = 'https://api.mercadopago.com';
@@ -13,7 +19,7 @@ const MP_HEADERS = {
   'Content-Type': 'application/json'
 };
 
-// 1. Crear plan de suscripción
+// Función interna para crear planes
 const createSubscriptionPlanInternal = async (planType) => {
   try {
     const plan = PLANS_MERCADOPAGO[planType];
@@ -47,8 +53,8 @@ const createSubscriptionPlanInternal = async (planType) => {
   }
 };
 
-// 2. Inicializar todos los planes
-export const initializePlans = async () => {
+// Inicializar todos los planes (función interna)
+const initializePlans = async () => {
   for (const [planType, config] of Object.entries(PLANS_MERCADOPAGO)) {
     if (!config.id) {
       await createSubscriptionPlanInternal(planType);
@@ -56,7 +62,22 @@ export const initializePlans = async () => {
   }
 };
 
-// 3. Crear suscripción
+// Controladores exportados
+export const createSubscriptionPlan = async (req, res) => {
+  const { planType } = req.body;
+  
+  if (!PLANS_MERCADOPAGO[planType]) {
+    return res.status(400).json({ error: `Plan ${planType} no válido` });
+  }
+
+  try {
+    const planId = await createSubscriptionPlanInternal(planType);
+    res.status(201).json({ planId });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 export const createUserSubscription = async (req, res) => {
   const { userId, planType } = req.body;
   const plan = PLANS_MERCADOPAGO[planType];
@@ -107,10 +128,8 @@ export const createUserSubscription = async (req, res) => {
   }
 };
 
-// 6. Obtener estado de suscripción
 export const getSubscriptionStatus = async (req, res) => {
   const { userId } = req.params;
-  console.log(`\n🔍 Consultando estado para usuario ${userId}`);
 
   try {
     const sub = await Subscription.findOne({
@@ -129,8 +148,8 @@ export const getSubscriptionStatus = async (req, res) => {
     }
 
     // Sincronizar con MercadoPago
-    const mpSub = await mercadopago.preapproval.get(sub.mercado_pago_id);
-    const mpStatus = mpSub.response?.status || sub.estado_suscripcion;
+    const mpSub = await mercadopago.preapproval.get({ id: sub.mercado_pago_id });
+    const mpStatus = mpSub.body?.status || sub.estado_suscripcion;
 
     if (sub.estado_suscripcion !== mpStatus) {
       await sub.update({ estado_suscripcion: mpStatus });
@@ -155,7 +174,6 @@ export const getSubscriptionStatus = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error en getSubscriptionStatus:', error.message);
     res.status(500).json({
       error: 'Error al obtener estado',
       message: error.message
@@ -163,10 +181,8 @@ export const getSubscriptionStatus = async (req, res) => {
   }
 };
 
-// 7. Cancelar suscripción
 export const cancelSubscription = async (req, res) => {
   const { userId } = req.body;
-  console.log(`\n🛑 Cancelando suscripción para usuario ${userId}`);
 
   try {
     const sub = await Subscription.findOne({
@@ -174,7 +190,7 @@ export const cancelSubscription = async (req, res) => {
     });
 
     if (!sub) {
-      throw new Error('No hay suscripción activa/pendiente');
+      return res.status(404).json({ error: 'No hay suscripción activa/pendiente' });
     }
 
     await mercadopago.preapproval.update({
@@ -199,7 +215,6 @@ export const cancelSubscription = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Error en cancelSubscription:', error.message);
     res.status(500).json({
       error: 'Error al cancelar suscripción',
       message: error.message
@@ -207,24 +222,19 @@ export const cancelSubscription = async (req, res) => {
   }
 };
 
-// 8. Webhook handler
 export const webhookHandler = async (req, res) => {
-  const eventId = req.headers['x-request-id'] || `webhook_${Date.now()}`;
-  console.log(`\n🔄 Procesando webhook ${eventId}`);
-
   try {
     const { type, data } = req.body;
 
     if (type === 'payment') {
-      const payment = await mercadopago.payment.findById(data.id);
-      const paymentData = payment.response;
+      const payment = await mercadopago.payment.get(data.id);
+      const paymentData = payment.body;
       
       const externalRef = paymentData.external_reference;
       if (!externalRef?.startsWith('USER_')) return res.sendStatus(200);
       
-      const userId = externalRef.split('_')[1];
       const sub = await Subscription.findOne({
-        where: { mercado_pago_id: externalRef }
+        where: { mercado_pago_id: paymentData.preapproval_id }
       });
 
       if (paymentData.status === 'approved' && sub) {
@@ -246,8 +256,8 @@ export const webhookHandler = async (req, res) => {
       });
 
       if (sub) {
-        const mpSub = await mercadopago.preapproval.get(data.id);
-        const status = mpSub.response.status;
+        const mpSub = await mercadopago.preapproval.get({ id: data.id });
+        const status = mpSub.body.status;
         await sub.update({ estado_suscripcion: status });
 
         if (status === 'cancelled' || status === 'paused') {
@@ -261,7 +271,9 @@ export const webhookHandler = async (req, res) => {
 
     res.sendStatus(200);
   } catch (error) {
-    console.error(`❌ Error en webhook ${eventId}:`, error.message);
     res.status(500).json({ error: 'Error procesando webhook' });
   }
 };
+
+// Inicializar planes al cargar el módulo
+initializePlans().catch(console.error);

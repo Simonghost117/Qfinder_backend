@@ -1,9 +1,9 @@
 import express from 'express';
 import {
+  createSubscriptionPlan,
   createUserSubscription,
   getSubscriptionStatus,
   cancelSubscription,
-  createSubscriptionPlan,
   webhookHandler
 } from '../controllers/paymentController.js';
 import { verifyToken } from '../middlewares/verifyToken.js';
