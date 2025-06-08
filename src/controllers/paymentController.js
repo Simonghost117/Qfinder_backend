@@ -1,179 +1,89 @@
-import mercadopago from 'mercadopago';
-import { models } from '../models/index.js';
-const { Usuario, Subscription } = models;
-import { SUBSCRIPTION_LIMITS, PLANS_MERCADOPAGO } from '../config/subscriptions.js';
+import axios from 'axios';
 import dotenv from 'dotenv';
+import { models } from '../models/index.js';
+import { SUBSCRIPTION_LIMITS, PLANS_MERCADOPAGO } from '../config/subscriptions.js';
 
 dotenv.config();
 
-// 1. Configuración robusta de MercadoPago
-console.log("🔧 Inicializando módulo de pagos...");
-try {
-  mercadopago.configurations.setAccessToken(process.env.MERCADOPAGO_ACCESS_TOKEN);
-  console.log("✅ SDK MercadoPago inicializado correctamente");
-  console.log("Modo:", mercadopago.configurations.sandbox ? "Sandbox" : "Producción");
-} catch (error) {
-  console.error("❌ Error fatal configurando MercadoPago:", error);
-  throw new Error("Configuración de MercadoPago fallida");
-}
+const { Usuario, Subscription } = models;
+const MP_BASE_URL = 'https://api.mercadopago.com';
 
-// 2. Función interna para crear planes
+const MP_HEADERS = {
+  Authorization: `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
+  'Content-Type': 'application/json'
+};
+
+// 1. Crear plan de suscripción
 const createSubscriptionPlanInternal = async (planType) => {
   try {
-    console.log(`🛠 Creando plan ${planType}...`);
-    
-    // Verificación exhaustiva del SDK
-    if (!mercadopago?.preapproval_plan?.create) {
-      throw new Error("SDK no inicializado correctamente - falta preapproval_plan.create");
-    }
-
     const plan = PLANS_MERCADOPAGO[planType];
-    if (!plan) throw new Error(`Plan ${planType} no definido en configuración`);
+    if (!plan) throw new Error(`Plan ${planType} no definido`);
 
     const planData = {
-      description: plan.description,
+      back_url: process.env.MERCADOPAGO_BACK_URL || "https://tudominio.com/return",
+      reason: plan.description,
       auto_recurring: {
         frequency: 1,
-        frequency_type: "months",
+        frequency_type: 'months',
+        transaction_amount: plan.amount,
+        currency_id: 'USD',
         repetitions: 12,
         billing_day: 10,
-        billing_day_proportional: true,
-        transaction_amount: plan.amount,
-        currency_id: "USD"
+        billing_day_proportional: true
       },
       payment_methods_allowed: {
-        payment_types: [{ id: "credit_card" }, { id: "debit_card" }]
-      },
-      back_url: process.env.MERCADOPAGO_BACK_URL || "https://tudominio.com/return"
+        payment_types: [{ id: 'credit_card' }, { id: 'debit_card' }]
+      }
     };
 
-    console.log("Enviando a MercadoPago:", { planType, amount: plan.amount });
-    const mpPlan = await mercadopago.preapproval_plan.create(planData);
-    
-    if (!mpPlan?.response?.id) {
-      throw new Error("Respuesta inválida de MercadoPago");
-    }
+    const res = await axios.post(`${MP_BASE_URL}/preapproval_plan`, planData, { headers: MP_HEADERS });
 
-    PLANS_MERCADOPAGO[planType].id = mpPlan.response.id;
-    console.log(`✅ Plan creado - ID: ${mpPlan.response.id}`);
-    return mpPlan.response.id;
-  } catch (error) {
-    console.error(`❌ Error en plan ${planType}:`, error.message);
-    if (error.response) {
-      console.error("Detalles error:", JSON.stringify(error.response.body, null, 2));
-    }
-    throw error;
+    if (!res.data.id) throw new Error('Respuesta inválida de MercadoPago');
+    PLANS_MERCADOPAGO[planType].id = res.data.id;
+
+    return res.data.id;
+  } catch (err) {
+    throw new Error(`Error creando plan ${planType}: ${err.response?.data?.message || err.message}`);
   }
 };
 
-// 3. Inicialización de planes (versión robusta)
+// 2. Inicializar todos los planes
 export const initializePlans = async () => {
-  console.log("\n⚙️ Iniciando inicialización de planes...");
-  try {
-    let success = true;
-    
-    for (const [planType, config] of Object.entries(PLANS_MERCADOPAGO)) {
-      try {
-        if (!config.id) {
-          console.log(`🔄 Creando ${planType}...`);
-          const planId = await createSubscriptionPlanInternal(planType);
-          PLANS_MERCADOPAGO[planType].id = planId;
-          console.log(`✔ ${planType} creado (ID: ${planId})`);
-        } else {
-          console.log(`ℹ️ ${planType} ya existe (ID: ${config.id})`);
-        }
-      } catch (error) {
-        console.error(`❌ Falló ${planType}:`, error.message);
-        success = false;
-      }
+  for (const [planType, config] of Object.entries(PLANS_MERCADOPAGO)) {
+    if (!config.id) {
+      await createSubscriptionPlanInternal(planType);
     }
-
-    if (!success) throw new Error("Algunos planes no se crearon");
-    console.log("✅ Todos los planes listos");
-    return true;
-  } catch (error) {
-    console.error("❌ Error crítico en initializePlans:", error.message);
-    return false;
   }
 };
 
-// 4. Controlador para crear planes (endpoint)
-export const createSubscriptionPlan = async (req, res) => {
-  const { planType } = req.body;
-  console.log(`\n📝 Solicitud crear plan: ${planType}`);
-
-  try {
-    if (!PLANS_MERCADOPAGO[planType]) {
-      return res.status(400).json({ error: 'Tipo de plan no válido' });
-    }
-
-    const planId = await createSubscriptionPlanInternal(planType);
-    
-    res.status(201).json({
-      success: true,
-      planId,
-      planDetails: PLANS_MERCADOPAGO[planType]
-    });
-  } catch (error) {
-    console.error(`❌ Error en createSubscriptionPlan:`, error.message);
-    res.status(500).json({
-      error: 'Error al crear plan',
-      message: error.message,
-      details: error.response?.body || null
-    });
-  }
-};
-
-// 5. Crear suscripción para usuario (versión mejorada)
+// 3. Crear suscripción
 export const createUserSubscription = async (req, res) => {
   const { userId, planType } = req.body;
-  const transactionId = `sub_${Date.now()}`;
-  console.log(`\n📝 [${transactionId}] Nueva suscripción - Usuario: ${userId}, Plan: ${planType}`);
+  const plan = PLANS_MERCADOPAGO[planType];
+  if (!plan || !plan.id) return res.status(400).json({ error: 'Plan no válido o no inicializado' });
+
+  const user = await Usuario.findByPk(userId);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  const existing = await Subscription.findOne({
+    where: { usuario_id: userId, estado_suscripcion: ['active', 'pending'] }
+  });
+  if (existing) return res.status(400).json({ error: 'Ya tiene suscripción activa o pendiente' });
+
+  const subData = {
+    preapproval_plan_id: plan.id,
+    payer_email: user.correo_usuario,
+    external_reference: `USER_${userId}_${Date.now()}`,
+    back_url: process.env.MERCADOPAGO_BACK_URL,
+    reason: plan.description
+  };
 
   try {
-    // Validaciones
-    if (!userId || !planType) {
-      throw new Error('Faltan userId o planType');
-    }
+    const response = await axios.post(`${MP_BASE_URL}/preapproval`, subData, { headers: MP_HEADERS });
 
-    const plan = PLANS_MERCADOPAGO[planType];
-    if (!plan?.id) {
-      throw new Error('Plan no configurado');
-    }
-
-    const user = await Usuario.findByPk(userId);
-    if (!user) {
-      throw new Error('Usuario no encontrado');
-    }
-
-    // Verificar suscripción existente
-    const exists = await Subscription.findOne({
-      where: { usuario_id: userId, estado_suscripcion: ['active', 'pending'] }
-    });
-    if (exists) {
-      throw new Error('Usuario ya tiene suscripción activa/pendiente');
-    }
-
-    // Crear en MercadoPago
-    const subData = {
-      preapproval_plan_id: plan.id,
-      payer_email: user.correo_usuario,
-      external_reference: `USER_${userId}_${transactionId}`,
-      reason: plan.description,
-      back_url: process.env.MERCADOPAGO_BACK_URL
-    };
-
-    console.log("Creando suscripción en MercadoPago...");
-    const mpSub = await mercadopago.preapproval.create(subData);
-    
-    if (!mpSub?.response?.id) {
-      throw new Error('Error al crear suscripción en MercadoPago');
-    }
-
-    // Guardar en DB
-    const newSub = await Subscription.create({
+    const sub = await Subscription.create({
       usuario_id: userId,
-      mercado_pago_id: mpSub.response.id,
+      mercado_pago_id: response.data.id,
       plan_id: plan.id,
       tipo_suscripcion: planType,
       estado_suscripcion: 'pending',
@@ -183,20 +93,16 @@ export const createUserSubscription = async (req, res) => {
       fecha_renovacion: new Date(new Date().setMonth(new Date().getMonth() + 1))
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
-      subscriptionId: newSub.id_subscription,
-      initPoint: mpSub.response.init_point,
-      status: mpSub.response.status,
-      transactionId
+      subscriptionId: sub.id_subscription,
+      initPoint: response.data.init_point,
+      status: response.data.status
     });
-
-  } catch (error) {
-    console.error(`❌ [${transactionId}] Error:`, error.message);
-    res.status(500).json({
-      error: 'Error al crear suscripción',
-      message: error.message,
-      transactionId
+  } catch (err) {
+    return res.status(500).json({
+      error: 'Error creando suscripción',
+      details: err.response?.data || err.message
     });
   }
 };
