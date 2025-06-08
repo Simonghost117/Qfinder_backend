@@ -1,5 +1,6 @@
-// Importación correcta para la última versión del SDK
-import { MercadoPagoConfig, PreapprovalPlan, Preapproval, Payment } from 'mercadopago';
+// Importación corregida para CommonJS
+import mercadopagoPkg from 'mercadopago';
+const { MercadoPagoConfig, PreapprovalPlan, Preapproval, Payment } = mercadopagoPkg;
 import dotenv from 'dotenv';
 import Usuario from '../models/usuario.model.js';
 import Subscription from '../models/subscription.model.js';
@@ -28,7 +29,7 @@ const verifySignature = (payload, signature) => {
   return hash === signature;
 };
 
-// Controladores (actualizados para SDK actual)
+// Controladores actualizados
 export const createPlan = async (req, res) => {
   try {
     const { planType } = req.body;
@@ -137,9 +138,6 @@ export const createUserSubscription = async (req, res) => {
   }
 };
 
-/**
- * Maneja los webhooks de MercadoPago
- */
 export const webhookHandler = async (req, res) => {
   try {
     const signature = req.headers['x-signature-sha256'];
@@ -193,7 +191,6 @@ export const webhookHandler = async (req, res) => {
           { where: { mercado_pago_id: data.id } }
         );
 
-        // Actualizar membresía del usuario según estado
         if (status === 'cancelled') {
           await Usuario.update(
             { membresia: 'free' },
@@ -226,9 +223,6 @@ export const webhookHandler = async (req, res) => {
   }
 };
 
-/**
- * Obtiene el estado de la suscripción de un usuario
- */
 export const getSubscriptionStatus = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -250,7 +244,6 @@ export const getSubscriptionStatus = async (req, res) => {
       });
     }
 
-    // Si está pendiente, verificar estado actual en MercadoPago
     if (subscription.estado_suscripcion === 'pending') {
       const response = await preapproval.get({ id: subscription.mercado_pago_id });
       const status = response.status;
@@ -269,7 +262,6 @@ export const getSubscriptionStatus = async (req, res) => {
       }
     }
 
-    // Calcular uso actual
     const used_patients = await Paciente.count({ where: { usuario_id: userId } });
     
     let used_caregivers = 0;
@@ -304,9 +296,6 @@ export const getSubscriptionStatus = async (req, res) => {
   }
 };
 
-/**
- * Cancela una suscripción activa
- */
 export const cancelSubscription = async (req, res) => {
   try {
     const { userId } = req.body;
@@ -319,13 +308,11 @@ export const cancelSubscription = async (req, res) => {
       return res.status(404).json({ error: 'No hay suscripción activa para cancelar' });
     }
 
-    // Cancelar en MercadoPago
     await preapproval.update({ 
       id: subscription.mercado_pago_id,
       body: { status: 'cancelled' }
     });
 
-    // Actualizar en base de datos
     await Subscription.update(
       { 
         estado_suscripcion: 'cancelled',
@@ -334,7 +321,6 @@ export const cancelSubscription = async (req, res) => {
       { where: { id_subscription: subscription.id_subscription } }
     );
 
-    // Degradar usuario a free
     await Usuario.update(
       { membresia: 'free' },
       { where: { id_usuario: userId } }
@@ -353,7 +339,6 @@ export const cancelSubscription = async (req, res) => {
   }
 };
 
-// Exportar todos los controladores
 export default {
   createPlan,
   createUserSubscription,
