@@ -3,7 +3,7 @@ import {
   createUserSubscription,
   getSubscriptionStatus,
   cancelSubscription,
-  createSubscriptionPlan,
+  // createSubscriptionPlan,
   webhookHandler
 } from '../controllers/paymentController.js';
 import { verifyToken } from '../middlewares/verifyToken.js';
