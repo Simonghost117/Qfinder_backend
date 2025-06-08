@@ -1,89 +1,160 @@
-import axios from 'axios';
-import dotenv from 'dotenv';
+import mercadopago from 'mercadopago';
 import { models } from '../models/index.js';
+const { Usuario, Subscription } = models;
 import { SUBSCRIPTION_LIMITS, PLANS_MERCADOPAGO } from '../config/subscriptions.js';
+import dotenv from 'dotenv';
 
 dotenv.config();
 
-const { Usuario, Subscription } = models;
-const MP_BASE_URL = 'https://api.mercadopago.com';
+// Configuración inicial de MercadoPago
+mercadopago.configure({
+  access_token: process.env.MERCADOPAGO_ACCESS_TOKEN
+});
 
-const MP_HEADERS = {
-  Authorization: `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
-  'Content-Type': 'application/json'
-};
-
-// 1. Crear plan de suscripción
+// Función interna para crear planes
 const createSubscriptionPlanInternal = async (planType) => {
   try {
     const plan = PLANS_MERCADOPAGO[planType];
-    if (!plan) throw new Error(`Plan ${planType} no definido`);
-
     const planData = {
-      back_url: process.env.MERCADOPAGO_BACK_URL || "https://tudominio.com/return",
-      reason: plan.description,
+      description: plan.description,
       auto_recurring: {
         frequency: 1,
-        frequency_type: 'months',
-        transaction_amount: plan.amount,
-        currency_id: 'USD',
+        frequency_type: "months",
         repetitions: 12,
         billing_day: 10,
-        billing_day_proportional: true
+        billing_day_proportional: true,
+        transaction_amount: plan.amount,
+        currency_id: "USD"
       },
       payment_methods_allowed: {
-        payment_types: [{ id: 'credit_card' }, { id: 'debit_card' }]
-      }
+        payment_types: [{ id: "credit_card" }, { id: "debit_card" }]
+      },
+      back_url: process.env.MERCADOPAGO_BACK_URL
     };
 
-    const res = await axios.post(`${MP_BASE_URL}/preapproval_plan`, planData, { headers: MP_HEADERS });
-
-    if (!res.data.id) throw new Error('Respuesta inválida de MercadoPago');
-    PLANS_MERCADOPAGO[planType].id = res.data.id;
-
-    return res.data.id;
-  } catch (err) {
-    throw new Error(`Error creando plan ${planType}: ${err.response?.data?.message || err.message}`);
+    const mpPlan = await mercadopago.preapproval_plan.create(planData);
+    PLANS_MERCADOPAGO[planType].id = mpPlan.response.id;
+    return true;
+  } catch (error) {
+    console.error(`Error creando plan ${planType}:`, error);
+    throw error;
   }
 };
 
-// 2. Inicializar todos los planes
 export const initializePlans = async () => {
-  for (const [planType, config] of Object.entries(PLANS_MERCADOPAGO)) {
-    if (!config.id) {
+  console.log("Inicializando planes de suscripción...");
+  try {
+    for (const planType in PLANS_MERCADOPAGO) {
+      if (!PLANS_MERCADOPAGO[planType].id) {
+        await createSubscriptionPlanInternal(planType);
+      }
+    }
+    console.log("Planes inicializados correctamente");
+    return true;
+  } catch (error) {
+    console.error("Error inicializando planes:", error);
+    return false;
+  }
+};
+
+export const createSubscriptionPlan = async (req, res) => {
+  try {
+    const { planType } = req.body;
+    
+    if (!PLANS_MERCADOPAGO[planType].id) {
       await createSubscriptionPlanInternal(planType);
     }
+
+    const plan = PLANS_MERCADOPAGO[planType];
+    const planData = {
+      description: plan.description,
+      auto_recurring: {
+        frequency: 1,
+        frequency_type: "months",
+        repetitions: 12,
+        billing_day: 10,
+        billing_day_proportional: true,
+        transaction_amount: plan.amount,
+        currency_id: "USD"
+      },
+      payment_methods_allowed: {
+        payment_types: [{ id: "credit_card" }, { id: "debit_card" }]
+      },
+      back_url: process.env.MERCADOPAGO_BACK_URL
+    };
+
+    const mpPlan = await mercadopago.preapproval_plan.create(planData);
+    PLANS_MERCADOPAGO[planType].id = mpPlan.response.id;
+    
+    res.status(201).json({
+      id: mpPlan.response.id,
+      ...plan
+    });
+  } catch (error) {
+    console.error('Error creando plan:', error);
+    res.status(500).json({ 
+      error: error.message,
+      details: error.cause ? error.cause : null
+    });
   }
 };
 
-// 3. Crear suscripción
 export const createUserSubscription = async (req, res) => {
-  const { userId, planType } = req.body;
-  const plan = PLANS_MERCADOPAGO[planType];
-  if (!plan || !plan.id) return res.status(400).json({ error: 'Plan no válido o no inicializado' });
-
-  const user = await Usuario.findByPk(userId);
-  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
-
-  const existing = await Subscription.findOne({
-    where: { usuario_id: userId, estado_suscripcion: ['active', 'pending'] }
-  });
-  if (existing) return res.status(400).json({ error: 'Ya tiene suscripción activa o pendiente' });
-
-  const subData = {
-    preapproval_plan_id: plan.id,
-    payer_email: user.correo_usuario,
-    external_reference: `USER_${userId}_${Date.now()}`,
-    back_url: process.env.MERCADOPAGO_BACK_URL,
-    reason: plan.description
-  };
-
   try {
-    const response = await axios.post(`${MP_BASE_URL}/preapproval`, subData, { headers: MP_HEADERS });
+    const { userId, planType } = req.body;
+    
+    if (!userId || !planType) {
+      return res.status(400).json({ 
+        error: 'Faltan campos requeridos',
+        missing_fields: {
+          userId: !userId,
+          planType: !planType
+        }
+      });
+    }
 
-    const sub = await Subscription.create({
+    if (!['plus', 'pro'].includes(planType)) {
+      return res.status(400).json({ error: 'Tipo de plan inválido' });
+    }
+
+    const plan = PLANS_MERCADOPAGO[planType];
+    
+    if (!plan || !plan.id) {
+      return res.status(400).json({ error: 'Plan no configurado' });
+    }
+
+    const user = await Usuario.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    const existingSubscription = await Subscription.findOne({
+      where: { 
+        usuario_id: userId,
+        estado_suscripcion: ['active', 'pending'] 
+      }
+    });
+    
+    if (existingSubscription) {
+      return res.status(400).json({ 
+        error: 'Usuario ya tiene suscripción activa o pendiente',
+        subscriptionId: existingSubscription.id_subscription
+      });
+    }
+
+    const subscriptionData = {
+      preapproval_plan_id: plan.id,
+      payer_email: user.correo_usuario,
+      external_reference: `USER_${userId}`,
+      reason: plan.description,
+      back_url: process.env.MERCADOPAGO_BACK_URL
+    };
+
+    const mpSubscription = await mercadopago.preapproval.create(subscriptionData);
+    
+    const newSubscription = await Subscription.create({
       usuario_id: userId,
-      mercado_pago_id: response.data.id,
+      mercado_pago_id: mpSubscription.response.id,
       plan_id: plan.id,
       tipo_suscripcion: planType,
       estado_suscripcion: 'pending',
@@ -93,49 +164,61 @@ export const createUserSubscription = async (req, res) => {
       fecha_renovacion: new Date(new Date().setMonth(new Date().getMonth() + 1))
     });
 
-    return res.status(201).json({
-      success: true,
-      subscriptionId: sub.id_subscription,
-      initPoint: response.data.init_point,
-      status: response.data.status
+    res.status(201).json({
+      id: newSubscription.id_subscription,
+      mercado_pago_id: mpSubscription.response.id,
+      init_point: mpSubscription.response.init_point,
+      status: mpSubscription.response.status
     });
-  } catch (err) {
-    return res.status(500).json({
-      error: 'Error creando suscripción',
-      details: err.response?.data || err.message
+  } catch (error) {
+    console.error('Error al crear suscripción:', error);
+    
+    let errorMessage = 'Error interno del servidor';
+    let errorDetails = null;
+    
+    if (error.response && error.response.body) {
+      errorDetails = error.response.body;
+      if (error.response.body.message) {
+        errorMessage = error.response.body.message;
+      } else if (Array.isArray(error.response.body.cause)) {
+        errorMessage = error.response.body.cause[0].description;
+      }
+    }
+    
+    res.status(500).json({ 
+      error: errorMessage,
+      details: errorDetails
     });
   }
 };
 
-// 6. Obtener estado de suscripción
 export const getSubscriptionStatus = async (req, res) => {
-  const { userId } = req.params;
-  console.log(`\n🔍 Consultando estado para usuario ${userId}`);
-
   try {
-    const sub = await Subscription.findOne({
+    const { userId } = req.params;
+    
+    const subscription = await Subscription.findOne({
       where: { usuario_id: userId },
       include: [{
         model: Usuario,
-        attributes: ['id_usuario', 'correo_usuario', 'membresia']
+        attributes: ['id_usuario', 'nombre_usuario', 'correo_usuario', 'membresia']
       }]
     });
 
-    if (!sub) {
+    if (!subscription) {
       return res.json({
         status: 'free',
-        limits: SUBSCRIPTION_LIMITS.free
+        patient_limit: SUBSCRIPTION_LIMITS.free.pacientes,
+        caregiver_limit: SUBSCRIPTION_LIMITS.free.cuidadores
       });
     }
 
-    // Sincronizar con MercadoPago
-    const mpSub = await mercadopago.preapproval.get(sub.mercado_pago_id);
-    const mpStatus = mpSub.response?.status || sub.estado_suscripcion;
+    const mpSubscription = await mercadopago.preapproval.get(subscription.mercado_pago_id);
+    const status = mpSubscription.response.status;
 
-    if (sub.estado_suscripcion !== mpStatus) {
-      await sub.update({ estado_suscripcion: mpStatus });
+    if (subscription.estado_suscripcion !== status) {
+      await subscription.update({ estado_suscripcion: status });
       
-      if (mpStatus === 'cancelled' || mpStatus === 'paused') {
+      if (status === 'cancelled' || status === 'paused') {
         await Usuario.update(
           { membresia: 'free' },
           { where: { id_usuario: userId } }
@@ -144,45 +227,46 @@ export const getSubscriptionStatus = async (req, res) => {
     }
 
     res.json({
-      status: mpStatus,
-      type: sub.tipo_suscripcion,
-      startDate: sub.fecha_inicio,
-      renewalDate: sub.fecha_renovacion,
-      limits: {
-        patients: sub.limite_pacientes,
-        caregivers: sub.limite_cuidadores
-      }
+      id: subscription.id_subscription,
+      status: subscription.estado_suscripcion,
+      type: subscription.tipo_suscripcion,
+      start_date: subscription.fecha_inicio,
+      renewal_date: subscription.fecha_renovacion,
+      patient_limit: subscription.limite_pacientes,
+      caregiver_limit: subscription.limite_cuidadores,
+      used_patients: subscription.pacientes_usados || 0,
+      used_caregivers: subscription.cuidadores_usados || 0
     });
-
   } catch (error) {
-    console.error('❌ Error en getSubscriptionStatus:', error.message);
-    res.status(500).json({
-      error: 'Error al obtener estado',
-      message: error.message
+    console.error('Error obteniendo estado:', error);
+    res.status(500).json({ 
+      error: 'Error interno del servidor',
+      details: error.message
     });
   }
 };
 
-// 7. Cancelar suscripción
 export const cancelSubscription = async (req, res) => {
-  const { userId } = req.body;
-  console.log(`\n🛑 Cancelando suscripción para usuario ${userId}`);
-
   try {
-    const sub = await Subscription.findOne({
-      where: { usuario_id: userId, estado_suscripcion: ['active', 'pending'] }
+    const { userId } = req.body;
+    
+    const subscription = await Subscription.findOne({
+      where: { 
+        usuario_id: userId,
+        estado_suscripcion: ['active', 'pending'] 
+      }
     });
 
-    if (!sub) {
-      throw new Error('No hay suscripción activa/pendiente');
+    if (!subscription) {
+      return res.status(404).json({ error: 'No hay suscripción activa o pendiente' });
     }
 
     await mercadopago.preapproval.update({
-      id: sub.mercado_pago_id,
+      id: subscription.mercado_pago_id,
       status: 'cancelled'
     });
 
-    await sub.update({
+    await subscription.update({
       estado_suscripcion: 'cancelled',
       fecha_cancelacion: new Date()
     });
@@ -192,68 +276,71 @@ export const cancelSubscription = async (req, res) => {
       { where: { id_usuario: userId } }
     );
 
-    res.json({
-      success: true,
+    res.json({ 
       message: 'Suscripción cancelada',
-      cancellationDate: new Date()
+      cancellation_date: new Date()
     });
-
   } catch (error) {
-    console.error('❌ Error en cancelSubscription:', error.message);
-    res.status(500).json({
-      error: 'Error al cancelar suscripción',
-      message: error.message
+    console.error('Error cancelando suscripción:', error);
+    
+    let errorMessage = 'Error interno del servidor';
+    if (error.response && error.response.body) {
+      errorMessage = error.response.body.message || JSON.stringify(error.response.body);
+    }
+    
+    res.status(500).json({ 
+      error: errorMessage,
+      details: error.message
     });
   }
 };
 
-// 8. Webhook handler
 export const webhookHandler = async (req, res) => {
-  const eventId = req.headers['x-request-id'] || `webhook_${Date.now()}`;
-  console.log(`\n🔄 Procesando webhook ${eventId}`);
-
   try {
     const { type, data } = req.body;
-
+    
     if (type === 'payment') {
       const payment = await mercadopago.payment.findById(data.id);
       const paymentData = payment.response;
       
-      const externalRef = paymentData.external_reference;
-      if (!externalRef?.startsWith('USER_')) return res.sendStatus(200);
+      const externalReference = paymentData.external_reference;
+      if (!externalReference || !externalReference.startsWith('USER_')) {
+        return res.sendStatus(200);
+      }
       
-      const userId = externalRef.split('_')[1];
-      const sub = await Subscription.findOne({
-        where: { mercado_pago_id: externalRef }
+      const userId = externalReference.split('_')[1];
+      const subscription = await Subscription.findOne({
+        where: { mercado_pago_id: paymentData.external_reference }
       });
 
-      if (paymentData.status === 'approved' && sub) {
-        await sub.update({
+      if (paymentData.status === 'approved' && subscription) {
+        await subscription.update({
           estado_suscripcion: 'active',
           fecha_inicio: new Date(),
           fecha_renovacion: new Date(new Date().setMonth(new Date().getMonth() + 1))
         });
         
         await Usuario.update(
-          { membresia: sub.tipo_suscripcion },
-          { where: { id_usuario: sub.usuario_id } }
+          { membresia: subscription.tipo_suscripcion },
+          { where: { id_usuario: subscription.usuario_id } }
         );
       }
     } 
     else if (type === 'subscription') {
-      const sub = await Subscription.findOne({
+      const subscription = await Subscription.findOne({
         where: { mercado_pago_id: data.id }
       });
 
-      if (sub) {
-        const mpSub = await mercadopago.preapproval.get(data.id);
-        const status = mpSub.response.status;
-        await sub.update({ estado_suscripcion: status });
+      if (subscription) {
+        const mpSubscription = await mercadopago.preapproval.get(data.id);
+        const status = mpSubscription.response.status;
+
+        await subscription.update({ estado_suscripcion: status });
 
         if (status === 'cancelled' || status === 'paused') {
           await Usuario.update(
             { membresia: 'free' },
-            { where: { id_usuario: sub.usuario_id } }
+            { where: { id_usuario: subscription.usuario_id } }
           );
         }
       }
@@ -261,7 +348,7 @@ export const webhookHandler = async (req, res) => {
 
     res.sendStatus(200);
   } catch (error) {
-    console.error(`❌ Error en webhook ${eventId}:`, error.message);
-    res.status(500).json({ error: 'Error procesando webhook' });
+    console.error('Error en webhook:', error);
+    res.status(500).json({ error: error.message });
   }
 };
