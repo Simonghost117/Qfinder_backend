@@ -3,7 +3,6 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Configuración de Mercado Pago
 mercadopago.configure({
   access_token: process.env.MERCADOPAGO_ACCESS_TOKEN
 });
@@ -40,7 +39,6 @@ export const getSubscription = async (subscriptionId) => {
 
 export const handleWebhook = async (payload, signature) => {
   try {
-    // Validar firma del webhook
     if (signature !== process.env.MERCADOPAGO_WEBHOOK_SECRET) {
       throw new Error('Invalid webhook signature');
     }
