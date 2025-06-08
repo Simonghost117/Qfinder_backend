@@ -56,6 +56,10 @@ const server = http.createServer(app);
 const startServer = async () => {
   try {
     console.log("\n🔌 Conectando a la base de datos...");
+        mercadopago.configure({
+      access_token: process.env.MERCADOPAGO_ACCESS_TOKEN,
+      integrator_id: process.env.MERCADOPAGO_INTEGRATOR_ID || null
+    });
     const isConnected = await testConnection();
     if (!isConnected) {
       throw new Error('❌ Conexión a la base de datos fallida');
