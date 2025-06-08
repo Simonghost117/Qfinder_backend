@@ -82,3 +82,46 @@ export const cancelSubscription = async (req, res) => {
     });
   }
 };
+export const createSubscriptionPlan = async (req, res) => {
+  try {
+    const { planType } = req.body;
+    
+    if (!PLANS_MERCADOPAGO[planType].id) {
+      return res.status(400).json({ error: 'Tipo de plan no válido' });
+    }
+
+    const plan = PLANS_MERCADOPAGO[planType];
+    
+    const planData = {
+      description: plan.description,
+      auto_recurring: {
+        frequency: 1,
+        frequency_type: "months",
+        repetitions: 12,
+        billing_day: 10,
+        billing_day_proportional: true,
+        transaction_amount: plan.amount,
+        currency_id: "USD"
+      },
+      payment_methods_allowed: {
+        payment_types: [{ id: "credit_card" }, { id: "debit_card" }]
+      },
+      back_url: process.env.MERCADOPAGO_BACK_URL
+    };
+
+    const mpPlan = await mercadopago.preapproval_plan.create(planData);
+    
+    PLANS_MERCADOPAGO[planType].id = mpPlan.response.id;
+    
+    res.status(201).json({
+      id: mpPlan.response.id,
+      ...plan
+    });
+  } catch (error) {
+    console.error('Error creando plan:', error);
+    res.status(500).json({ 
+      error: error.message,
+      details: error.cause ? error.cause : null
+    });
+  }
+};
