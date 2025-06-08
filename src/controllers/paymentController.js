@@ -315,8 +315,13 @@ export const webhookHandler = async (req, res) => {
 export const createSubscriptionPlanInternal = async (planType) => {
   try {
     const plan = PLANS_MERCADOPAGO[planType];
+    
+    if (!plan) {
+      throw new Error(`Tipo de plan ${planType} no válido`);
+    }
+
     const planData = {
-      description: plan.description,
+      reason: plan.description,
       auto_recurring: {
         frequency: 1,
         frequency_type: "months",
@@ -332,9 +337,14 @@ export const createSubscriptionPlanInternal = async (planType) => {
       back_url: process.env.MERCADOPAGO_BACK_URL
     };
 
-    const mpPlan = await mercadopago.preapproval_plan.create(planData);
-    PLANS_MERCADOPAGO[planType].id = mpPlan.response.id;
-    console.log(`Plan ${planType} creado con ID: ${mpPlan.response.id}`);
+    // Usar el cliente preApprovalPlanClient que ya está inicializado
+    const mpPlan = await preApprovalPlanClient.create({ body: planData });
+    
+    // Actualizar el ID del plan en la configuración
+    PLANS_MERCADOPAGO[planType].id = mpPlan.id;
+    console.log(`Plan ${planType} creado con ID: ${mpPlan.id}`);
+    
+    return mpPlan;
   } catch (error) {
     console.error(`Error creando plan ${planType}:`, error);
     throw new Error(`Error creando plan: ${error.message}`);
