@@ -6,7 +6,7 @@ import app from './app.js';
 import './config/firebase-admin.js';
 import sequelize, { testConnection } from './config/db.js';
 import mercadopago from 'mercadopago';
-
+import { configureMercadoPago } from './config/mercadopagoConfig.js';
 // Configuración de entorno
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
@@ -64,7 +64,11 @@ const startServer = async () => {
       await sequelize.sync({ alter: true });
       console.log("✅ Base de datos sincronizada (modo desarrollo)");
     }
-
+console.log("🔧 Configurando MercadoPago...");
+if (!await configureMercadoPago()) {
+  console.error("❌ No se puede continuar sin MercadoPago");
+  process.exit(1);
+}
     server.listen(PORT, () => {
       console.log(`\n🚀 Servidor escuchando en http://localhost:${PORT}`);
       console.log(`🔧 Entorno: ${process.env.NODE_ENV}`);
