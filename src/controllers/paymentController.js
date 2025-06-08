@@ -1,6 +1,5 @@
-// Importación corregida para CommonJS
-import mercadopagoPkg from 'mercadopago';
-const { MercadoPagoConfig, PreapprovalPlan, Preapproval, Payment } = mercadopagoPkg;
+// Importación corregida y verificada
+import mercadopago from 'mercadopago';
 import dotenv from 'dotenv';
 import Usuario from '../models/usuario.model.js';
 import Subscription from '../models/subscription.model.js';
@@ -11,15 +10,11 @@ import crypto from 'crypto';
 
 dotenv.config();
 
-// Configuración de MercadoPago (versión actual)
-const client = new MercadoPagoConfig({
-  accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN,
-  options: { integratorId: process.env.MERCADOPAGO_INTEGRATOR_ID || undefined }
+// Configuración de MercadoPago (compatible con versiones recientes)
+mercadopago.configure({
+  access_token: process.env.MERCADOPAGO_ACCESS_TOKEN,
+  integrator_id: process.env.MERCADOPAGO_INTEGRATOR_ID || undefined
 });
-
-const preapprovalPlan = new PreapprovalPlan(client);
-const preapproval = new Preapproval(client);
-const payment = new Payment(client);
 
 // Función para verificar firma webhook
 const verifySignature = (payload, signature) => {
@@ -29,7 +24,7 @@ const verifySignature = (payload, signature) => {
   return hash === signature;
 };
 
-// Controladores actualizados
+// Controladores actualizados y verificados
 export const createPlan = async (req, res) => {
   try {
     const { planType } = req.body;
@@ -57,7 +52,8 @@ export const createPlan = async (req, res) => {
       back_url: process.env.MERCADOPAGO_BACK_URL
     };
 
-    const result = await preapprovalPlan.create({ body: planData });
+    const response = await mercadopago.preapproval_plan.create(planData);
+    const result = response.body;
     
     PLANS_MERCADOPAGO[planType].id = result.id;
     
@@ -69,7 +65,7 @@ export const createPlan = async (req, res) => {
     console.error('Error creando plan:', error);
     res.status(400).json({ 
       error: error.message,
-      details: error.cause?.apiResponse || null
+      details: error.response?.body || null
     });
   }
 };
@@ -109,7 +105,8 @@ export const createUserSubscription = async (req, res) => {
       back_url: process.env.MERCADOPAGO_BACK_URL
     };
 
-    const result = await preapproval.create({ body: subscriptionData });
+    const response = await mercadopago.preapproval.create(subscriptionData);
+    const result = response.body;
     
     const newSubscription = await Subscription.create({
       usuario_id: userId,
@@ -133,7 +130,7 @@ export const createUserSubscription = async (req, res) => {
     console.error('Error al crear suscripción:', error);
     res.status(400).json({ 
       error: error.message,
-      details: error.cause?.apiResponse || null
+      details: error.response?.body || null
     });
   }
 };
@@ -154,12 +151,12 @@ export const webhookHandler = async (req, res) => {
     let subscription;
 
     if (type === 'payment') {
-      const paymentResponse = await payment.get({ id: data.id });
+      const paymentResponse = await mercadopago.payment.get(data.id);
       subscription = await Subscription.findOne({
-        where: { mercado_pago_id: paymentResponse.external_reference }
+        where: { mercado_pago_id: paymentResponse.body.external_reference }
       });
 
-      if (paymentResponse.status === 'approved' && subscription) {
+      if (paymentResponse.body.status === 'approved' && subscription) {
         await Subscription.update(
           { 
             estado_suscripcion: 'active',
@@ -168,7 +165,7 @@ export const webhookHandler = async (req, res) => {
             limite_pacientes: SUBSCRIPTION_LIMITS[subscription.tipo_suscripcion].pacientes,
             limite_cuidadores: SUBSCRIPTION_LIMITS[subscription.tipo_suscripcion].cuidadores
           },
-          { where: { mercado_pago_id: paymentResponse.external_reference } }
+          { where: { mercado_pago_id: paymentResponse.body.external_reference } }
         );
         
         await Usuario.update(
@@ -183,8 +180,8 @@ export const webhookHandler = async (req, res) => {
       });
 
       if (subscription) {
-        const subResponse = await preapproval.get({ id: data.id });
-        const status = subResponse.status;
+        const subResponse = await mercadopago.preapproval.get(data.id);
+        const status = subResponse.body.status;
 
         await Subscription.update(
           { estado_suscripcion: status },
@@ -218,7 +215,7 @@ export const webhookHandler = async (req, res) => {
     console.error('Error en webhook:', error);
     res.status(500).json({ 
       error: error.message,
-      details: error.cause?.apiResponse || null
+      details: error.response?.body || null
     });
   }
 };
@@ -245,8 +242,8 @@ export const getSubscriptionStatus = async (req, res) => {
     }
 
     if (subscription.estado_suscripcion === 'pending') {
-      const response = await preapproval.get({ id: subscription.mercado_pago_id });
-      const status = response.status;
+      const response = await mercadopago.preapproval.get(subscription.mercado_pago_id);
+      const status = response.body.status;
       
       await Subscription.update(
         { estado_suscripcion: status },
@@ -291,7 +288,7 @@ export const getSubscriptionStatus = async (req, res) => {
     console.error('Error obteniendo estado:', error);
     res.status(500).json({ 
       error: error.message,
-      details: error.cause?.apiResponse || null
+      details: error.response?.body || null
     });
   }
 };
@@ -308,9 +305,9 @@ export const cancelSubscription = async (req, res) => {
       return res.status(404).json({ error: 'No hay suscripción activa para cancelar' });
     }
 
-    await preapproval.update({ 
+    await mercadopago.preapproval.update({ 
       id: subscription.mercado_pago_id,
-      body: { status: 'cancelled' }
+      status: 'cancelled'
     });
 
     await Subscription.update(
@@ -334,7 +331,7 @@ export const cancelSubscription = async (req, res) => {
     console.error('Error cancelando suscripción:', error);
     res.status(400).json({ 
       error: error.message,
-      details: error.cause?.apiResponse || null
+      details: error.response?.body || null
     });
   }
 };
