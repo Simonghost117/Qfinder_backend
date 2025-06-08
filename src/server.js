@@ -34,7 +34,9 @@ export const client = new MercadoPagoConfig({
     integratorId: process.env.MERCADOPAGO_INTEGRATOR_ID || undefined
   }
 });
-
+// Después de la configuración de MercadoPago
+await createSubscriptionPlanInternal('plus');
+await createSubscriptionPlanInternal('pro');
 const PORT = process.env.PORT || 3000;
 const server = http.createServer(app);
 
