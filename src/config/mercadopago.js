@@ -12,7 +12,8 @@ export const configureMercadoPago = () => {
     options: {
       timeout: 15000,
       idempotencyKey: `mp-${Date.now()}`,
-      integratorId: process.env.MERCADOPAGO_INTEGRATOR_ID
+      integratorId: process.env.MERCADOPAGO_INTEGRATOR_ID,
+         sandbox: true 
     }
   });
 };
