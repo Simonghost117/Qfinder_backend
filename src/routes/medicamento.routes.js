@@ -9,7 +9,7 @@ import {
 import { verifyToken, verifyTokenWeb } from '../middlewares/verifyToken.js';
 import validateSchema from '../middlewares/validatoreSchema.js';
 import { medicamentoSchema } from '../schema/medicamentoSchema.js';
-import { validateAdmin } from '../middlewares/validateAdmin.js';
+import { validateAdmin, validateRol } from '../middlewares/validateAdmin.js';
 
 const router = Router();
 
@@ -28,19 +28,19 @@ router.get('/listar/:id',
 
 router.post('/crear', 
   verifyTokenWeb, 
-  validateAdmin,
+  validateRol(['Administrador', 'Super']),
   validateSchema(medicamentoSchema),
   crearMedicamento
 );
 router.put('/actualizar/:id',
   verifyToken, 
-  validateAdmin,
+  validateRol(['Administrador', 'Super']),
   validateSchema(medicamentoSchema),
   actualizarMedicamento
 );
 router.delete('/eliminar/:id', 
   verifyToken, 
-  validateAdmin,
+  validateRol(['Administrador', 'Super']),
   eliminarMedicamento
 );
 

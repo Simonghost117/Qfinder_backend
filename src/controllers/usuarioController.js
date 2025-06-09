@@ -348,36 +348,61 @@ export const perfilUser = async (req, res) => {
     res.status(500).json({ message: 'Error al obtener el perfil del usuario', error });
   }
 }
-import { Op } from 'sequelize';
+import { Op, col } from 'sequelize';
 import { PaginationService } from '../utils/paginationUtils.js';
+import sequelize from '../config/db.js';
 
 export const listarUsuarios = async (req, res) => {
   try { 
-    const usuarios = await Usuario.findAll(
-      {
-      where: {
-        tipo_usuario: 'Usuario'
-      }, order: [['id_usuario', 'ASC']]
-      }
-  );
-    // Opcional: añadir filtros dinámicos
+    const where = {
+      tipo_usuario: 'Usuario'
+    };
+    
+    // Añadir filtros dinámicos
     if (req.query.estado) {
       where.estado_usuario = req.query.estado;
     }
     
     if (req.query.busqueda) {
+      const searchTerm = req.query.busqueda.toLowerCase(); // Normalizamos el término de búsqueda
+      
       where[Op.or] = [
-        { nombre_usuario: { [Op.like]: `%${req.query.busqueda}%` } },
-        { apellido_usuario: { [Op.like]: `%${req.query.busqueda}%` } },
-        { correo_usuario: { [Op.like]: `%${req.query.busqueda}%` } }
+        // Búsqueda insensible a mayúsculas/minúsculas usando LOWER
+        { 
+          nombre_usuario: { 
+            [Op.iLike]: `%${searchTerm}%` // Op.iLike para PostgreSQL (insensible a mayúsculas)
+          } 
+        },
+        { 
+          apellido_usuario: { 
+            [Op.iLike]: `%${searchTerm}%` 
+          } 
+        },
+        { 
+          correo_usuario: { 
+            [Op.iLike]: `%${searchTerm}%` 
+          } 
+        },
+        // Alternativa para MySQL/MariaDB:
+        /*
+        sequelize.where(
+          sequelize.fn('LOWER', sequelize.col('nombre_usuario')),
+          'LIKE',
+          `%${searchTerm}%`
+        ),
+        */
+        // Búsqueda por identificación exacta (sin importar mayúsculas)
+        sequelize.where(
+          sequelize.fn('LOWER', sequelize.col('identificacion_usuario')),
+          '=',
+          searchTerm
+        )
       ];
     }
 
     const result = await PaginationService.paginate(Usuario, {
-      where: {
-        tipo_usuario: 'Usuario',
-      },
-      order: [['id_usuario', 'DESC']],
+      where,
+      order: [['id_usuario', 'ASC']],
       req,
       transformData: (usuarios) => usuarios.map(usuario => ({
         id_usuario: usuario.id_usuario,
