@@ -46,7 +46,7 @@ export const createCheckoutProPreference = async (req, res) => {
         }
       },
       payment_methods: {
-        excluded_payment_types: [{ id: "ticket" }, { id: "atm" }],
+        // excluded_payment_types: [{ id: "ticket" }, { id: "atm" }],
         installments: 1,
         default_installments: 1
       },
