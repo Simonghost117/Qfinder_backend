@@ -28,3 +28,15 @@ export const createPreference = async (preferenceData) => {
     throw new Error(`Failed to create preference: ${error.message}`);
   }
 };
+// services/mercadopagoService.js
+export const getPayment = async (paymentId) => {
+  try {
+    const payment = await new Payment(client).get({ id: paymentId });
+    return payment;
+  } catch (error) {
+    console.error('Error getting payment:', error);
+    throw new Error(`Failed to get payment: ${error.message}`);
+  }
+};
+
+// Asegúrate de tener esta importación al inicio del archivo
