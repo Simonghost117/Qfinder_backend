@@ -1,4 +1,5 @@
 // services/paginationService.js
+import { Op } from 'sequelize';
 
 export class PaginationService {
   static async paginate(model, {
