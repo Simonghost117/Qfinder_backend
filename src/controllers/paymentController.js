@@ -56,11 +56,10 @@ export const createCheckoutProPreference = async (req, res) => {
       // 🔥 Configuración clave para Deep Links en Android
       auto_return: "approved", // Cierra el checkout y regresa automáticamente a la app
       back_urls: {
-        success: `qfinder://payment/success?user_id=${userId}&plan_type=${planType}`, // Deep Link para éxito
-        failure: `qfinder://payment/failure`, // Deep Link para fallo
-        pending: `qfinder://payment/pending` // Deep Link para pagos pendientes
-      },
-      
+  success: 'https://qfinder-app.com/payment/success?user_id=${userId}&plan_type=${planType}',
+  failure: 'https://qfinder-app.com/payment/failure',
+  pending: 'https://qfinder-app.com/payment/pending'
+      },  
       statement_descriptor: `QFINDER ${planType.toUpperCase()}`
     };
 
