@@ -7,19 +7,11 @@ export const createCheckoutProPreference = async (req, res) => {
   try {
     const { userId, planType } = req.body;
     
-    // Validaciones
+    // Validaciones (tu código actual)
     if (!userId || !planType) {
       return res.status(400).json({ 
         success: false,
         error: 'Missing required fields: userId and planType'
-      });
-    }
-
-    if (!PLANS_MERCADOPAGO[planType]) {
-      return res.status(400).json({ 
-        success: false,
-        error: 'Invalid plan type',
-        availablePlans: Object.keys(PLANS_MERCADOPAGO)
       });
     }
 
@@ -33,6 +25,7 @@ export const createCheckoutProPreference = async (req, res) => {
 
     const plan = PLANS_MERCADOPAGO[planType];
     
+    // Configuración de la preferencia de pago
     const preferenceData = {
       items: [
         {
@@ -59,12 +52,15 @@ export const createCheckoutProPreference = async (req, res) => {
       },
       external_reference: `USER_${userId}_PLAN_${planType}`,
       notification_url: `${process.env.API_BASE_URL}/api/payments/webhook`,
+      
+      // 🔥 Configuración clave para Deep Links en Android
+      auto_return: "approved", // Cierra el checkout y regresa automáticamente a la app
       back_urls: {
-        success: `${process.env.FRONTEND_URL}/subscription/success?user_id=${userId}`,
-        failure: `${process.env.FRONTEND_URL}/subscription/failure?user_id=${userId}`,
-        pending: `${process.env.FRONTEND_URL}/subscription/pending?user_id=${userId}`
+        success: `qfinder://payment/success?user_id=${userId}&plan_type=${planType}`, // Deep Link para éxito
+        failure: `qfinder://payment/failure`, // Deep Link para fallo
+        pending: `qfinder://payment/pending` // Deep Link para pagos pendientes
       },
-      auto_return: "approved",
+      
       statement_descriptor: `QFINDER ${planType.toUpperCase()}`
     };
 
@@ -86,7 +82,6 @@ export const createCheckoutProPreference = async (req, res) => {
   }
 };
 
-// ... (imports anteriores se mantienen igual)
 
 export const handleWebhook = async (req, res) => {
   try {
