@@ -54,16 +54,18 @@ export const createCheckoutProPreference = async (req, res) => {
       notification_url: `${process.env.API_BASE_URL}/api/payments/webhook`,
       
       // 🔥 Configuración clave para Deep Links en Android
-back_urls: {
-  success: `https://qfinder-app.com/payment/success?user_id=${userId}&plan_type=${planType}`,
-  failure: `https://qfinder-app.com/payment/failure?user_id=${userId}`,
-  pending: `https://qfinder-app.com/payment/pending?user_id=${userId}`
-},metadata: {
-  deeplink_success: `qfinder://payment/success?user_id=${userId}&plan_type=${planType}`,
-  deeplink_failure: `qfinder://payment/failure?user_id=${userId}`,
-  deeplink_pending: `qfinder://payment/pending?user_id=${userId}`
-},
-    auto_return: "approved", // Asegúrate que esta opción está activa
+ back_urls: {
+    success: `${process.env.API_BASE_URL}/api/payments/success-redirect?user_id=${userId}&plan_type=${planType}`,
+    failure: `${process.env.API_BASE_URL}/api/payments/failure-redirect?user_id=${userId}`,
+    pending: `${process.env.API_BASE_URL}/api/payments/pending-redirect?user_id=${userId}`
+  },
+  auto_return: "approved",
+  metadata: {
+    deeplink_success: `qfinder://payment/success?user_id=${userId}&plan_type=${planType}`,
+    deeplink_failure: `qfinder://payment/failure?user_id=${userId}`,
+    deeplink_pending: `qfinder://payment/pending?user_id=${userId}`
+  },
+
       statement_descriptor: `QFINDER ${planType.toUpperCase()}`
     };
 
@@ -194,3 +196,57 @@ async function processApprovedPayment(payment) {
     throw error;
   }
 }
+// paymentController.js - Añade estos nuevos controladores
+export const successRedirect = async (req, res) => {
+  const { user_id, plan_type } = req.query;
+  const deeplink = `qfinder://payment/success?user_id=${user_id}&plan_type=${plan_type}`;
+  
+  res.send(`
+    <html>
+      <head>
+        <meta http-equiv="refresh" content="0; url=${deeplink}" />
+        <script>window.location.href = "${deeplink}";</script>
+      </head>
+      <body>
+        <p>Redirigiendo a la aplicación...</p>
+        <a href="${deeplink}">Si no eres redirigido, haz clic aquí</a>
+      </body>
+    </html>
+  `);
+};
+
+export const failureRedirect = async (req, res) => {
+  const { user_id } = req.query;
+  const deeplink = `qfinder://payment/failure?user_id=${user_id}`;
+  
+  res.send(`
+    <html>
+      <head>
+        <meta http-equiv="refresh" content="0; url=${deeplink}" />
+        <script>window.location.href = "${deeplink}";</script>
+      </head>
+      <body>
+        <p>Redirigiendo a la aplicación...</p>
+        <a href="${deeplink}">Si no eres redirigido, haz clic aquí</a>
+      </body>
+    </html>
+  `);
+};
+
+export const pendingRedirect = async (req, res) => {
+  const { user_id } = req.query;
+  const deeplink = `qfinder://payment/pending?user_id=${user_id}`;
+  
+  res.send(`
+    <html>
+      <head>
+        <meta http-equiv="refresh" content="0; url=${deeplink}" />
+        <script>window.location.href = "${deeplink}";</script>
+      </head>
+      <body>
+        <p>Redirigiendo a la aplicación...</p>
+        <a href="${deeplink}">Si no eres redirigido, haz clic aquí</a>
+      </body>
+    </html>
+  `);
+};
