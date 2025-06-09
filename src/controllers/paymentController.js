@@ -93,7 +93,7 @@ export const handleWebhook = async (req, res) => {
     console.log('Webhook received:', JSON.stringify(req.body, null, 2));
     
     // Validación opcional en desarrollo
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV == 'production') {
       console.warn('⚠️ Skipping signature validation in development');
     } else {
       const signature = req.headers['x-signature'];
