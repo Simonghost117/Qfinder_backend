@@ -86,29 +86,43 @@ export const createCheckoutProPreference = async (req, res) => {
   }
 };
 
+// ... (imports anteriores se mantienen igual)
+
 export const handleWebhook = async (req, res) => {
   try {
-    // Validar firma del webhook
-    const signature = req.headers['x-signature'];
-    if (signature !== process.env.MERCADOPAGO_WEBHOOK_SECRET) {
-      console.warn('Unauthorized webhook attempt');
-      return res.sendStatus(401);
+    console.log('Webhook received:', JSON.stringify(req.body, null, 2));
+    
+    // Validación opcional en desarrollo
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('⚠️ Skipping signature validation in development');
+    } else {
+      const signature = req.headers['x-signature'];
+      if (signature !== process.env.MERCADOPAGO_WEBHOOK_SECRET) {
+        console.warn('Unauthorized webhook attempt. Signature:', signature);
+        return res.sendStatus(401);
+      }
     }
 
     const { type, data } = req.body;
     
     if (type === 'payment') {
       const payment = await getPayment(data.id);
+      console.log(`Payment status: ${payment.status}`);
       
-      // Solo procesar si el pago está aprobado
       if (payment.status === 'approved') {
         await processApprovedPayment(payment);
+      } else {
+        console.log(`Payment not approved. Status: ${payment.status}`);
       }
     }
     
     res.sendStatus(200);
   } catch (error) {
-    console.error('Error in webhook handler:', error);
+    console.error('Error in webhook handler:', JSON.stringify({
+      error: error.message,
+      stack: error.stack,
+      body: req.body
+    }, null, 2));
     res.status(500).json({ 
       success: false,
       error: 'Error processing webhook',
@@ -118,37 +132,67 @@ export const handleWebhook = async (req, res) => {
 };
 
 async function processApprovedPayment(payment) {
-  const externalRef = payment.external_reference;
-  const [_, userId, __, planType] = externalRef.split('_');
-  
-  // Verificar si ya existe una suscripción para evitar duplicados
-  const existingSub = await Subscription.findOne({
-    where: { id_usuario: userId, estado_suscripcion: 'active' }
-  });
-  
-  if (existingSub) {
-    console.log(`Active subscription already exists for user ${userId}`);
-    return;
+  try {
+    const externalRef = payment.external_reference;
+    console.log('Processing payment with external_ref:', externalRef);
+    
+    if (!externalRef) {
+      throw new Error('Missing external_reference in payment');
+    }
+
+    const refParts = externalRef.split('_');
+    if (refParts.length < 4) {
+      throw new Error(`Invalid external_reference format: ${externalRef}`);
+    }
+
+    const userId = refParts[1];
+    const planType = refParts[3];
+
+    // Verificar si el usuario existe
+    const user = await Usuario.findByPk(userId);
+    if (!user) {
+      throw new Error(`User ${userId} not found`);
+    }
+
+    // Verificar si el plan es válido
+    if (!PLANS_MERCADOPAGO[planType]) {
+      throw new Error(`Invalid plan type: ${planType}`);
+    }
+
+    // Resto de la lógica de suscripción...
+    const existingSub = await Subscription.findOne({
+      where: { id_usuario: userId, estado_suscripcion: 'active' }
+    });
+    
+    if (existingSub) {
+      console.log(`User ${userId} already has active subscription`);
+      return;
+    }
+
+    await Subscription.create({
+      id_usuario: userId,
+      mercado_pago_id: payment.id,
+      plan_id: `plan-${planType}`,
+      tipo_suscripcion: planType,
+      estado_suscripcion: 'active',
+      limite_pacientes: SUBSCRIPTION_LIMITS[planType].pacientes,
+      limite_cuidadores: SUBSCRIPTION_LIMITS[planType].cuidadores,
+      fecha_inicio: new Date(),
+      fecha_renovacion: new Date(new Date().setMonth(new Date().getMonth() + 1))
+    });
+
+    await Usuario.update(
+      { membresia: planType },
+      { where: { id_usuario: userId } }
+    );
+    
+    console.log(`Subscription created successfully for user ${userId}, plan ${planType}`);
+  } catch (error) {
+    console.error('Error in processApprovedPayment:', JSON.stringify({
+      error: error.message,
+      paymentId: payment.id,
+      stack: error.stack
+    }, null, 2));
+    throw error;
   }
-
-  // Crear nueva suscripción
-  await Subscription.create({
-    id_usuario: userId,
-    mercado_pago_id: payment.id,
-    plan_id: `plan-${planType}`,
-    tipo_suscripcion: planType,
-    estado_suscripcion: 'active',
-    limite_pacientes: SUBSCRIPTION_LIMITS[planType].pacientes,
-    limite_cuidadores: SUBSCRIPTION_LIMITS[planType].cuidadores,
-    fecha_inicio: new Date(),
-    fecha_renovacion: new Date(new Date().setMonth(new Date().getMonth() + 1))
-  });
-
-  // Actualizar membresía del usuario
-  await Usuario.update(
-    { membresia: planType },
-    { where: { id_usuario: userId } }
-  );
-  
-  console.log(`Created subscription for user ${userId} with plan ${planType}`);
 }
