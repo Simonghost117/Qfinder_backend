@@ -1,8 +1,10 @@
 import { MercadoPagoConfig } from 'mercadopago';
 import crypto from 'crypto';
-
+import { access } from 'fs';
+  const access_token ="APP_USR-358197303018633-060512-a9dc7451432fc51a9d32f4fab6b83e68-390857873";
 export const configureMercadoPago = () => {
-  const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
+const accessToken =  access_token; // Puedes usar una variable de entorno o un valor por defecto para pruebas  
+  // const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
   const isSandbox = process.env.NODE_ENV !== 'production';
   
   if (!accessToken) {
