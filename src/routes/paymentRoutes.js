@@ -21,9 +21,14 @@ router.get('/verify-payment/:paymentId', verifyToken, verifyPayment);
 // Webhook Mercado Pago (sin autenticación)
 router.post(
   '/webhook',
-  express.json({ verify: (req, res, buf) => { req.rawBody = buf.toString() } }),
+  express.json({
+    verify: (req, res, buf) => {
+      req.rawBody = buf; // Captura como Buffer (¡no usar toString!)
+    }
+  }),
   handleWebhook
 );
+
 
 // Endpoint para verificación manual del webhook
 router.get('/webhook', (req, res) => {

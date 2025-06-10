@@ -20,7 +20,6 @@ export const configureMercadoPago = () => {
     }
   });
 };
-// Verificación mejorada de firmas para webhooks
 export const verifyWebhookSignature = (body, signatureHeader, secret) => {
   if (!signatureHeader || !secret) {
     console.warn('⚠️ Faltan parámetros para verificación');
@@ -28,10 +27,9 @@ export const verifyWebhookSignature = (body, signatureHeader, secret) => {
   }
 
   try {
-    // Parsear la firma recibida
     const parts = signatureHeader.split(',');
     const signatureParts = {};
-    
+
     parts.forEach(part => {
       const [key, value] = part.split('=');
       signatureParts[key] = value;
@@ -45,23 +43,21 @@ export const verifyWebhookSignature = (body, signatureHeader, secret) => {
       return false;
     }
 
-    // Preparar el payload para verificación
+    // Preparar payload SIN convertir Buffer a string
     let payload;
-    if (typeof body === 'string') {
+    if (Buffer.isBuffer(body)) {
+      payload = Buffer.concat([Buffer.from(`${timestamp}:`), body]);
+    } else if (typeof body === 'string') {
       payload = `${timestamp}:${body}`;
-    } else if (Buffer.isBuffer(body)) {
-      payload = `${timestamp}:${body.toString('utf8')}`;
     } else {
       payload = `${timestamp}:${JSON.stringify(body)}`;
     }
 
-    // Generar la firma esperada
     const generatedSignature = crypto
       .createHmac('sha256', secret)
       .update(payload)
       .digest('hex');
 
-    // Comparación segura contra timing attacks
     const signatureMatches = crypto.timingSafeEqual(
       Buffer.from(generatedSignature, 'hex'),
       Buffer.from(receivedSignature, 'hex')
@@ -69,7 +65,7 @@ export const verifyWebhookSignature = (body, signatureHeader, secret) => {
 
     if (!signatureMatches) {
       console.error('❌ Firma no coincide', {
-        payload,
+        payload: payload.toString(), // para debug
         receivedSignature,
         generatedSignature
       });
