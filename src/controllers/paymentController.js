@@ -110,14 +110,22 @@ export const createCheckoutProPreference = async (req, res) => {
   }
 };
 
+const extractId = (resource) => {
+  if (!resource) return null;
+  const parts = resource.split('/');
+  return parts[parts.length - 1];
+};
+
 export const handleWebhook = async (req, res) => {
   try {
-    const type = req.body.type || req.query.type;
-    const data = req.body.data || (req.query['data.id'] && { id: req.query['data.id'] });
-    const resource = req.body.resource;
+    const topic = req.query.topic || req.body.topic;
+    const id =
+      req.query.id ||
+      (req.body.data && req.body.data.id) ||
+      extractId(req.body.resource);
 
-    if (!type || (!data?.id && !resource)) {
-      console.warn('⚠️ Webhook recibido sin tipo o datos válidos:', {
+    if (!topic || !id) {
+      console.warn('⚠️ Webhook recibido sin topic o id válido:', {
         headers: req.headers,
         body: req.body,
         query: req.query
@@ -125,10 +133,10 @@ export const handleWebhook = async (req, res) => {
       return res.sendStatus(400);
     }
 
-    console.log('📨 Webhook recibido:', { type, data, resource });
+    console.log('📨 Webhook recibido:', { topic, id });
 
-    if (type === 'payment' && data?.id) {
-      const payment = await getPayment(data.id);
+    if (topic === 'payment') {
+      const payment = await getPayment(id);
       console.log('💰 Estado del pago:', payment.status);
 
       switch (payment.status) {
@@ -146,10 +154,12 @@ export const handleWebhook = async (req, res) => {
         default:
           console.log(`⚠️ Estado de pago no manejado: ${payment.status}`);
       }
-    } else if (type === 'merchant_order' && resource) {
-      // Consulta la información de la orden con Axios
+
+    } else if (topic === 'merchant_order') {
+      const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
+      const resource = req.body.resource;
+
       try {
-        const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
         const orderResponse = await axios.get(resource, {
           headers: {
             Authorization: `Bearer ${accessToken}`
@@ -158,9 +168,6 @@ export const handleWebhook = async (req, res) => {
 
         const order = orderResponse.data;
         console.log('📦 Detalles de la merchant_order recibida:', order);
-
-        // Aquí puedes agregar lógica para verificar pagos asociados a esta orden
-        // Por ejemplo: revisar si hay pagos aprobados y procesarlos
 
         if (order.payments?.length) {
           for (const p of order.payments) {
