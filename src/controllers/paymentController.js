@@ -5,7 +5,7 @@ import { models } from '../models/index.js';
 import axios from 'axios';
 const { Usuario, Subscription } = models;
 
-// Mapeo de estados de pago
+// Estados de pago
 const PAYMENT_STATUS = {
   pending: 'pending',
   approved: 'approved',
@@ -18,20 +18,12 @@ const PAYMENT_STATUS = {
   charged_back: 'charged_back'
 };
 
-// Función para registrar errores en un sistema de monitoreo
+// Registrar errores
 const notifyErrorToMonitoringSystem = (error, context = {}) => {
   console.error('🚨 Error crítico:', { error: error.message, ...context });
-  // Aquí podrías integrar con Sentry, Rollbar, etc.
 };
 
-// Función para extraer el ID de un recurso de MercadoPago
-const extractId = (resource) => {
-  if (!resource) return null;
-  const parts = resource.split('/');
-  return parts[parts.length - 1];
-};
-
-// Función para procesar pagos según su estado
+// Procesar pagos según estado
 async function processPaymentBasedOnStatus(payment) {
   console.log(`🔍 Procesando pago ${payment.id} con estado: ${payment.status}`);
 
@@ -52,7 +44,7 @@ async function processPaymentBasedOnStatus(payment) {
   }
 }
 
-// Función para procesar pagos aprobados
+// Procesar pago aprobado
 async function processApprovedPayment(payment) {
   const transaction = await models.sequelize.transaction();
   try {
@@ -62,7 +54,6 @@ async function processApprovedPayment(payment) {
       throw new Error('El pago no contiene external_reference');
     }
 
-    // Formato esperado: USER_123_PLAN_plus
     const [_, userId, __, planType] = external_reference.split('_');
 
     if (!userId || !planType) {
@@ -74,7 +65,6 @@ async function processApprovedPayment(payment) {
       throw new Error(`Usuario con ID ${userId} no encontrado`);
     }
 
-    // Verifica si ya se procesó este pago
     const existingPayment = await Subscription.findOne({
       where: { mercado_pago_id: id },
       transaction
@@ -86,13 +76,11 @@ async function processApprovedPayment(payment) {
       return;
     }
 
-    // Verifica que el plan sea válido
     const planKeys = Object.keys(PLANS_MERCADOPAGO);
     if (!planKeys.includes(planType)) {
       throw new Error(`Tipo de plan inválido: ${planType}`);
     }
 
-    // Crea o actualiza la suscripción en la DB
     const fechaInicio = new Date();
     const fechaRenovacion = new Date();
     fechaRenovacion.setMonth(fechaInicio.getMonth() + 1);
@@ -110,7 +98,6 @@ async function processApprovedPayment(payment) {
       datos_pago: JSON.stringify(payment)
     }, { transaction });
 
-    // Actualiza el estado de membresía del usuario
     await Usuario.update(
       { membresia: planType },
       { where: { id_usuario: userId }, transaction }
@@ -118,9 +105,6 @@ async function processApprovedPayment(payment) {
 
     await transaction.commit();
     console.log(`✅ Suscripción actualizada para el usuario ${userId}`);
-    console.log(`🔄 Membresía del usuario ${userId} actualizada a ${planType}`);
-
-    // Aquí podrías añadir notificaciones al usuario (email, push, etc.)
   } catch (error) {
     await transaction.rollback();
     notifyErrorToMonitoringSystem(error, {
@@ -129,24 +113,6 @@ async function processApprovedPayment(payment) {
     });
     throw error;
   }
-}
-
-// Función para procesar pagos pendientes
-async function processPendingPayment(payment) {
-  console.log(`⏳ Procesando pago pendiente: ${payment.id}`);
-  // Aquí podrías:
-  // 1. Registrar el pago pendiente en tu base de datos
-  // 2. Enviar una notificación al usuario
-  // 3. Programar una verificación posterior
-}
-
-// Función para procesar pagos rechazados
-async function processRejectedPayment(payment) {
-  console.log(`❌ Procesando pago rechazado: ${payment.id}`);
-  // Aquí podrías:
-  // 1. Notificar al usuario sobre el pago rechazado
-  // 2. Ofrecer alternativas de pago
-  // 3. Registrar el motivo del rechazo para análisis
 }
 
 // Controlador principal del webhook
@@ -159,46 +125,37 @@ export const handleWebhook = async (req, res) => {
   });
 
   try {
-    // Verificar firma del webhook
     const signature = req.headers['x-signature'];
     if (!signature) {
       console.warn('⚠️ Webhook sin firma:', req.headers);
       return res.sendStatus(401);
     }
 
-    const isValid = verifyWebhookSignature(req.body, signature);
+    const isValid = verifyWebhookSignature(req.rawBody || req.body, signature);
     if (!isValid) {
       console.warn('⚠️ Firma de webhook inválida');
       return res.sendStatus(403);
     }
 
-    // Obtener datos del webhook de diferentes formas posibles
     const eventData = req.body || {};
     const queryParams = req.query || {};
 
-    // Manejar formato alternativo de notificación
     if (eventData.action === 'payment.created' && eventData.data?.id) {
       const payment = await getPayment(eventData.data.id);
       await processPaymentBasedOnStatus(payment);
       return res.sendStatus(200);
     }
 
-    // Determinar tipo de evento y ID
     const topic = queryParams.type || eventData.type;
     const id = queryParams['data.id'] || (eventData.data && eventData.data.id);
 
     if (!topic || !id) {
-      console.warn('⚠️ Webhook recibido sin topic o id válido:', {
-        headers: req.headers,
-        body: eventData,
-        query: queryParams
-      });
+      console.warn('⚠️ Webhook recibido sin topic o id válido');
       return res.sendStatus(400);
     }
 
     console.log(`📨 Webhook recibido - Tipo: ${topic}, ID: ${id}`);
 
-    // Manejar diferentes tipos de eventos
     if (topic === 'payment') {
       const payment = await getPayment(id);
       await processPaymentBasedOnStatus(payment);
@@ -233,22 +190,13 @@ export const handleWebhook = async (req, res) => {
       }
     }
 
-    console.log('✅ Webhook procesado correctamente', {
-      topic,
-      id,
-      status: payment?.status || 'N/A'
-    });
     res.sendStatus(200);
   } catch (error) {
     notifyErrorToMonitoringSystem(error, {
       action: 'handleWebhook',
       body: req.body
     });
-    console.error('❌ Error en handleWebhook:', {
-      error: error.message,
-      stack: error.stack,
-      body: req.body
-    });
+    console.error('❌ Error en handleWebhook:', error.message);
     res.status(500).json({
       success: false,
       error: 'Error procesando webhook',
@@ -262,7 +210,7 @@ export const verifyWebhookConfig = async (req, res) => {
   try {
     const challenge = req.query.challenge;
     if (!challenge) {
-      return res.status(400).send('Missing challenge parameter');
+      return res.status(400).send('Falta el parámetro challenge');
     }
     
     console.log('✅ Webhook verification challenge received');
@@ -271,8 +219,8 @@ export const verifyWebhookConfig = async (req, res) => {
     notifyErrorToMonitoringSystem(error, {
       action: 'verifyWebhookConfig'
     });
-    console.error('Error verifying webhook:', error);
-    res.status(500).send('Error verifying webhook');
+    console.error('Error verificando webhook:', error);
+    res.status(500).send('Error verificando webhook');
   }
 };
 
@@ -376,7 +324,6 @@ export const pendingRedirect = async (req, res) => {
   `);
 };
 
-
 export const createCheckoutProPreference = async (req, res) => {
   try {
     const { userId, planType } = req.body;
@@ -443,10 +390,7 @@ export const createCheckoutProPreference = async (req, res) => {
       metadata: {
         user_id: userId,
         plan_type: planType,
-        app: "qfinder",
-        deeplink_success: `qfinder://payment/success?user_id=${userId}&plan_type=${planType}`,
-        deeplink_failure: `qfinder://payment/failure?user_id=${userId}`,
-        deeplink_pending: `qfinder://payment/pending?user_id=${userId}`
+        app: "qfinder"
       },
       statement_descriptor: `QFINDER ${planType.toUpperCase()}`
     };
