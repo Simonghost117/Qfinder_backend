@@ -38,5 +38,3 @@ export const getPayment = async (paymentId) => {
     throw new Error(`Failed to get payment: ${error.message}`);
   }
 };
-
-// Asegúrate de tener esta importación al inicio del archivo
