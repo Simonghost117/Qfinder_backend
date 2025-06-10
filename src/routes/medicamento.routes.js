@@ -4,12 +4,14 @@ import {
   listarMedicamentos,
   listarMedicamentosId,
   actualizarMedicamento,
-  eliminarMedicamento
+  eliminarMedicamento, 
+  listarMedicamentos2
 } from '../controllers/medicamento.controller.js';
 import { verifyToken, verifyTokenWeb } from '../middlewares/verifyToken.js';
 import validateSchema from '../middlewares/validatoreSchema.js';
 import { medicamentoSchema } from '../schema/medicamentoSchema.js';
 import { validateAdmin, validateRol } from '../middlewares/validateAdmin.js';
+import { paginationMiddleware } from '../middlewares/pagination.js';
 
 const router = Router();
 
@@ -31,6 +33,12 @@ router.post('/crear',
   validateRol(['Administrador', 'Super']),
   validateSchema(medicamentoSchema),
   crearMedicamento
+);
+router.get('/listar2', 
+  verifyTokenWeb,
+  validateRol(['Administrador', 'Super']),
+  paginationMiddleware(5),
+  listarMedicamentos2
 );
 router.put('/actualizar/:id',
   verifyToken, 

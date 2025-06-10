@@ -1,13 +1,15 @@
 import express from 'express';
 import { register, listarPacientes, getPacienteById, actualizarPaciente, eliminarPaciente, listarTodosPacientes,
     registerPaciente2,
-    actualizarPaciente2
+    actualizarPaciente2,
+    listarPacientes2
  } from '../controllers/pacienteController.js';
 import validateSchema from "../middlewares/validatoreSchema.js"
 import {PacienteSchema, ActPacienteSchema, ActPaciente2} from "../schema/pacienteSchema.js";
 import { verifyToken, verifyTokenWeb } from '../middlewares/verifyToken.js';
 import { checkEpisodioPermissions } from '../middlewares/episodioPermissions.middleware.js';
 import { validateAdmin, validateRol } from '../middlewares/validateAdmin.js';
+import { paginationMiddleware } from '../middlewares/pagination.js';
 const router = express.Router();
 
 //🟢
@@ -45,13 +47,14 @@ router.delete('/eliminarPaciente/:id_paciente',
 router.get('/todosPacientes', 
     verifyTokenWeb,
     validateRol(['Administrador', 'Super']),
+    paginationMiddleware(5),
     listarTodosPacientes
 )
 router.get('/listarPacientes2/:id_usuario',
     verifyTokenWeb, 
     validateRol(['Administrador', 'Super']), 
     // checkEpisodioPermissions(['Administrador']),
-    listarPacientes
+    listarPacientes2
 );
 router.post('/registrarPaciente2/:id_usuario',
     verifyTokenWeb,

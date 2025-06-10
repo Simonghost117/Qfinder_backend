@@ -1,4 +1,6 @@
 import Medicamento from '../models/medicamento.model.js';
+import { Op } from 'sequelize';
+import {PaginationService} from '../utils/paginationUtils.js';
 
 export const crearMedicamento = async (req, res) => {
   try {
@@ -125,3 +127,49 @@ export const eliminarMedicamento = async (req, res) => {
   }
 };
 
+export const listarMedicamentos2 = async (req, res) => {
+  try { 
+    const where = {
+    };
+  
+    if (req.query.estado) {
+      where.estado_usuario = req.query.estado;
+    }
+    
+    if (req.query.busqueda) {
+      const searchTerm = req.query.busqueda.toLowerCase(); 
+      
+      where[Op.or] = [
+        { 
+          nombre: { 
+            [Op.iLike]: `%${searchTerm}%` 
+          } 
+        },
+        { 
+          tipo: { 
+            [Op.iLike]: `%${searchTerm}%` 
+          } 
+        }
+      ];
+    }
+
+    const result = await PaginationService.paginate(Medicamento, {
+      where,
+      order: [['id_medicamento', 'DESC']],
+      req,
+      transformData: (medicamentos) => medicamentos.map(medicamento => ({
+        id_medicamento: medicamento.id_medicamento,
+        id_usuario : medicamento.id_usuario ,
+        nombre: medicamento.nombre,
+        descripcion: medicamento.descripcion,
+        tipo: medicamento.tipo,
+        
+      }))
+    });
+
+    res.status(200).json(result);
+  
+  } catch (error) {
+    res.status(500).json({ message: 'Error al listar medicamentos', error: error.message });
+  }
+};
