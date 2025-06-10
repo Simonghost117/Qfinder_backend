@@ -13,7 +13,7 @@ export const configureMercadoPago = () => {
       timeout: 15000,
       idempotencyKey: `mp-${Date.now()}`,
       integratorId: process.env.MERCADOPAGO_INTEGRATOR_ID,
-         sandbox: true 
+         sandbox: false // Cambia a true si estás en modo sandbox
     }
   });
 };

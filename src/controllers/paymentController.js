@@ -38,7 +38,7 @@ export const createCheckoutProPreference = async (req, res) => {
         }
       ],
       payer: {
-        email: "TESTUSER471043532",
+        email: user.correo_usuario,
         name: user.nombre_usuario,
         identification: {
           type: "CC",
