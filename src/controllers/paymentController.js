@@ -5,7 +5,7 @@ import { models } from '../models/index.js';
 import axios from 'axios';
 const { Usuario, Subscription } = models;
 
-// Constantes mejor organizadas
+// Mapeo de estados de pago
 const PAYMENT_STATUS = {
   pending: 'pending',
   approved: 'approved',
@@ -18,130 +18,47 @@ const PAYMENT_STATUS = {
   charged_back: 'charged_back'
 };
 
-const SUBSCRIPTION_STATUS = {
-  active: 'active',
-  pending: 'pending',
-  cancelled: 'cancelled',
-  paused: 'paused',
-  expired: 'expired'
-};
-
-// Helpers mejorados
-const extractId = (resource) => {
-  if (!resource) return null;
-  const parts = resource.split('/');
-  return parts[parts.length - 1];
-};
-
-const parseExternalReference = (externalRef) => {
-  try {
-    if (!externalRef) throw new Error('External reference es requerida');
-    
-    const match = externalRef.match(/^USER_(\d+)_PLAN_(\w+)(?:_(\w+))?$/i);
-    if (!match) throw new Error(`Formato de external_reference inválido: ${externalRef}`);
-    
-    return {
-      userId: match[1],
-      planType: match[2].toLowerCase(),
-      additionalData: match[3] || null
-    };
-  } catch (error) {
-    console.error('Error parsing external reference:', {
-      externalRef,
-      error: error.message
-    });
-    throw error;
-  }
-};
-
-const calculateRenewalDate = (startDate, planType) => {
-  const date = new Date(startDate);
-  const plan = PLANS_MERCADOPAGO[planType];
-  
-  if (!plan) throw new Error(`Plan type ${planType} not found`);
-  
-  date.setHours(12, 0, 0, 0); // Establecer a mediodía para evitar problemas de zona horaria
-  
-  if (plan.frequency_type === 'months') {
-    date.setMonth(date.getMonth() + (plan.frequency || 1));
-  } else if (plan.frequency_type === 'days') {
-    date.setDate(date.getDate() + (plan.frequency || 30));
-  } else {
-    date.setMonth(date.getMonth() + 1);
-  }
-  
-  return date;
-};
-
-// Controladores principales
 export const createCheckoutProPreference = async (req, res) => {
-  const transaction = await models.sequelize.transaction();
   try {
     const { userId, planType } = req.body;
     
     if (!userId || !planType) {
-      await transaction.rollback();
-      return res.status(400).json({
+      return res.status(400).json({ 
         success: false,
-        error: 'Faltan campos requeridos',
-        required: ['userId', 'planType'],
-        received: { userId, planType }
+        error: 'Faltan campos requeridos: userId y planType'
       });
     }
 
-    const plan = PLANS_MERCADOPAGO[planType.toLowerCase()];
-    if (!plan) {
-      await transaction.rollback();
+    if (!PLANS_MERCADOPAGO[planType]) {
       return res.status(400).json({
         success: false,
-        error: `Tipo de plan inválido: ${planType}`,
-        availablePlans: Object.keys(PLANS_MERCADOPAGO)
+        error: `Tipo de plan inválido: ${planType}`
       });
     }
 
-    const user = await Usuario.findByPk(userId, { transaction });
+    const user = await Usuario.findByPk(userId);
     if (!user) {
-      await transaction.rollback();
       return res.status(404).json({ 
         success: false,
         error: 'Usuario no encontrado'
       });
     }
 
-    // Verificar si el usuario ya tiene una suscripción activa
-    const existingSubscription = await Subscription.findOne({
-      where: { 
-        id_usuario: userId, 
-        estado_suscripcion: [SUBSCRIPTION_STATUS.active, SUBSCRIPTION_STATUS.pending] 
-      },
-      transaction
-    });
-
-    if (existingSubscription) {
-      await transaction.rollback();
-      return res.status(409).json({
-        success: false,
-        error: 'El usuario ya tiene una suscripción activa o pendiente',
-        currentSubscription: {
-          id: existingSubscription.id,
-          plan: existingSubscription.tipo_suscripcion,
-          status: existingSubscription.estado_suscripcion
-        }
-      });
-    }
-
+    const plan = PLANS_MERCADOPAGO[planType];
     const baseUrl = process.env.API_BASE_URL;
-    const externalRef = `USER_${userId}_PLAN_${planType.toUpperCase()}`;
 
     const preferenceData = {
-      items: [{
-        title: `Suscripción ${planType.toUpperCase()}`,
-        description: plan.description,
-        quantity: 1,
-        unit_price: plan.amount,
-        currency_id: plan.currency_id,
-        picture_url: plan.picture_url || 'https://tuapp.com/logo.png'
-      }],
+      items: [
+        {
+          id: `sub-${planType}`,
+          title: `Suscripción ${planType.toUpperCase()}`,
+          description: plan.description,
+          quantity: 1,
+          unit_price: plan.amount,
+          currency_id: plan.currency_id,
+          picture_url: 'https://tuapp.com/logo.png'
+        }
+      ],
       payer: {
         email: user.correo_usuario,
         name: user.nombre_usuario,
@@ -156,7 +73,7 @@ export const createCheckoutProPreference = async (req, res) => {
         default_installments: 1,
         excluded_payment_types: [{ id: "ticket" }, { id: "atm" }]
       },
-      external_reference: externalRef,
+      external_reference: `USER_${userId}_PLAN_${planType}`,
       notification_url: `${baseUrl}/api/payments/webhook`,
       back_urls: {
         success: `${baseUrl}/api/payments/success-redirect?user_id=${userId}&plan_type=${planType}`,
@@ -175,115 +92,37 @@ export const createCheckoutProPreference = async (req, res) => {
       statement_descriptor: `QFINDER ${planType.toUpperCase()}`
     };
 
-    if (plan.frequency && plan.frequency_type) {
-      preferenceData.auto_recurring = {
-        frequency: plan.frequency,
-        frequency_type: plan.frequency_type,
-        transaction_amount: plan.amount,
-        currency_id: plan.currency_id
-      };
-    }
-
     const preference = await createPreference(preferenceData);
-    
-    // Registrar la creación de la preferencia
-    await Subscription.create({
-      id_usuario: userId,
-      mercado_pago_id: preference.id,
-      plan_id: `plan-${planType}`,
-      tipo_suscripcion: planType,
-      estado_suscripcion: SUBSCRIPTION_STATUS.pending,
-      datos_pago: JSON.stringify({
-        preference_id: preference.id,
-        status: 'preference_created',
-        date_created: new Date(),
-        amount: plan.amount,
-        currency: plan.currency_id
-      })
-    }, { transaction });
-    
-    await transaction.commit();
     
     res.status(200).json({
       success: true,
       init_point: preference.init_point,
       sandbox_init_point: preference.sandbox_init_point,
-      preference_id: preference.id,
-      external_reference: externalRef
+      preference_id: preference.id
     });
   } catch (error) {
-    await transaction.rollback();
-    console.error('Error en createCheckoutProPreference:', {
-      error: {
-        name: error.name,
-        message: error.message,
-        stack: error.stack
-      },
-      requestBody: req.body,
-      timestamp: new Date().toISOString()
-    });
-    
+    console.error('Error en createCheckoutProPreference:', error);
     res.status(500).json({ 
       success: false,
       error: 'Error al crear preferencia de pago',
-      details: process.env.NODE_ENV === 'development' ? {
-        message: error.message,
-        stack: error.stack
-      } : undefined,
-      reference: `ERR-${Date.now()}`
+      details: error.message
     });
   }
 };
 
+const extractId = (resource) => {
+  if (!resource) return null;
+  const parts = resource.split('/');
+  return parts[parts.length - 1];
+};
+
 export const handleWebhook = async (req, res) => {
   try {
-    // Verificación mejorada de firma del webhook
-    if (process.env.MERCADOPAGO_WEBHOOK_SECRET) {
-      const signature = req.headers['x-signature'] || req.headers['x-signature-sha256'];
-      const requestBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
-      
-      try {
-        const isValid = verifyWebhookSignature(requestBody, signature);
-        if (!isValid) {
-          console.warn('⚠️ Webhook con firma inválida recibido', {
-            headers: req.headers,
-            body: req.body
-          });
-          return res.status(403).json({ error: 'Firma inválida' });
-        }
-      } catch (sigError) {
-        console.error('❌ Error verificando firma del webhook:', sigError);
-        return res.status(400).json({ error: 'Error verificando firma' });
-      }
-    }
-
-    // Manejo de webhooks de suscripción
-    const subscriptionType = req.query.type || req.body.type;
-    const subscriptionId = req.query['data.id'] || req.body.data?.id || req.body.id;
-
-    if (subscriptionType && subscriptionId) {
-      console.log('📨 Webhook de suscripción recibido:', { 
-        type: subscriptionType,
-        id: subscriptionId,
-        action: req.body.action 
-      });
-
-      switch (subscriptionType) {
-        case 'subscription_preapproval':
-          await processSubscriptionUpdate(req.body);
-          return res.sendStatus(200);
-        case 'subscription_authorized_payment':
-          await processSubscriptionPayment(req.body);
-          return res.sendStatus(200);
-        default:
-          console.warn(`⚠️ Tipo de suscripción no manejado: ${subscriptionType}`);
-          return res.sendStatus(200);
-      }
-    }
-
-    // Manejo de webhooks tradicionales
     const topic = req.query.topic || req.body.topic;
-    const id = req.query.id || req.body.data?.id || extractId(req.body.resource);
+    const id =
+      req.query.id ||
+      (req.body.data && req.body.data.id) ||
+      extractId(req.body.resource);
 
     if (!topic || !id) {
       console.warn('⚠️ Webhook recibido sin topic o id válido:', {
@@ -302,7 +141,6 @@ export const handleWebhook = async (req, res) => {
 
       switch (payment.status) {
         case PAYMENT_STATUS.approved:
-        case PAYMENT_STATUS.authorized:
           await processApprovedPayment(payment);
           break;
         case PAYMENT_STATUS.pending:
@@ -316,498 +154,135 @@ export const handleWebhook = async (req, res) => {
         default:
           console.log(`⚠️ Estado de pago no manejado: ${payment.status}`);
       }
-    } 
-    else if (topic === 'merchant_order') {
-      await processMerchantOrder(req.body.resource);
+
+    } else if (topic === 'merchant_order') {
+      const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
+      const resource = req.body.resource;
+
+      try {
+        const orderResponse = await axios.get(resource, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`
+          }
+        });
+
+        const order = orderResponse.data;
+        console.log('📦 Detalles de la merchant_order recibida:', order);
+
+        if (order.payments?.length) {
+          for (const p of order.payments) {
+            if (p.status === 'approved') {
+              const paymentDetail = await getPayment(p.id);
+              await processApprovedPayment(paymentDetail);
+            }
+          }
+        }
+
+      } catch (err) {
+        console.error('❌ Error al consultar merchant_order:', {
+          mensaje: err.message,
+          stack: err.stack
+        });
+      }
     }
 
     res.sendStatus(200);
   } catch (error) {
     console.error('❌ Error en handleWebhook:', {
-      error: {
-        name: error.name,
-        message: error.message,
-        stack: error.stack
-      },
-      body: req.body,
-      query: req.query,
-      timestamp: new Date().toISOString()
+      error: error.message,
+      stack: error.stack,
+      body: req.body
     });
-    
     res.status(500).json({
       success: false,
       error: 'Error procesando webhook',
-      details: process.env.NODE_ENV === 'development' ? {
-        message: error.message,
-        stack: error.stack
-      } : undefined,
-      reference: `WEBHOOK-ERR-${Date.now()}`
+      details: error.message
     });
   }
 };
 
-// Funciones de procesamiento mejoradas
+
 async function processApprovedPayment(payment) {
-  const transaction = await models.sequelize.transaction();
   try {
     const { external_reference, id } = payment;
-    
+
     if (!external_reference) {
       throw new Error('El pago no contiene external_reference');
     }
 
-    const { userId, planType } = parseExternalReference(external_reference);
+    // Formato esperado: USER_123_PLAN_plus
+    const [_, userId, __, planType] = external_reference.split('_');
 
-    // Verificar si el pago ya fue procesado
+    if (!userId || !planType) {
+      throw new Error(`Formato de external_reference inválido: ${external_reference}`);
+    }
+
+    const user = await Usuario.findByPk(userId);
+    if (!user) {
+      throw new Error(`Usuario con ID ${userId} no encontrado`);
+    }
+
+    // Verifica si ya se procesó este pago
     const existingPayment = await Subscription.findOne({
-      where: { mercado_pago_id: id },
-      transaction
+      where: { mercado_pago_id: id }
     });
 
-    if (existingPayment && existingPayment.estado_suscripcion === SUBSCRIPTION_STATUS.active) {
+    if (existingPayment) {
       console.log(`El pago ${id} ya fue procesado anteriormente.`);
-      await transaction.commit();
       return;
     }
 
-    // Validar que el plan exista
-    if (!PLANS_MERCADOPAGO[planType]) {
+    // Verifica que el plan sea válido
+    const planKeys = Object.keys(PLANS_MERCADOPAGO);
+    if (!planKeys.includes(planType)) {
       throw new Error(`Tipo de plan inválido: ${planType}`);
     }
 
-    const user = await Usuario.findByPk(userId, { transaction });
-    if (!user) {
-      throw new Error(`Usuario ${userId} no encontrado`);
-    }
-
-    // Calcular fechas de manera segura
+    // Crea o actualiza la suscripción en la DB
     const fechaInicio = new Date();
-    const fechaRenovacion = calculateRenewalDate(fechaInicio, planType);
+    const fechaRenovacion = new Date();
+    fechaRenovacion.setMonth(fechaInicio.getMonth() + 1);
 
-    // Actualizar o crear la suscripción
-    let subscription;
-    if (existingPayment) {
-      subscription = await existingPayment.update({
-        estado_suscripcion: SUBSCRIPTION_STATUS.active,
-        limite_pacientes: SUBSCRIPTION_LIMITS[planType].pacientes,
-        limite_cuidadores: SUBSCRIPTION_LIMITS[planType].cuidadores,
-        fecha_inicio: fechaInicio,
-        fecha_renovacion: fechaRenovacion,
-        datos_pago: JSON.stringify({
-          ...JSON.parse(existingPayment.datos_pago || '{}'),
-          id: payment.id,
-          status: payment.status,
-          date_approved: payment.date_approved,
-          payment_method: payment.payment_method_id,
-          amount: payment.transaction_amount
-        })
-      }, { transaction });
-    } else {
-      subscription = await Subscription.create({
-        id_usuario: userId,
-        mercado_pago_id: id,
-        plan_id: `plan-${planType}`,
-        tipo_suscripcion: planType,
-        estado_suscripcion: SUBSCRIPTION_STATUS.active,
-        limite_pacientes: SUBSCRIPTION_LIMITS[planType].pacientes,
-        limite_cuidadores: SUBSCRIPTION_LIMITS[planType].cuidadores,
-        fecha_inicio: fechaInicio,
-        fecha_renovacion: fechaRenovacion,
-        datos_pago: JSON.stringify({
-          id: payment.id,
-          status: payment.status,
-          date_approved: payment.date_approved,
-          payment_method: payment.payment_method_id,
-          amount: payment.transaction_amount
-        })
-      }, { transaction });
-    }
+    const [subscription, created] = await Subscription.upsert({
+      id_usuario: userId,
+      mercado_pago_id: id,
+      plan_id: `plan-${planType}`,
+      tipo_suscripcion: planType,
+      estado_suscripcion: 'active',
+      limite_pacientes: SUBSCRIPTION_LIMITS[planType].pacientes,
+      limite_cuidadores: SUBSCRIPTION_LIMITS[planType].cuidadores,
+      fecha_inicio: fechaInicio,
+      fecha_renovacion: fechaRenovacion,
+      datos_pago: JSON.stringify(payment)
+    });
 
-    // Actualizar el usuario
+    // Actualiza el estado de membresía del usuario
     await Usuario.update(
       { membresia: planType },
-      { where: { id_usuario: userId }, transaction }
+      { where: { id_usuario: userId } }
     );
 
-    await transaction.commit();
-    console.log(`✅ Suscripción ${subscription.estado_suscripcion} para usuario ${userId} - ID: ${subscription.id}`);
-
-    // Aquí podrías enviar una notificación al usuario
-    // await sendPaymentConfirmation(user, payment, subscription);
-
+    console.log(`✅ Suscripción ${created ? 'creada' : 'actualizada'} para el usuario ${userId}`);
+    console.log(`🔄 Membresía del usuario ${userId} actualizada a ${planType}`);
   } catch (error) {
-    await transaction.rollback();
     console.error('❌ Error en processApprovedPayment:', {
+      mensaje: error.message,
       paymentId: payment?.id,
-      externalReference: payment?.external_reference,
-      error: {
-        name: error.name,
-        message: error.message,
-        stack: error.stack
-      },
-      timestamp: new Date().toISOString()
+      stack: error.stack
     });
-    
     throw error;
-  }
-}
-
-async function processSubscriptionUpdate(subscriptionData) {
-  const transaction = await models.sequelize.transaction();
-  try {
-    const { id, action } = subscriptionData;
-    console.log(`🔄 Procesando actualización de suscripción ${id} - Acción: ${action}`);
-
-    const subscription = await Subscription.findOne({
-      where: { mercado_pago_id: id },
-      transaction
-    });
-
-    if (!subscription) {
-      console.warn(`⚠️ Suscripción ${id} no encontrada en la base de datos`);
-      await transaction.commit();
-      return;
-    }
-
-    let newStatus = subscription.estado_suscripcion;
-    let updateData = {
-      datos_pago: JSON.stringify({
-        ...JSON.parse(subscription.datos_pago || '{}'),
-        last_update: new Date(),
-        update_action: action
-      })
-    };
-
-    switch (action) {
-      case 'updated':
-        // Actualizar datos si es necesario
-        break;
-      case 'cancelled':
-        newStatus = SUBSCRIPTION_STATUS.cancelled;
-        break;
-      case 'paused':
-        newStatus = SUBSCRIPTION_STATUS.paused;
-        break;
-      case 'activated':
-        newStatus = SUBSCRIPTION_STATUS.active;
-        break;
-      case 'payment_created':
-        await transaction.commit();
-        return await processSubscriptionPayment(subscriptionData);
-      default:
-        console.log(`⚠️ Acción de suscripción no manejada: ${action}`);
-    }
-
-    updateData.estado_suscripcion = newStatus;
-
-    await subscription.update(updateData, { transaction });
-    await transaction.commit();
-
-    console.log(`✅ Suscripción ${id} actualizada a estado: ${newStatus}`);
-  } catch (error) {
-    await transaction.rollback();
-    console.error('❌ Error en processSubscriptionUpdate:', {
-      subscriptionId: subscriptionData?.id,
-      error: {
-        name: error.name,
-        message: error.message,
-        stack: error.stack
-      },
-      timestamp: new Date().toISOString()
-    });
-    
-    throw error;
-  }
-}
-
-async function processSubscriptionPayment(paymentData) {
-  const transaction = await models.sequelize.transaction();
-  try {
-    const { id } = paymentData;
-    console.log(`💰 Procesando pago de suscripción ${id}`);
-
-    const subscription = await Subscription.findOne({
-      where: { mercado_pago_id: id },
-      transaction
-    });
-
-    if (!subscription) {
-      throw new Error(`Suscripción con ID ${id} no encontrada`);
-    }
-
-    // Actualizar fechas de renovación
-    const newRenewalDate = calculateRenewalDate(new Date(), subscription.tipo_suscripcion);
-
-    await subscription.update({
-      fecha_renovacion: newRenewalDate,
-      estado_suscripcion: SUBSCRIPTION_STATUS.active,
-      datos_pago: JSON.stringify({
-        ...JSON.parse(subscription.datos_pago || '{}'),
-        last_payment: new Date(),
-        payment_data: paymentData
-      })
-    }, { transaction });
-
-    await transaction.commit();
-    console.log(`✅ Pago de suscripción ${id} procesado. Nueva fecha de renovación: ${newRenewalDate}`);
-  } catch (error) {
-    await transaction.rollback();
-    console.error('❌ Error en processSubscriptionPayment:', {
-      paymentId: paymentData?.id,
-      error: {
-        name: error.name,
-        message: error.message,
-        stack: error.stack
-      },
-      timestamp: new Date().toISOString()
-    });
-    
-    throw error;
-  }
-}
-
-async function processMerchantOrder(orderResource) {
-  try {
-    const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
-    const orderResponse = await axios.get(orderResource, {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
-
-    const order = orderResponse.data;
-    console.log('📦 Detalles de la merchant_order recibida:', order.id);
-
-    if (order.payments?.length) {
-      for (const p of order.payments) {
-        if (p.status === 'approved') {
-          const paymentDetail = await getPayment(p.id);
-          await processApprovedPayment(paymentDetail);
-        }
-      }
-    }
-  } catch (err) {
-    console.error('❌ Error al consultar merchant_order:', {
-      mensaje: err.message,
-      stack: err.stack,
-      timestamp: new Date().toISOString()
-    });
-    
-    throw err;
   }
 }
 
 async function processPendingPayment(payment) {
-  const transaction = await models.sequelize.transaction();
-  try {
-    const { external_reference, id } = payment;
-    
-    if (!external_reference) {
-      console.warn('Pago pendiente sin external_reference:', id);
-      await transaction.commit();
-      return;
-    }
-
-    const { userId, planType } = parseExternalReference(external_reference);
-
-    // Verificar si ya existe un registro para este pago
-    const existingPayment = await Subscription.findOne({
-      where: { mercado_pago_id: id },
-      transaction
-    });
-
-    if (existingPayment) {
-      await existingPayment.update({
-        estado_suscripcion: SUBSCRIPTION_STATUS.pending,
-        datos_pago: JSON.stringify({
-          ...JSON.parse(existingPayment.datos_pago || '{}'),
-          payment_status: 'pending',
-          last_update: new Date()
-        })
-      }, { transaction });
-    } else {
-      await Subscription.create({
-        id_usuario: userId,
-        mercado_pago_id: id,
-        plan_id: `plan-${planType}`,
-        tipo_suscripcion: planType,
-        estado_suscripcion: SUBSCRIPTION_STATUS.pending,
-        datos_pago: JSON.stringify({
-          id: payment.id,
-          status: payment.status,
-          date_created: payment.date_created,
-          payment_method: payment.payment_method_id,
-          amount: payment.transaction_amount
-        })
-      }, { transaction });
-    }
-
-    await transaction.commit();
-    console.log(`🔄 Pago pendiente registrado: ${id}`);
-  } catch (error) {
-    await transaction.rollback();
-    console.error('❌ Error en processPendingPayment:', {
-      paymentId: payment?.id,
-      error: {
-        name: error.name,
-        message: error.message,
-        stack: error.stack
-      },
-      timestamp: new Date().toISOString()
-    });
-  }
+  console.log(`Procesando pago pendiente: ${payment.id}`);
+  // Lógica para pagos pendientes
 }
 
 async function processRejectedPayment(payment) {
-  const transaction = await models.sequelize.transaction();
-  try {
-    const { external_reference, id } = payment;
-    
-    if (!external_reference) {
-      console.warn('Pago rechazado sin external_reference:', id);
-      await transaction.commit();
-      return;
-    }
-
-    const { userId } = parseExternalReference(external_reference);
-
-    // Actualizar el registro si existe
-    const existingPayment = await Subscription.findOne({
-      where: { mercado_pago_id: id },
-      transaction
-    });
-
-    if (existingPayment) {
-      await existingPayment.update({
-        estado_suscripcion: SUBSCRIPTION_STATUS.cancelled,
-        datos_pago: JSON.stringify({
-          ...JSON.parse(existingPayment.datos_pago || '{}'),
-          payment_status: 'rejected',
-          rejection_reason: payment.status_detail,
-          last_update: new Date()
-        })
-      }, { transaction });
-    }
-
-    await transaction.commit();
-    console.log(`❌ Pago rechazado registrado: ${id}`);
-  } catch (error) {
-    await transaction.rollback();
-    console.error('❌ Error en processRejectedPayment:', {
-      paymentId: payment?.id,
-      error: {
-        name: error.name,
-        message: error.message,
-        stack: error.stack
-      },
-      timestamp: new Date().toISOString()
-    });
-  }
+  console.log(`Procesando pago rechazado: ${payment.id}`);
+  // Lógica para pagos rechazados
 }
-
-// Controladores de redirección
-export const successRedirect = async (req, res) => {
-  try {
-    const { user_id, plan_type } = req.query;
-    
-    if (!user_id || !plan_type) {
-      return res.status(400).send('Parámetros user_id y plan_type son requeridos');
-    }
-
-    const deeplink = `qfinder://payment/success?user_id=${user_id}&plan_type=${plan_type}`;
-    
-    res.send(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Redireccionando...</title>
-          <meta http-equiv="refresh" content="0; url=${deeplink}" />
-          <script>window.location.href = "${deeplink}";</script>
-          <style>
-            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
-            a { color: #0066cc; text-decoration: none; }
-          </style>
-        </head>
-        <body>
-          <h1>¡Pago exitoso!</h1>
-          <p>Redirigiendo a la aplicación...</p>
-          <a href="${deeplink}">Si no eres redirigido automáticamente, haz clic aquí</a>
-        </body>
-      </html>
-    `);
-  } catch (error) {
-    console.error('Error en successRedirect:', error);
-    res.status(500).send('Error procesando la redirección');
-  }
-};
-
-export const failureRedirect = async (req, res) => {
-  try {
-    const { user_id } = req.query;
-    
-    if (!user_id) {
-      return res.status(400).send('Parámetro user_id es requerido');
-    }
-
-    const deeplink = `qfinder://payment/failure?user_id=${user_id}`;
-    
-    res.send(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Redireccionando...</title>
-          <meta http-equiv="refresh" content="0; url=${deeplink}" />
-          <script>window.location.href = "${deeplink}";</script>
-          <style>
-            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
-            a { color: #0066cc; text-decoration: none; }
-          </style>
-        </head>
-        <body>
-          <h1>¡Pago fallido!</h1>
-          <p>Redirigiendo a la aplicación...</p>
-          <a href="${deeplink}">Si no eres redirigido automáticamente, haz clic aquí</a>
-        </body>
-      </html>
-    `);
-  } catch (error) {
-    console.error('Error en failureRedirect:', error);
-    res.status(500).send('Error procesando la redirección');
-  }
-};
-
-export const pendingRedirect = async (req, res) => {
-  try {
-    const { user_id } = req.query;
-    
-    if (!user_id) {
-      return res.status(400).send('Parámetro user_id es requerido');
-    }
-
-    const deeplink = `qfinder://payment/pending?user_id=${user_id}`;
-    
-    res.send(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Redireccionando...</title>
-          <meta http-equiv="refresh" content="0; url=${deeplink}" />
-          <script>window.location.href = "${deeplink}";</script>
-          <style>
-            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
-            a { color: #0066cc; text-decoration: none; }
-          </style>
-        </head>
-        <body>
-          <h1>¡Pago pendiente!</h1>
-          <p>Estamos procesando tu pago. Redirigiendo a la aplicación...</p>
-          <a href="${deeplink}">Si no eres redirigido automáticamente, haz clic aquí</a>
-        </body>
-      </html>
-    `);
-  } catch (error) {
-    console.error('Error en pendingRedirect:', error);
-    res.status(500).send('Error procesando la redirección');
-  }
-};
 
 export const verifyPayment = async (req, res) => {
   try {
@@ -816,8 +291,7 @@ export const verifyPayment = async (req, res) => {
     if (!paymentId) {
       return res.status(400).json({
         success: false,
-        error: 'Se requiere un paymentId válido',
-        code: 'MISSING_PAYMENT_ID'
+        error: 'Se requiere un paymentId válido'
       });
     }
 
@@ -826,53 +300,81 @@ export const verifyPayment = async (req, res) => {
       where: { mercado_pago_id: paymentId }
     });
 
-    // Verificar si el pago está aprobado pero no se procesó
-    if ((payment.status === PAYMENT_STATUS.approved || payment.status === PAYMENT_STATUS.authorized) && !subscription) {
-      console.warn(`⚠️ Pago aprobado pero no procesado: ${paymentId}`);
-      await processApprovedPayment(payment);
-    }
-
     res.json({
       success: true,
       payment: {
         id: payment.id,
         status: payment.status,
-        status_detail: payment.status_detail,
-        amount: payment.transaction_amount,
-        currency: payment.currency_id,
+        amount: payment.amount,
+        currency: payment.currency,
         date_created: payment.date_created,
         date_approved: payment.date_approved,
         external_reference: payment.external_reference
       },
       processed: !!subscription,
-      subscription: subscription ? {
-        id: subscription.id,
-        plan_type: subscription.tipo_suscripcion,
-        status: subscription.estado_suscripcion,
-        start_date: subscription.fecha_inicio,
-        renewal_date: subscription.fecha_renovacion
-      } : null
+      subscription
     });
   } catch (error) {
-    console.error('Error en verifyPayment:', {
-      error: {
-        name: error.name,
-        message: error.message,
-        stack: error.stack
-      },
-      params: req.params,
-      timestamp: new Date().toISOString()
-    });
-    
+    console.error('Error en verifyPayment:', error);
     res.status(500).json({
       success: false,
       error: 'Error verificando pago',
-      code: 'PAYMENT_VERIFICATION_ERROR',
-      details: process.env.NODE_ENV === 'development' ? {
-        message: error.message,
-        stack: error.stack
-      } : undefined,
-      reference: `VERIFY-ERR-${Date.now()}`
+      details: error.message
     });
   }
+};
+
+// Controladores de redirección (mantenidos igual)
+export const successRedirect = async (req, res) => {
+  const { user_id, plan_type } = req.query;
+  const deeplink = `qfinder://payment/success?user_id=${user_id}&plan_type=${plan_type}`;
+  
+  res.send(`
+    <html>
+      <head>
+        <meta http-equiv="refresh" content="0; url=${deeplink}" />
+        <script>window.location.href = "${deeplink}";</script>
+      </head>
+      <body>
+        <p>Redirigiendo a la aplicación...</p>
+        <a href="${deeplink}">Si no eres redirigido, haz clic aquí</a>
+      </body>
+    </html>
+  `);
+};
+
+export const failureRedirect = async (req, res) => {
+  const { user_id } = req.query;
+  const deeplink = `qfinder://payment/failure?user_id=${user_id}`;
+  
+  res.send(`
+    <html>
+      <head>
+        <meta http-equiv="refresh" content="0; url=${deeplink}" />
+        <script>window.location.href = "${deeplink}";</script>
+      </head>
+      <body>
+        <p>Redirigiendo a la aplicación...</p>
+        <a href="${deeplink}">Si no eres redirigido, haz clic aquí</a>
+      </body>
+    </html>
+  `);
+};
+
+export const pendingRedirect = async (req, res) => {
+  const { user_id } = req.query;
+  const deeplink = `qfinder://payment/pending?user_id=${user_id}`;
+  
+  res.send(`
+    <html>
+      <head>
+        <meta http-equiv="refresh" content="0; url=${deeplink}" />
+        <script>window.location.href = "${deeplink}";</script>
+      </head>
+      <body>
+        <p>Redirigiendo a la aplicación...</p>
+        <a href="${deeplink}">Si no eres redirigido, haz clic aquí</a>
+      </body>
+    </html>
+  `);
 };
