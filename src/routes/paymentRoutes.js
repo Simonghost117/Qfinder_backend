@@ -5,8 +5,7 @@ import {
   successRedirect,
   failureRedirect,
   pendingRedirect,
-  verifyPayment,
-  verifyWebhookConfig
+  verifyPayment
 } from '../controllers/paymentController.js';
 import { verifyToken } from '../middlewares/verifyToken.js';
 
@@ -15,12 +14,15 @@ const router = express.Router();
 // Middleware para webhooks que preserva el body raw
 const webhookMiddleware = express.raw({
   type: 'application/json',
-  verify: (req, res, buf) => {
-    req.rawBody = buf; // Guarda el Buffer completo
+  limit: '10mb',
+  verify: (req, res, buf, encoding) => {
     try {
-      // También parsea el JSON para facilitar el acceso a los datos
-      req.body = buf.length ? JSON.parse(buf.toString()) : {};
+      req.rawBody = buf;
+      if (buf && buf.length) {
+        req.body = JSON.parse(buf.toString(encoding || 'utf8'));
+      }
     } catch (e) {
+      console.error('Error parsing webhook body:', e);
       req.body = {};
     }
   }
@@ -32,7 +34,12 @@ router.get('/verify-payment/:paymentId', verifyToken, verifyPayment);
 
 // Webhook Mercado Pago (sin autenticación)
 router.post('/webhook', webhookMiddleware, handleWebhook);
-router.get('/webhook', verifyWebhookConfig);
+router.get('/webhook', (req, res) => {
+  // Endpoint para verificación manual del webhook
+  const challenge = req.query.challenge;
+  if (!challenge) return res.status(400).send('Missing challenge parameter');
+  res.status(200).send(challenge);
+});
 
 // Redirecciones
 router.get('/success-redirect', successRedirect);

@@ -5,7 +5,6 @@ const client = configureMercadoPago();
 
 export const createPreference = async (preferenceData) => {
   try {
-    // Validación de datos
     if (!preferenceData.items || preferenceData.items.length === 0) {
       throw new Error('El array de items no puede estar vacío');
     }

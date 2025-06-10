@@ -2,7 +2,6 @@ import { createPreference, getPayment, searchPayments } from '../services/mercad
 import { verifyWebhookSignature } from '../config/mercadopago.js';
 import { PLANS_MERCADOPAGO, SUBSCRIPTION_LIMITS } from '../config/subscriptions.js';
 import { models } from '../models/index.js';
-import axios from 'axios';
 const { Usuario, Subscription } = models;
 
 // Estados de pago
@@ -18,33 +17,10 @@ const PAYMENT_STATUS = {
   charged_back: 'charged_back'
 };
 
-// Registrar errores
 const notifyErrorToMonitoringSystem = (error, context = {}) => {
   console.error('🚨 Error crítico:', { error: error.message, ...context });
 };
 
-// Procesar pagos según estado
-async function processPaymentBasedOnStatus(payment) {
-  console.log(`🔍 Procesando pago ${payment.id} con estado: ${payment.status}`);
-
-  switch (payment.status) {
-    case PAYMENT_STATUS.approved:
-      await processApprovedPayment(payment);
-      break;
-    case PAYMENT_STATUS.pending:
-    case PAYMENT_STATUS.in_process:
-      await processPendingPayment(payment);
-      break;
-    case PAYMENT_STATUS.rejected:
-    case PAYMENT_STATUS.cancelled:
-      await processRejectedPayment(payment);
-      break;
-    default:
-      console.log(`⚠️ Estado de pago no manejado: ${payment.status}`);
-  }
-}
-
-// Procesar pago aprobado
 async function processApprovedPayment(payment) {
   const transaction = await models.sequelize.transaction();
   try {
@@ -115,23 +91,27 @@ async function processApprovedPayment(payment) {
   }
 }
 
-// Controlador principal del webhook
 export const handleWebhook = async (req, res) => {
   console.log('🔔 Nuevo webhook recibido', {
     headers: req.headers,
     body: req.body,
-    query: req.query,
-    ip: req.ip
+    query: req.query
   });
 
   try {
+    // Verificar si es un ping de prueba
+    if (req.query.type === 'test') {
+      console.log('✅ Webhook de prueba recibido');
+      return res.status(200).json({ status: 'ok' });
+    }
+
     // Verificar firma del webhook
     const signature = req.headers['x-signature'];
     const webhookSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
 
     if (!signature || !webhookSecret) {
       console.warn('⚠️ Firma no proporcionada o secreto no configurado');
-      return res.status(401).json({ error: 'Firma no proporcionada o secreto no configurado' });
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
     // Usar el cuerpo RAW para verificación
@@ -140,7 +120,7 @@ export const handleWebhook = async (req, res) => {
 
     if (!isValid) {
       console.warn('⚠️ Firma de webhook inválida');
-      return res.status(403).json({ error: 'Firma inválida' });
+      return res.status(403).json({ error: 'Invalid signature' });
     }
 
     // Procesar según el tipo de webhook
@@ -148,12 +128,13 @@ export const handleWebhook = async (req, res) => {
     console.log(`📌 Tipo de evento: ${eventType}`);
 
     switch (eventType) {
-      case 'subscription_preapproval':
-        await handleSubscriptionUpdate(req.body);
+      case 'payment':
+        const payment = await getPayment(req.body.data?.id || req.query['data.id']);
+        await processApprovedPayment(payment);
         break;
       
-      case 'payment':
-        await handlePaymentNotification(req.body);
+      case 'subscription_preapproval':
+        console.log('Evento de suscripción recibido:', req.body);
         break;
       
       default:
@@ -165,31 +146,11 @@ export const handleWebhook = async (req, res) => {
   } catch (error) {
     console.error('❌ Error en handleWebhook:', error);
     return res.status(500).json({ 
-      error: 'Error procesando webhook',
+      error: 'Internal server error',
       details: error.message 
     });
   }
 };
-
-// Endpoint para verificación del webhook
-export const verifyWebhookConfig = async (req, res) => {
-  try {
-    const challenge = req.query.challenge;
-    if (!challenge) {
-      return res.status(400).send('Falta el parámetro challenge');
-    }
-    
-    console.log('✅ Webhook verification challenge received');
-    res.status(200).send(challenge);
-  } catch (error) {
-    notifyErrorToMonitoringSystem(error, {
-      action: 'verifyWebhookConfig'
-    });
-    console.error('Error verificando webhook:', error);
-    res.status(500).send('Error verificando webhook');
-  }
-};
-
 // Controlador para verificar estado de pago
 export const verifyPayment = async (req, res) => {
   try {
