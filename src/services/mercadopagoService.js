@@ -1,5 +1,5 @@
 import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
-import { configureMercadoPago } from '../config/mercadopagoConfig.js';
+import { configureMercadoPago } from '../config/mercadopago.js';
 
 const client = configureMercadoPago();
 
