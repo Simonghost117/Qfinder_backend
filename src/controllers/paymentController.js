@@ -1,10 +1,10 @@
 import { createPreference, getPayment, searchPayments } from '../services/mercadopagoService.js';
-import { verifyWebhookSignature } from '../config/mercadopago.js';
+import { verifyWebhookSignature } from '../config/mercadopagoConfig.js';
 import { PLANS_MERCADOPAGO, SUBSCRIPTION_LIMITS } from '../config/subscriptions.js';
 import { models } from '../models/index.js';
 const { Usuario, Subscription } = models;
 
-// Estados de pago
+// Estados de pago ampliados
 const PAYMENT_STATUS = {
   pending: 'pending',
   approved: 'approved',
@@ -14,22 +14,29 @@ const PAYMENT_STATUS = {
   rejected: 'rejected',
   cancelled: 'cancelled',
   refunded: 'refunded',
-  charged_back: 'charged_back'
+  charged_back: 'charged_back',
+  expired: 'expired'
 };
 
 const notifyErrorToMonitoringSystem = (error, context = {}) => {
-  console.error('🚨 Error crítico:', { error: error.message, ...context });
+  console.error('🚨 Error crítico:', { 
+    error: error.message, 
+    stack: error.stack,
+    ...context 
+  });
+  // Aquí podrías integrar con Sentry, Rollbar, etc.
 };
 
 async function processApprovedPayment(payment) {
   const transaction = await models.sequelize.transaction();
   try {
-    const { external_reference, id } = payment;
+    const { external_reference, id, status } = payment;
 
     if (!external_reference) {
       throw new Error('El pago no contiene external_reference');
     }
 
+    // Formato: USER_<userId>_PLAN_<planType>
     const [_, userId, __, planType] = external_reference.split('_');
 
     if (!userId || !planType) {
@@ -41,6 +48,7 @@ async function processApprovedPayment(payment) {
       throw new Error(`Usuario con ID ${userId} no encontrado`);
     }
 
+    // Verificar si el pago ya fue procesado
     const existingPayment = await Subscription.findOne({
       where: { mercado_pago_id: id },
       transaction
@@ -49,38 +57,48 @@ async function processApprovedPayment(payment) {
     if (existingPayment) {
       console.log(`ℹ️ El pago ${id} ya fue procesado anteriormente.`);
       await transaction.commit();
-      return;
+      return { processed: false, reason: 'already_processed' };
     }
 
+    // Validar tipo de plan
     const planKeys = Object.keys(PLANS_MERCADOPAGO);
     if (!planKeys.includes(planType)) {
       throw new Error(`Tipo de plan inválido: ${planType}`);
     }
 
+    // Calcular fechas de inicio y renovación
     const fechaInicio = new Date();
     const fechaRenovacion = new Date();
     fechaRenovacion.setMonth(fechaInicio.getMonth() + 1);
 
+    // Crear o actualizar suscripción
     const [subscription] = await Subscription.upsert({
       id_usuario: userId,
       mercado_pago_id: id,
       plan_id: `plan-${planType}`,
       tipo_suscripcion: planType,
-      estado_suscripcion: 'active',
+      estado_suscripcion: status === 'approved' ? 'active' : status,
       limite_pacientes: SUBSCRIPTION_LIMITS[planType].pacientes,
       limite_cuidadores: SUBSCRIPTION_LIMITS[planType].cuidadores,
       fecha_inicio: fechaInicio,
       fecha_renovacion: fechaRenovacion,
       datos_pago: JSON.stringify(payment)
-    }, { transaction });
+    }, { 
+      transaction,
+      returning: true
+    });
 
-    await Usuario.update(
-      { membresia: planType },
-      { where: { id_usuario: userId }, transaction }
-    );
+    // Actualizar membresía del usuario solo si fue aprobado
+    if (status === 'approved') {
+      await Usuario.update(
+        { membresia: planType },
+        { where: { id_usuario: userId }, transaction }
+      );
+    }
 
     await transaction.commit();
-    console.log(`✅ Suscripción actualizada para el usuario ${userId}`);
+    console.log(`✅ Suscripción ${status} para el usuario ${userId}`);
+    return { processed: true, subscription };
   } catch (error) {
     await transaction.rollback();
     notifyErrorToMonitoringSystem(error, {
@@ -102,11 +120,11 @@ export const handleWebhook = async (req, res) => {
     // Verificar si es un ping de prueba
     if (req.query.type === 'test') {
       console.log('✅ Webhook de prueba recibido');
-      return res.status(200).json({ status: 'ok' });
+      return res.status(200).json({ status: 'ok', test: true });
     }
 
     // Verificar firma del webhook
-    const signature = req.headers['x-signature'];
+    const signature = req.headers['x-signature'] || req.headers['x-signature-sha256'];
     const webhookSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
 
     if (!signature || !webhookSecret) {
@@ -114,10 +132,7 @@ export const handleWebhook = async (req, res) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // Usar el cuerpo RAW para verificación
-    const rawBody = req.rawBody || Buffer.from(JSON.stringify(req.body));
-    const isValid = verifyWebhookSignature(rawBody, signature, webhookSecret);
-
+    const isValid = verifyWebhookSignature(req.rawBody || req.body, signature, webhookSecret);
     if (!isValid) {
       console.warn('⚠️ Firma de webhook inválida');
       return res.status(403).json({ error: 'Invalid signature' });
@@ -129,22 +144,40 @@ export const handleWebhook = async (req, res) => {
 
     switch (eventType) {
       case 'payment':
-        const payment = await getPayment(req.body.data?.id || req.query['data.id']);
+      case 'payment.updated':
+        const paymentId = req.body.data?.id || req.query['data.id'];
+        if (!paymentId) {
+          return res.status(400).json({ error: 'Payment ID missing' });
+        }
+        
+        const payment = await getPayment(paymentId);
         await processApprovedPayment(payment);
         break;
       
+      case 'subscription':
       case 'subscription_preapproval':
         console.log('Evento de suscripción recibido:', req.body);
+        // Aquí puedes agregar lógica específica para suscripciones recurrentes
+        break;
+      
+      case 'plan':
+      case 'subscription_plan':
+        console.log('Evento de plan recibido:', req.body);
         break;
       
       default:
         console.warn(`⚠️ Tipo de webhook no manejado: ${eventType}`);
+        // Respondemos 200 aunque no lo manejemos para que MP no reintente
     }
 
     return res.status(200).json({ success: true });
     
   } catch (error) {
-    console.error('❌ Error en handleWebhook:', error);
+    console.error('❌ Error en handleWebhook:', {
+      message: error.message,
+      stack: error.stack,
+      body: req.body
+    });
     return res.status(500).json({ 
       error: 'Internal server error',
       details: error.message 

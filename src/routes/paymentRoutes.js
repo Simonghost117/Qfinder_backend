@@ -12,28 +12,34 @@ import { verifyToken } from '../middlewares/verifyToken.js';
 const router = express.Router();
 
 // Middleware para webhooks que preserva el body raw
-const webhookMiddleware = express.raw({
-  type: 'application/json',
-  limit: '10mb',
-  verify: (req, res, buf, encoding) => {
-    try {
-      req.rawBody = buf;
-      if (buf && buf.length) {
-        req.body = JSON.parse(buf.toString(encoding || 'utf8'));
+const rawBodyMiddleware = (req, res, next) => {
+  if (req.is('application/json')) {
+    let data = '';
+    req.setEncoding('utf8');
+    req.on('data', chunk => {
+      data += chunk;
+    });
+    req.on('end', () => {
+      try {
+        req.rawBody = data;
+        req.body = JSON.parse(data);
+        next();
+      } catch (error) {
+        console.error('Error parsing JSON:', error);
+        res.status(400).json({ error: 'Invalid JSON' });
       }
-    } catch (e) {
-      console.error('Error parsing webhook body:', e);
-      req.body = {};
-    }
+    });
+  } else {
+    next();
   }
-});
+};
 
 // Ruta para crear preferencia de Checkout Pro
 router.post('/checkout-pro', verifyToken, createCheckoutProPreference);
 router.get('/verify-payment/:paymentId', verifyToken, verifyPayment);
 
 // Webhook Mercado Pago (sin autenticación)
-router.post('/webhook', webhookMiddleware, handleWebhook);
+router.post('/webhook', rawBodyMiddleware, handleWebhook);
 router.get('/webhook', (req, res) => {
   // Endpoint para verificación manual del webhook
   const challenge = req.query.challenge;

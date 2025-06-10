@@ -1,10 +1,8 @@
 import { MercadoPagoConfig } from 'mercadopago';
 import crypto from 'crypto';
-import { access } from 'fs';
-  const access_token ="APP_USR-358197303018633-060512-a9dc7451432fc51a9d32f4fab6b83e68-390857873";
+
 export const configureMercadoPago = () => {
-const accessToken =  access_token; // Puedes usar una variable de entorno o un valor por defecto para pruebas  
-  // const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
+  const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
   const isSandbox = process.env.NODE_ENV !== 'production';
   
   if (!accessToken) {
@@ -14,10 +12,14 @@ const accessToken =  access_token; // Puedes usar una variable de entorno o un v
   return new MercadoPagoConfig({
     accessToken: accessToken,
     options: {
-      timeout: 15000,
-      idempotencyKey: `mp-${Date.now()}`,
+      timeout: 5000,
+      idempotencyKey: `mp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       integratorId: process.env.MERCADOPAGO_INTEGRATOR_ID,
-      sandbox: isSandbox
+      sandbox: isSandbox,
+      headers: {
+        'x-product-id': 'qfinder-app',
+        'x-integrator-id': process.env.MERCADOPAGO_INTEGRATOR_ID
+      }
     }
   });
 };
@@ -29,17 +31,22 @@ export const verifyWebhookSignature = (body, signatureHeader, secret) => {
   }
 
   try {
-    // Extraer solo la firma v1 (MercadoPago a veces envía solo v1)
-    const signature = signatureHeader.includes('v1=') 
-      ? signatureHeader.split('v1=')[1] 
-      : signatureHeader;
+    // MercadoPago envía las firmas en formato "sha256=xxx,sha1=yyy"
+    const signatures = signatureHeader.split(',')
+      .reduce((acc, current) => {
+        const [version, signature] = current.split('=');
+        acc[version] = signature;
+        return acc;
+      }, {});
+
+    const signature = signatures['sha256'] || signatures['v1'] || signatureHeader;
 
     // Preparar el payload para verificación
     let payload;
     if (typeof body === 'string') {
       payload = body;
     } else if (body instanceof Buffer) {
-      payload = body.toString();
+      payload = body.toString('utf8');
     } else {
       payload = JSON.stringify(body);
     }
@@ -50,7 +57,11 @@ export const verifyWebhookSignature = (body, signatureHeader, secret) => {
       .update(payload)
       .digest('hex');
 
-    return generatedSignature === signature;
+    // Comparación segura contra timing attacks
+    return crypto.timingSafeEqual(
+      Buffer.from(generatedSignature),
+      Buffer.from(signature)
+    );
   } catch (error) {
     console.error('❌ Error en verifyWebhookSignature:', error);
     return false;
