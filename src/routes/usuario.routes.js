@@ -7,7 +7,8 @@ import validateSchema from '../middlewares/validatoreSchema.js';
 import { loginSchema, registerSchema, updateSchema, cambiarContrasenaSchema, usuarioAdmiAct } from '../schema/usuarioSchema.js';
 import { verifyToken, verifyTokenWeb } from '../middlewares/verifyToken.js';
 import { recuperarContrasena, cambiarContrasena, verificarCodigo } from '../controllers/recuperarContrasena.js';
-import { validateAdmin } from '../middlewares/validateAdmin.js';
+import { validateAdmin, validateRol } from '../middlewares/validateAdmin.js';
+import {paginationMiddleware} from '../middlewares/pagination.js';
 
 const router = express.Router();
 //🟢
@@ -66,53 +67,61 @@ router.get('/perfil',
 
 router.get('/listarUsuarios',
     verifyTokenWeb,
-    validateAdmin,
+    validateRol(['Administrador', 'Super']),
+    paginationMiddleware(5),
     listarUsuarios
 );
 router.get('/listarAdmin',
     verifyTokenWeb,
-    validateAdmin,
+    validateRol(['Administrador', 'Super']),
     listarAdmin
 );
-//Actualizar usuarios en general por parte del administrador
+//Actualizar usuarios en general por parte del administrador (no puede actualizar a otro administrador)
 router.put('/actualizarUsuario/:id_usuario',
     verifyTokenWeb,
-    validateAdmin,
+    validateRol(['Administrador', 'Super']),
     validateSchema(usuarioAdmiAct),
     actualizarUsuario
 );
 //Eliminar usuario en general por parte del administrador
 router.delete('/eliminarUsuario/:id_usuario',
     verifyTokenWeb,
-    validateAdmin,
+    validateRol(['Administrador', 'Super']),
     eliminarUsuario
 ); 
 router.get('/buscarUsuario',
     verifyTokenWeb,
-    validateAdmin,
+    validateRol(['Administrador', 'Super']),
     buscarUserNombre
 );
 router.post('/registrarUsuario',
     verifyTokenWeb,
-    validateAdmin,
+    validateRol(['Administrador', 'Super']),
+    validateSchema(registerSchema),
+    registerUsuario
+);
+//No va a ser utilizada
+router.post('/regisUsuarios',
+    verifyTokenWeb,
+    validateRol(['Super']),
     validateSchema(registerSchema),
     registerUsuario
 );
 //Perfil personal del administrador
 router.get('/perfilAdmin',
     verifyTokenWeb,
-    validateAdmin,
+    validateRol(['Administrador', 'Super']),
     perfilUser
 );
 router.put('/actualizarPerfilAdmin',
     verifyTokenWeb,
-    validateAdmin,
+    validateRol(['Administrador', 'Super']),
     validateSchema(usuarioAdmiAct),
     actualizarAdmin
 );
 router.delete('/eliminarPerfilAdmin',
     verifyTokenWeb,
-    validateAdmin,
+    validateRol(['Super']),
     eliminarAdmin
 );
 

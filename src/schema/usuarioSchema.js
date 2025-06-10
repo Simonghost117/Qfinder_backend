@@ -74,7 +74,7 @@ export const usuarioAdmiAct = z.object({
         .max(50, { message: "El teléfono no puede exceder los 50 caracteres" }),
     correo_usuario: z.string()
         .email({ message: "El correo electrónico debe tener un formato válido" }),
-    tipo_usuario: z.enum(['Usuario', 'Medico', 'Administrador']).optional(),
+    tipo_usuario: z.enum(['Usuario', 'Medico', 'Administrador', 'Super']).optional(),
     contrasena_usuario: z.string()
         .min(8, { message: "La contraseña debe tener al menos 8 caracteres" }), 
     imagen_usuario: z.string().optional(),

@@ -3,7 +3,8 @@ import Usuario from '../models/usuario.model.js';
 import { createAccessToken } from '../libs/jwt.js';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
-import { manejarImagenes } from '../utils/imgBase64.js';
+import { imgBase64, manejarImagenes } from '../utils/imgBase64.js';
+
 dotenv.config();
 
 
@@ -347,27 +348,76 @@ export const perfilUser = async (req, res) => {
     res.status(500).json({ message: 'Error al obtener el perfil del usuario', error });
   }
 }
+import { Op, col } from 'sequelize';
+import { PaginationService } from '../utils/paginationUtils.js';
+import sequelize from '../config/db.js';
 
 export const listarUsuarios = async (req, res) => {
   try { 
-    const usuarios = await Usuario.findAll(
-      {
-      where: {
-        tipo_usuario: 'Usuario'
-      }, order: [['id_usuario', 'ASC']]
-      }
-  );
-    res.status(200).json(usuarios.map(usuario => ({
-      id_usuario: usuario.id_usuario,
-      nombre_usuario: usuario.nombre_usuario,
-      apellido_usuario: usuario.apellido_usuario,
-      identificacion_usuario: usuario.identificacion_usuario,
-      direccion_usuario: usuario.direccion_usuario,
-      telefono_usuario: usuario.telefono_usuario,
-      correo_usuario: usuario.correo_usuario,
-      tipo_usuario: usuario.tipo_usuario,
-      estado_usuario: usuario.estado_usuario
-    })));
+    const where = {
+      tipo_usuario: 'Usuario'
+    };
+    
+    // Añadir filtros dinámicos
+    if (req.query.estado) {
+      where.estado_usuario = req.query.estado;
+    }
+    
+    if (req.query.busqueda) {
+      const searchTerm = req.query.busqueda.toLowerCase(); // Normalizamos el término de búsqueda
+      
+      where[Op.or] = [
+        // Búsqueda insensible a mayúsculas/minúsculas usando LOWER
+        { 
+          nombre_usuario: { 
+            [Op.iLike]: `%${searchTerm}%` // Op.iLike para PostgreSQL (insensible a mayúsculas)
+          } 
+        },
+        { 
+          apellido_usuario: { 
+            [Op.iLike]: `%${searchTerm}%` 
+          } 
+        },
+        { 
+          correo_usuario: { 
+            [Op.iLike]: `%${searchTerm}%` 
+          } 
+        },
+        // Alternativa para MySQL/MariaDB:
+        /*
+        sequelize.where(
+          sequelize.fn('LOWER', sequelize.col('nombre_usuario')),
+          'LIKE',
+          `%${searchTerm}%`
+        ),
+        */
+        // Búsqueda por identificación exacta (sin importar mayúsculas)
+        sequelize.where(
+          sequelize.fn('LOWER', sequelize.col('identificacion_usuario')),
+          '=',
+          searchTerm
+        )
+      ];
+    }
+
+    const result = await PaginationService.paginate(Usuario, {
+      where,
+      order: [['id_usuario', 'ASC']],
+      req,
+      transformData: (usuarios) => usuarios.map(usuario => ({
+        id_usuario: usuario.id_usuario,
+        nombre_usuario: usuario.nombre_usuario,
+        apellido_usuario: usuario.apellido_usuario,
+        identificacion_usuario: usuario.identificacion_usuario,
+        direccion_usuario: usuario.direccion_usuario,
+        telefono_usuario: usuario.telefono_usuario,
+        correo_usuario: usuario.correo_usuario,
+        tipo_usuario: usuario.tipo_usuario,
+        estado_usuario: usuario.estado_usuario
+      }))
+    });
+
+    res.status(200).json(result);
   } catch (error) {
     console.log('Error al listar los usuarios', error);
     res.status(500).json({ message: "Erro interno del servidor al listar los usuarios"})
@@ -402,16 +452,38 @@ export const listarAdmin = async (req, res) => {
 export const actualizarUsuario = async (req, res) => {
   try {
     const { id_usuario } = req.params;
-    const { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, tipo_usuario, imagen_usuario} = req.body;
-    const usuario = await Usuario.findAll({
+    const { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, imagen_usuario, tipo_usuario} = req.body;
+    const usuario = await Usuario.findOne({
       where: {
         id_usuario: id_usuario
-      }
+      }, attributes: [ 'tipo_usuario' ]
     })
     if (!usuario) {
       return res.status(404).json({ message: "Usuario no encontrado" });
     }
-    const dataToUpdate = { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, tipo_usuario };
+    console.log("Tipo de usuario en BD:", usuario.tipo_usuario);
+
+    let rolAsignado = {tipo_usuario: tipo_usuario}; 
+
+    const user = req.user;
+    if (user.tipo_usuario == 'Administrador') {
+       rolAsignado = {tipo_usuario : 'Usuario'};
+      if (usuario.tipo_usuario !== 'Usuario') {
+        return res.status(403).json({ message: "No tienes permiso para actualizar este usuario, rol denegado" });
+      }
+    } 
+    // Manejo de imagen
+        let nueva_imagen;
+        try {
+          nueva_imagen = await manejarImagenes(imagen_usuario, usuario.imagen_usuario);
+        } catch (error) {
+          return res.status(400).json({ 
+            success: false,
+            message: error.message 
+          });
+        }
+    const dataToUpdate = { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, tipo_usuario: rolAsignado.tipo_usuario || tipo_usuario,
+      imagen_usuario: nueva_imagen };
     await Usuario.update(dataToUpdate, {
       where: { id_usuario: id_usuario },
     });
@@ -431,6 +503,12 @@ export const eliminarUsuario = async (req, res) => {
     const usuario = await Usuario.findByPk(id_usuario);
     if(!usuario) {
       return res.status(404).json({ message: "Usuario no encontrado"});
+    }
+    if (usuario.tipo_usuario === 'Administrador') {
+      const user = req.user;
+      if (user.tipo_usuario !== 'Super') {
+        return res.status(403).json({ message: "No tienes permiso para eliminar a otros administradores" });
+      }
     }
     await Usuario.destroy({
       where: { id_usuario: id_usuario }
@@ -460,6 +538,23 @@ export const registerUsuario = async (req, res) => {
   try {
     const { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, contrasena_usuario, tipo_usuario } = req.body;
 
+    // 1. Validar duplicados en BD (solo el correo)
+    const existe = await Usuario.findOne({ where: { correo_usuario } });
+    if (existe) {
+      return res.status(400).json({ error: 'El correo ya está registrado' });
+    }
+
+    let rolAsignado = {tipo_usuario: tipo_usuario}; 
+
+    const user = req.user;
+    if (user.tipo_usuario == 'Administrador') {
+      if (tipo_usuario !== 'Usuario') {
+        return res.status(403).json({ message: "No tienes permiso para registrar este tipo de usuario, su rol solo le permite registrar usuarios" });
+      }
+        rolAsignado = {tipo_usuario : 'Usuario'};
+      
+    } 
+
     const userData = {
       nombre_usuario,
       apellido_usuario,
@@ -467,14 +562,9 @@ export const registerUsuario = async (req, res) => {
       direccion_usuario,
       telefono_usuario,
       contrasena_usuario,
-      tipo_usuario: tipo_usuario || 'Usuario', // Por defecto 'Usuario'
+      tipo_usuario: rolAsignado.tipo_usuario, 
     };
     
-    // 1. Validar duplicados en BD (solo el correo)
-    const existe = await Usuario.findOne({ where: { correo_usuario } });
-    if (existe) {
-      return res.status(400).json({ error: 'El correo ya está registrado' });
-    }
 
     const idExiste = await Usuario.findOne({ where: { identificacion_usuario: userData.identificacion_usuario } });
     if (idExiste) {
@@ -561,5 +651,61 @@ export const eliminarAdmin = async (req, res) => {
   } catch (error) {
     console.error('Error al eliminar el administrador:', error);
     res.status(500).json({ message: 'Error al eliminar el administrador', error });
+  }
+}
+
+
+export const registerUsuariosSuper = async (req, res) => {
+  try {
+    const { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, contrasena_usuario, tipo_usuario } = req.body;
+
+    const userData = {
+      nombre_usuario,
+      apellido_usuario,
+      identificacion_usuario,
+      direccion_usuario,
+      telefono_usuario,
+      contrasena_usuario,
+      tipo_usuario: tipo_usuario || 'Usuario', // Por defecto 'Usuario' si no se especifica
+    };
+    
+    // 1. Validar duplicados en BD (solo el correo)
+    const existe = await Usuario.findOne({ where: { correo_usuario } });
+    if (existe) {
+      return res.status(400).json({ error: 'El correo ya está registrado' });
+    }
+
+    const idExiste = await Usuario.findOne({ where: { identificacion_usuario: userData.identificacion_usuario } });
+    if (idExiste) {
+      return res.status(400).json({ error: 'El número de identificación ya está registrado' });
+    }
+    const passwordHash = await bcrypt.hash(contrasena_usuario, 10);
+
+    const usuario = await Usuario.create({
+      ...userData,
+      correo_usuario,
+      contrasena_usuario: passwordHash,
+    });
+    
+    res.status(200).json({ 
+      message: 'Usuario registrado exitosamente',
+      usuario: {
+        id_usuario: usuario.id_usuario,
+        nombre_usuario: usuario.nombre_usuario,
+        apellido_usuario: usuario.apellido_usuario,
+        identificacion_usuario: usuario.identificacion_usuario,
+        direccion_usuario: usuario.direccion_usuario,
+        telefono_usuario: usuario.telefono_usuario,
+        correo_usuario: usuario.correo_usuario,
+        tipo_usuario: usuario.tipo_usuario,
+      }
+      
+    });
+    
+  } catch (error) {
+    res.status(500).json({ 
+      error: 'Error en registro', 
+      details: error.message 
+    });
   }
 }

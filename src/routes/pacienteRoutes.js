@@ -7,7 +7,7 @@ import validateSchema from "../middlewares/validatoreSchema.js"
 import {PacienteSchema, ActPacienteSchema, ActPaciente2} from "../schema/pacienteSchema.js";
 import { verifyToken, verifyTokenWeb } from '../middlewares/verifyToken.js';
 import { checkEpisodioPermissions } from '../middlewares/episodioPermissions.middleware.js';
-import { validateAdmin } from '../middlewares/validateAdmin.js';
+import { validateAdmin, validateRol } from '../middlewares/validateAdmin.js';
 const router = express.Router();
 
 //🟢
@@ -44,30 +44,30 @@ router.delete('/eliminarPaciente/:id_paciente',
 
 router.get('/todosPacientes', 
     verifyTokenWeb,
-    validateAdmin,
+    validateRol(['Administrador', 'Super']),
     listarTodosPacientes
 )
 router.get('/listarPacientes2/:id_usuario',
     verifyTokenWeb, 
-    validateAdmin, 
+    validateRol(['Administrador', 'Super']), 
     checkEpisodioPermissions(['Administrador']),
     listarPacientes
 );
 router.post('/registrarPaciente2/:id_usuario',
     verifyTokenWeb,
-    validateAdmin,
+    validateRol(['Administrador', 'Super']),
     validateSchema(PacienteSchema),
     registerPaciente2
 );
 router.put('/actualizarPaciente2/:id_paciente', 
     verifyTokenWeb, 
-    validateAdmin, 
+    validateRol(['Administrador', 'Super']), 
     validateSchema(ActPaciente2), 
     actualizarPaciente2
 );
 router.delete('/eliminarPaciente2/:id_paciente',
     verifyTokenWeb, 
-    validateAdmin, 
+    validateRol(['Administrador', 'Super']), 
     eliminarPaciente
 );
 

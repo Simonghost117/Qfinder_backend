@@ -7,6 +7,7 @@ import { getMessaging } from 'firebase-admin/messaging';
 // import dotenv from 'dotenv';
 // dotenv.config();
 
+
 // Configuración desde variables de entorno
 const serviceAccount = {
   type: process.env.FIREBASE_TYPE,
