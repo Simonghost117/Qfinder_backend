@@ -8,6 +8,8 @@ import chatRoutes from './routes/chatRoutes.js';
 import cookieParser from 'cookie-parser';
 import session from 'express-session';
 import { EventEmitter } from 'events';
+import bodyParser from 'body-parser';
+
 startAllJobs();
 // Configuración de entorno
 dotenv.config();
@@ -31,6 +33,21 @@ app.use(cors({
   origin: process.env.FRONTEND_URL || 'https://qfinder-deploy-4ktr.vercel.app',
   credentials: true
 }));
+
+// Capturar el rawBody para la verificación de firmas
+app.use((req, res, next) => {
+  let data = '';
+  req.setEncoding('utf8');
+
+  req.on('data', chunk => {
+    data += chunk;
+  });
+
+  req.on('end', () => {
+    req.rawBody = data;
+    next();
+  });
+});
 app.use(helmet());
 app.use(morgan('dev'));
 app.use(cookieParser());
