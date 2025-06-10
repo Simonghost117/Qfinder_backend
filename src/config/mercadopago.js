@@ -12,7 +12,7 @@ export const configureMercadoPago = () => {
   return new MercadoPagoConfig({
     accessToken: accessToken,
     options: {
-      timeout: 30000,
+      timeout: 50000,
       idempotencyKey: `mp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       integratorId: process.env.MERCADOPAGO_INTEGRATOR_ID,
       sandbox: isSandbox,
