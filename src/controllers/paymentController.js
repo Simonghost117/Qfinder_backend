@@ -171,33 +171,44 @@ export const handleWebhook = async (req, res) => {
 async function processApprovedPayment(payment) {
   try {
     const { external_reference, id } = payment;
-    
+
     if (!external_reference) {
-      throw new Error('Pago no tiene external_reference');
+      throw new Error('El pago no contiene external_reference');
     }
 
+    // Formato esperado: USER_123_PLAN_plus
     const [_, userId, __, planType] = external_reference.split('_');
-    
+
     if (!userId || !planType) {
       throw new Error(`Formato de external_reference inválido: ${external_reference}`);
     }
 
     const user = await Usuario.findByPk(userId);
     if (!user) {
-      throw new Error(`Usuario ${userId} no encontrado`);
+      throw new Error(`Usuario con ID ${userId} no encontrado`);
     }
 
-    // Verificar si el pago ya fue procesado
+    // Verifica si ya se procesó este pago
     const existingPayment = await Subscription.findOne({
       where: { mercado_pago_id: id }
     });
 
     if (existingPayment) {
-      console.log(`Pago ${id} ya fue procesado anteriormente`);
+      console.log(`El pago ${id} ya fue procesado anteriormente.`);
       return;
     }
 
-    // Crear o actualizar suscripción
+    // Verifica que el plan sea válido
+    const planKeys = Object.keys(PLANS_MERCADOPAGO);
+    if (!planKeys.includes(planType)) {
+      throw new Error(`Tipo de plan inválido: ${planType}`);
+    }
+
+    // Crea o actualiza la suscripción en la DB
+    const fechaInicio = new Date();
+    const fechaRenovacion = new Date();
+    fechaRenovacion.setMonth(fechaInicio.getMonth() + 1);
+
     const [subscription, created] = await Subscription.upsert({
       id_usuario: userId,
       mercado_pago_id: id,
@@ -206,22 +217,23 @@ async function processApprovedPayment(payment) {
       estado_suscripcion: 'active',
       limite_pacientes: SUBSCRIPTION_LIMITS[planType].pacientes,
       limite_cuidadores: SUBSCRIPTION_LIMITS[planType].cuidadores,
-      fecha_inicio: new Date(),
-      fecha_renovacion: new Date(new Date().setMonth(new Date().getMonth() + 1)),
+      fecha_inicio: fechaInicio,
+      fecha_renovacion: fechaRenovacion,
       datos_pago: JSON.stringify(payment)
     });
 
-    // Actualizar membresía del usuario
+    // Actualiza el estado de membresía del usuario
     await Usuario.update(
       { membresia: planType },
       { where: { id_usuario: userId } }
     );
 
-    console.log(`Suscripción ${created ? 'creada' : 'actualizada'} para usuario ${userId}, plan ${planType}`);
+    console.log(`✅ Suscripción ${created ? 'creada' : 'actualizada'} para el usuario ${userId}`);
+    console.log(`🔄 Membresía del usuario ${userId} actualizada a ${planType}`);
   } catch (error) {
-    console.error('Error en processApprovedPayment:', {
-      error: error.message,
-      paymentId: payment.id,
+    console.error('❌ Error en processApprovedPayment:', {
+      mensaje: error.message,
+      paymentId: payment?.id,
       stack: error.stack
     });
     throw error;
