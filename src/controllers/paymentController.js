@@ -375,3 +375,96 @@ export const pendingRedirect = async (req, res) => {
     </html>
   `);
 };
+
+
+export const createCheckoutProPreference = async (req, res) => {
+  try {
+    const { userId, planType } = req.body;
+    
+    if (!userId || !planType) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Faltan campos requeridos: userId y planType'
+      });
+    }
+
+    if (!PLANS_MERCADOPAGO[planType]) {
+      return res.status(400).json({
+        success: false,
+        error: `Tipo de plan inválido: ${planType}`
+      });
+    }
+
+    const user = await Usuario.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Usuario no encontrado'
+      });
+    }
+
+    const plan = PLANS_MERCADOPAGO[planType];
+    const baseUrl = process.env.API_BASE_URL;
+
+    const preferenceData = {
+      items: [
+        {
+          id: `sub-${planType}`,
+          title: `Suscripción ${planType.toUpperCase()}`,
+          description: plan.description,
+          quantity: 1,
+          unit_price: plan.amount,
+          currency_id: plan.currency_id,
+          picture_url: 'https://tuapp.com/logo.png'
+        }
+      ],
+      payer: {
+        email: user.correo_usuario,
+        name: user.nombre_usuario,
+        surname: user.apellido_usuario || '',
+        identification: {
+          type: "CC",
+          number: user.documento_usuario || "00000000"
+        }
+      },
+      payment_methods: {
+        installments: 1,
+        default_installments: 1,
+        excluded_payment_types: [{ id: "ticket" }, { id: "atm" }]
+      },
+      external_reference: `USER_${userId}_PLAN_${planType}`,
+      notification_url: `${baseUrl}/api/payments/webhook`,
+      back_urls: {
+        success: `${baseUrl}/api/payments/success-redirect?user_id=${userId}&plan_type=${planType}`,
+        failure: `${baseUrl}/api/payments/failure-redirect?user_id=${userId}`,
+        pending: `${baseUrl}/api/payments/pending-redirect?user_id=${userId}`
+      },
+      auto_return: "approved",
+      metadata: {
+        user_id: userId,
+        plan_type: planType,
+        app: "qfinder",
+        deeplink_success: `qfinder://payment/success?user_id=${userId}&plan_type=${planType}`,
+        deeplink_failure: `qfinder://payment/failure?user_id=${userId}`,
+        deeplink_pending: `qfinder://payment/pending?user_id=${userId}`
+      },
+      statement_descriptor: `QFINDER ${planType.toUpperCase()}`
+    };
+
+    const preference = await createPreference(preferenceData);
+    
+    res.status(200).json({
+      success: true,
+      init_point: preference.init_point,
+      sandbox_init_point: preference.sandbox_init_point,
+      preference_id: preference.id
+    });
+  } catch (error) {
+    console.error('Error en createCheckoutProPreference:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Error al crear preferencia de pago',
+      details: error.message
+    });
+  }
+};
