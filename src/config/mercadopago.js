@@ -12,44 +12,54 @@ export const configureMercadoPago = () => {
   return new MercadoPagoConfig({
     accessToken: accessToken,
     options: {
-      timeout: 50000,
-      idempotencyKey: `mp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      timeout: 15000,
+      idempotencyKey: `mp-${Date.now()}`,
       integratorId: process.env.MERCADOPAGO_INTEGRATOR_ID,
-      sandbox: isSandbox,
-      headers: {
-        'x-product-id': 'qfinder-app',
-        'x-integrator-id': process.env.MERCADOPAGO_INTEGRATOR_ID
-      }
+      sandbox: isSandbox
     }
   });
 };
 
 export const verifyWebhookSignature = (body, signatureHeader, secret) => {
+  console.log('🔍 Verificando firma...');
+  
   if (!signatureHeader || !secret) {
     console.warn('⚠️ Faltan parámetros para verificación');
     return false;
   }
 
   try {
-    // MercadoPago envía las firmas en formato "sha256=xxx,sha1=yyy"
-    const signatures = signatureHeader.split(',')
-      .reduce((acc, current) => {
-        const [version, signature] = current.split('=');
-        acc[version] = signature;
-        return acc;
-      }, {});
+    // Extraer timestamp y firma del header
+    const parts = signatureHeader.split(',');
+    const signatureParts = {};
+    
+    parts.forEach(part => {
+      const [key, value] = part.split('=');
+      signatureParts[key] = value;
+    });
 
-    const signature = signatures['sha256'] || signatures['v1'] || signatureHeader;
+    const ts = signatureParts.ts;
+    const v1 = signatureParts.v1;
+
+    if (!ts || !v1) {
+      console.warn('⚠️ Firma mal formada');
+      return false;
+    }
 
     // Preparar el payload para verificación
     let payload;
     if (typeof body === 'string') {
-      payload = body;
+      // Si es string (body raw), usarlo directamente
+      payload = `${ts}:${body}`;
     } else if (body instanceof Buffer) {
-      payload = body.toString('utf8');
+      // Si es Buffer, convertirlo a string
+      payload = `${ts}:${body.toString()}`;
     } else {
-      payload = JSON.stringify(body);
+      // Si es objeto, convertirlo a JSON stringificado
+      payload = `${ts}:${JSON.stringify(body)}`;
     }
+
+    console.log('Payload usado para firma:', payload);
 
     // Generar firma HMAC-SHA256
     const generatedSignature = crypto
@@ -57,11 +67,11 @@ export const verifyWebhookSignature = (body, signatureHeader, secret) => {
       .update(payload)
       .digest('hex');
 
-    // Comparación segura contra timing attacks
-    return crypto.timingSafeEqual(
-      Buffer.from(generatedSignature),
-      Buffer.from(signature)
-    );
+    console.log('Firma recibida:', v1);
+    console.log('Firma generada:', generatedSignature);
+    console.log('Coinciden?:', generatedSignature === v1);
+
+    return generatedSignature === v1;
   } catch (error) {
     console.error('❌ Error en verifyWebhookSignature:', error);
     return false;

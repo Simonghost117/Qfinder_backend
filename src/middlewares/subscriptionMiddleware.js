@@ -37,7 +37,7 @@ export const createPlan = async (req, res) => {
         billing_day: 10,
         billing_day_proportional: true,
         transaction_amount: plan.amount,
-        currency_id: "COP"
+        currency_id: "COP",
       },
       payment_methods_allowed: {
         payment_types: [{ id: "credit_card" }, { id: "debit_card" }]
