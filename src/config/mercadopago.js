@@ -21,41 +21,45 @@ export const configureMercadoPago = () => {
 };
 
 export const verifyWebhookSignature = (body, signatureHeader) => {
+  console.log('🔍 Verificando firma...');
+  console.log('Body recibido:', typeof body, body);
+  console.log('Signature header:', signatureHeader);
+
   if (!signatureHeader) {
-    console.warn('No signature header present');
+    console.warn('⚠️ No signature header present');
     return false;
   }
 
+  const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
+  console.log('Secret key:', secret ? '***' : 'UNDEFINED!');
+
   try {
-    const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
-    if (!secret) {
-      console.error('MERCADOPAGO_WEBHOOK_SECRET is not set');
-      return false;
-    }
-
     const [tsPart, v1Part] = signatureHeader.split(',');
-    if (!tsPart || !v1Part) {
-      console.warn('Invalid signature format');
-      return false;
-    }
+    const ts = tsPart?.split('=')[1];
+    const v1 = v1Part?.split('=')[1];
 
-    const ts = tsPart.split('=')[1];
-    const v1 = v1Part.split('=')[1];
+    console.log('Timestamp:', ts);
+    console.log('Firma recibida (v1):', v1);
 
     if (!ts || !v1) {
-      console.warn('Could not extract timestamp or signature');
+      console.warn('⚠️ Firma mal formada');
       return false;
     }
 
-    const payload = `${ts}:${JSON.stringify(body)}`;
+    const payload = `${ts}:${typeof body === 'string' ? body : JSON.stringify(body)}`;
+    console.log('Payload usado:', payload);
+
     const generatedSignature = crypto
       .createHmac('sha256', secret)
       .update(payload)
       .digest('hex');
 
+    console.log('Firma generada:', generatedSignature);
+    console.log('Coinciden?:', generatedSignature === v1);
+
     return generatedSignature === v1;
   } catch (error) {
-    console.error('Error verifying signature:', error);
+    console.error('❌ Error en verifyWebhookSignature:', error);
     return false;
   }
 };
