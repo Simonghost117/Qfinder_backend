@@ -17,7 +17,7 @@ export const createPreference = async (preferenceData) => {
       throw new Error(`Items con precios inválidos: ${JSON.stringify(invalidItems)}`);
     }
 
-    // Configuración adicional recomendada
+  
     const enhancedPreference = {
       ...preferenceData,
       binary_mode: true, // Evita pagos pendientes
