@@ -5,6 +5,7 @@ const client = configureMercadoPago();
 
 export const createPreference = async (preferenceData) => {
   try {
+    // Validación de datos
     if (!preferenceData.items || preferenceData.items.length === 0) {
       throw new Error('El array de items no puede estar vacío');
     }
@@ -17,20 +18,7 @@ export const createPreference = async (preferenceData) => {
       throw new Error(`Items con precios inválidos: ${JSON.stringify(invalidItems)}`);
     }
 
-  
-    const enhancedPreference = {
-      ...preferenceData,
-      binary_mode: true, // Evita pagos pendientes
-      expires: false, // La preferencia no expira
-      statement_descriptor: "QFINDER*SUBSCRIPTION",
-      metadata: {
-        ...preferenceData.metadata,
-        platform: "nodejs",
-        version: "1.0"
-      }
-    };
-
-    const preference = await new Preference(client).create({ body: enhancedPreference });
+    const preference = await new Preference(client).create({ body: preferenceData });
     
     if (!preference.id) {
       throw new Error('La respuesta de MercadoPago no incluyó un ID de preferencia');
@@ -65,7 +53,6 @@ export const getPayment = async (paymentId) => {
       throw new Error('Pago no encontrado en MercadoPago');
     }
 
-    // Mapeo completo de campos importantes
     return {
       id: payment.id,
       status: payment.status,
@@ -74,17 +61,9 @@ export const getPayment = async (paymentId) => {
       currency: payment.currency_id,
       date_created: payment.date_created,
       date_approved: payment.date_approved,
-      date_last_updated: payment.date_last_updated,
-      payer: {
-        id: payment.payer?.id,
-        email: payment.payer?.email,
-        identification: payment.payer?.identification
-      },
+      payer: payment.payer,
       payment_method: payment.payment_method_id,
-      payment_type: payment.payment_type_id,
       external_reference: payment.external_reference,
-      description: payment.description,
-      metadata: payment.metadata,
       raw_response: payment
     };
   } catch (error) {
@@ -97,31 +76,11 @@ export const getPayment = async (paymentId) => {
   }
 };
 
-export const searchPayments = async (filters = {}) => {
+export const searchPayments = async (filters) => {
   try {
     const payment = new Payment(client);
-    const searchResults = await payment.search({
-      options: {
-        filters: {
-          ...filters,
-          'range': 'date_created',
-          'begin_date': 'NOW-1MONTH',
-          'end_date': 'NOW'
-        },
-        pagination: {
-          limit: 100,
-          offset: 0
-        }
-      }
-    });
-    
-    return searchResults.results.map(p => ({
-      id: p.id,
-      status: p.status,
-      amount: p.transaction_amount,
-      date_created: p.date_created,
-      external_reference: p.external_reference
-    }));
+    const searchResults = await payment.search({ filters });
+    return searchResults;
   } catch (error) {
     console.error('Error buscando pagos:', error);
     throw error;

@@ -6,16 +6,10 @@ import crypto from 'crypto';
 
 dotenv.config();
 
-// Reemplaza tu configuración actual con esta versión mejorada
 mercadopago.configure({
-  access_token: process.env.MERCADOPAGO_ACCESS_TOKEN,
-  options: {
-    timeout: 45000, // 45 segundos
-    retries: 3, // Número de reintentos
-    retry_delay: 1000, // 1 segundo entre reintentos
-    sandbox: process.env.NODE_ENV !== 'production' // Auto-detecta ambiente
-  }
+  access_token: process.env.MERCADOPAGO_ACCESS_TOKEN
 });
+
 // Función para verificar firma webhook
 const verifySignature = (payload, signature) => {
   const hash = crypto.createHmac('sha256', process.env.MERCADOPAGO_WEBHOOK_SECRET)
