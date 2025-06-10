@@ -50,7 +50,7 @@ router.get('/todosPacientes',
 router.get('/listarPacientes2/:id_usuario',
     verifyTokenWeb, 
     validateRol(['Administrador', 'Super']), 
-    checkEpisodioPermissions(['Administrador']),
+    // checkEpisodioPermissions(['Administrador']),
     listarPacientes
 );
 router.post('/registrarPaciente2/:id_usuario',
