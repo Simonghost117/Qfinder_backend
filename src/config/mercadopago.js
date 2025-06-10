@@ -20,53 +20,42 @@ export const configureMercadoPago = () => {
   });
 };
 
-export const verifyWebhookSignature = (req) => {
+export const verifyWebhookSignature = (body, signatureHeader) => {
+  if (!signatureHeader) {
+    console.warn('No signature header present');
+    return false;
+  }
+
   try {
-    const signatureHeader = req.headers['x-signature'];
-    
-    if (!signatureHeader) {
-      console.error('Header x-signature no encontrado');
-      return false;
-    }
-
-    // Extraer timestamp y firma del header
-    const [tsPart, v1Part] = signatureHeader.split(',');
-    const timestamp = tsPart.split('=')[1];
-    const signature = v1Part.split('=')[1];
-    
-    if (!timestamp || !signature) {
-      console.error('Formato de firma inválido', signatureHeader);
-      return false;
-    }
-
     const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
     if (!secret) {
-      console.error('MERCADOPAGO_WEBHOOK_SECRET no configurado');
+      console.error('MERCADOPAGO_WEBHOOK_SECRET is not set');
       return false;
     }
 
-    // Usar el body raw (debe configurarse en el middleware)
-    const payload = req.rawBody || JSON.stringify(req.body);
-    
-    const generatedSignature = crypto
-      .createHmac('sha256', secret)
-      .update(`${timestamp}:${payload}`)
-      .digest('hex');
-
-    const isValid = signature === generatedSignature;
-    
-    if (!isValid) {
-      console.error('Firma no válida', {
-        received: signature,
-        generated: generatedSignature,
-        timestamp,
-        payload: payload.substring(0, 100) + '...'
-      });
+    const [tsPart, v1Part] = signatureHeader.split(',');
+    if (!tsPart || !v1Part) {
+      console.warn('Invalid signature format');
+      return false;
     }
 
-    return isValid;
+    const ts = tsPart.split('=')[1];
+    const v1 = v1Part.split('=')[1];
+
+    if (!ts || !v1) {
+      console.warn('Could not extract timestamp or signature');
+      return false;
+    }
+
+    const payload = `${ts}:${JSON.stringify(body)}`;
+    const generatedSignature = crypto
+      .createHmac('sha256', secret)
+      .update(payload)
+      .digest('hex');
+
+    return generatedSignature === v1;
   } catch (error) {
-    console.error('Error validando firma webhook:', error);
+    console.error('Error verifying signature:', error);
     return false;
   }
 };
