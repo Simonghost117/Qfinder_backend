@@ -2,6 +2,7 @@ import { createPreference, getPayment, searchPayments } from '../services/mercad
 import { verifyWebhookSignature } from '../config/mercadopago.js';
 import { PLANS_MERCADOPAGO, SUBSCRIPTION_LIMITS } from '../config/subscriptions.js';
 import { models } from '../models/index.js';
+import axios from 'axios';
 const { Usuario, Subscription } = models;
 
 // Mapeo de estados de pago
@@ -111,12 +112,12 @@ export const createCheckoutProPreference = async (req, res) => {
 
 export const handleWebhook = async (req, res) => {
   try {
-    // Extrae datos de body o query
     const type = req.body.type || req.query.type;
     const data = req.body.data || (req.query['data.id'] && { id: req.query['data.id'] });
+    const resource = req.body.resource;
 
-    if (!type || !data || !data.id) {
-      console.warn('Webhook recibido sin tipo o datos válidos:', {
+    if (!type || (!data?.id && !resource)) {
+      console.warn('⚠️ Webhook recibido sin tipo o datos válidos:', {
         headers: req.headers,
         body: req.body,
         query: req.query
@@ -124,35 +125,63 @@ export const handleWebhook = async (req, res) => {
       return res.sendStatus(400);
     }
 
-    console.log('Webhook válido recibido:', { type, data });
+    console.log('📨 Webhook recibido:', { type, data, resource });
 
-    if (type === 'payment') {
+    if (type === 'payment' && data?.id) {
       const payment = await getPayment(data.id);
-      console.log('Estado del pago:', payment.status);
+      console.log('💰 Estado del pago:', payment.status);
 
       switch (payment.status) {
         case PAYMENT_STATUS.approved:
           await processApprovedPayment(payment);
           break;
-
         case PAYMENT_STATUS.pending:
         case PAYMENT_STATUS.in_process:
           await processPendingPayment(payment);
           break;
-
         case PAYMENT_STATUS.rejected:
         case PAYMENT_STATUS.cancelled:
           await processRejectedPayment(payment);
           break;
-
         default:
-          console.log(`Estado de pago no manejado: ${payment.status}`);
+          console.log(`⚠️ Estado de pago no manejado: ${payment.status}`);
+      }
+    } else if (type === 'merchant_order' && resource) {
+      // Consulta la información de la orden con Axios
+      try {
+        const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
+        const orderResponse = await axios.get(resource, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`
+          }
+        });
+
+        const order = orderResponse.data;
+        console.log('📦 Detalles de la merchant_order recibida:', order);
+
+        // Aquí puedes agregar lógica para verificar pagos asociados a esta orden
+        // Por ejemplo: revisar si hay pagos aprobados y procesarlos
+
+        if (order.payments?.length) {
+          for (const p of order.payments) {
+            if (p.status === 'approved') {
+              const paymentDetail = await getPayment(p.id);
+              await processApprovedPayment(paymentDetail);
+            }
+          }
+        }
+
+      } catch (err) {
+        console.error('❌ Error al consultar merchant_order:', {
+          mensaje: err.message,
+          stack: err.stack
+        });
       }
     }
 
     res.sendStatus(200);
   } catch (error) {
-    console.error('Error en handleWebhook:', {
+    console.error('❌ Error en handleWebhook:', {
       error: error.message,
       stack: error.stack,
       body: req.body
