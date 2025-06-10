@@ -115,7 +115,7 @@ export const handleWebhook = async (req, res) => {
     body: req.body,
     query: req.query
   });
-
+  res.status(200).end();
   try {
     // Verificar si es un ping de prueba
     if (req.query.type === 'test') {
