@@ -18,6 +18,7 @@ export const buscarUsuarioPorCorreo = async (req, res) => {
     const { nombre_usuario, apellido_usuario, correo_usuario } = usuario;
 
     return res.status(200).json({
+      id_usuario: id_usuario,
       nombre: nombre_usuario,
       apellido: apellido_usuario,
       correo: correo_usuario
