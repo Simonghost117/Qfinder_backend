@@ -11,7 +11,15 @@ export const client = new MercadoPagoConfig({
     sandbox: process.env.NODE_ENV !== 'production'
   }
 });
-
+export const configureMercadoPago = () => {
+  return new MercadoPagoConfig({
+    accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN,
+    options: {
+      timeout: 15000,
+      sandbox: process.env.NODE_ENV !== 'production'
+    }
+  });
+};
 // Verificación mejorada de firmas para webhooks
 export const verifyWebhookSignature = (body, signatureHeader, secret) => {
   if (!signatureHeader || !secret) {
