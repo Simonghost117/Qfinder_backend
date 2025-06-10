@@ -125,10 +125,12 @@ export const actualizarAsignacion = async (req, res) => {
     const { id } = req.params;
     const { fecha_inicio, fecha_fin, dosis, frecuencia } = req.body;
 
+    const frequencyData = parseFrequency(frecuencia);
+
     const asignacion = await PacienteMedicamento.findByPk(id);
     if (!asignacion) return res.status(404).json({ success: false, message: 'Asignación no encontrada' });
 
-    await asignacion.update({ fecha_inicio, fecha_fin, dosis, frecuencia });
+    await asignacion.update({ fecha_inicio, fecha_fin, dosis, frecuencia: frequencyData.inHours });
 
     res.status(200).json({ success: true, data: asignacion });
   } catch (error) {
