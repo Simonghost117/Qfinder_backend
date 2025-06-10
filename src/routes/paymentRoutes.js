@@ -14,20 +14,21 @@ const router = express.Router();
 // Middleware para webhooks que preserva el body raw
 const rawBodyMiddleware = (req, res, next) => {
   if (req.is('application/json')) {
-    let data = '';
-    req.setEncoding('utf8');
-    req.on('data', chunk => {
-      data += chunk;
-    });
+    const chunks = [];
+    req.on('data', chunk => chunks.push(chunk));
     req.on('end', () => {
       try {
-        req.rawBody = data;
-        req.body = JSON.parse(data);
+        req.rawBody = Buffer.concat(chunks).toString('utf8');
+        req.body = JSON.parse(req.rawBody);
         next();
       } catch (error) {
         console.error('Error parsing JSON:', error);
         res.status(400).json({ error: 'Invalid JSON' });
       }
+    });
+    req.on('error', (err) => {
+      console.error('Error reading request:', err);
+      res.status(500).json({ error: 'Request read error' });
     });
   } else {
     next();
