@@ -2,40 +2,31 @@ import express from 'express';
 import {
   createCheckoutProPreference,
   handleWebhook,
+  verifyPayment,
   successRedirect,
   failureRedirect,
-  pendingRedirect,
-  verifyPayment
+  pendingRedirect
 } from '../controllers/paymentController.js';
 import { verifyToken } from '../middlewares/verifyToken.js';
 
 const router = express.Router();
 
-// Middleware para webhooks que preserva el body raw
-const webhookMiddleware = express.raw({
-  type: 'application/json',
-  limit: '10mb',
-  verify: (req, res, buf, encoding) => {
-    try {
-      req.rawBody = buf;
-      if (buf && buf.length) {
-        req.body = JSON.parse(buf.toString(encoding || 'utf8'));
-      }
-    } catch (e) {
-      console.error('Error parsing webhook body:', e);
-      req.body = {};
-    }
-  }
-});
+// Middleware para capturar rawBody específico para MercadoPago
 
-// Ruta para crear preferencia de Checkout Pro
+
+// Rutas de API
 router.post('/checkout-pro', verifyToken, createCheckoutProPreference);
 router.get('/verify-payment/:paymentId', verifyToken, verifyPayment);
 
 // Webhook Mercado Pago (sin autenticación)
-router.post('/webhook', webhookMiddleware, handleWebhook);
+router.post(
+  '/webhook',
+  express.json({ verify: (req, res, buf) => { req.rawBody = buf.toString() } }),
+  handleWebhook
+);
+
+// Endpoint para verificación manual del webhook
 router.get('/webhook', (req, res) => {
-  // Endpoint para verificación manual del webhook
   const challenge = req.query.challenge;
   if (!challenge) return res.status(400).send('Missing challenge parameter');
   res.status(200).send(challenge);

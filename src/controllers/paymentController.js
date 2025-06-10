@@ -1,62 +1,115 @@
-import { createPreference, getPayment, searchPayments } from '../services/mercadopagoService.js';
+import { createPreference, getPayment } from '../services/mercadopagoService.js';
 import { verifyWebhookSignature } from '../config/mercadopago.js';
 import { PLANS_MERCADOPAGO, SUBSCRIPTION_LIMITS } from '../config/subscriptions.js';
 import { models } from '../models/index.js';
-import axios from 'axios';
+import Queue from 'bull';
+import pino from 'pino';
+
 const { Usuario, Subscription } = models;
 
-// Mapeo de estados de pago
+// Configuración de logger
+const logger = pino({
+  level: process.env.LOG_LEVEL || 'info',
+  serializers: {
+    err: pino.stdSerializers.err
+  }
+});
+
+// Configuración de cola de procesamiento
+const paymentQueue = new Queue('payment-processing', {
+  redis: process.env.REDIS_URL,
+  limiter: { max: 10, duration: 1000 },
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 5000 },
+    removeOnComplete: true
+  }
+});
+
+// Estados de pago
 const PAYMENT_STATUS = {
   pending: 'pending',
   approved: 'approved',
-  authorized: 'authorized',
-  in_process: 'in_process',
-  in_mediation: 'in_mediation',
   rejected: 'rejected',
-  cancelled: 'cancelled',
-  refunded: 'refunded',
-  charged_back: 'charged_back'
+  cancelled: 'cancelled'
+};
+
+// Procesar pago en background
+paymentQueue.process(async (job) => {
+  const { paymentId } = job.data;
+  try {
+    const payment = await getPayment(paymentId);
+    
+    if (payment.status === PAYMENT_STATUS.approved) {
+      await processApprovedPayment(payment);
+      logger.info({ paymentId }, 'Pago procesado exitosamente');
+      return { success: true };
+    }
+    
+    return { success: false, reason: 'unprocessed_status' };
+  } catch (error) {
+    logger.error({ paymentId, error }, 'Error procesando pago');
+    throw error;
+  }
+});
+
+// Controlador de webhook corregido
+export const handleWebhook = async (req, res) => {
+  try {
+    // Verificación de firma
+    const signature = req.headers['x-signature'] || req.headers['x-signature-sha256'];
+    const isValid = verifyWebhookSignature(
+      req.rawBody, 
+      signature,
+      process.env.MERCADOPAGO_WEBHOOK_SECRET
+    );
+
+    if (!isValid) {
+      logger.warn('Firma de webhook inválida', {
+        headers: req.headers,
+        rawBody: req.rawBody
+      });
+      return res.status(401).send('Invalid signature');
+    }
+
+    // Procesar evento
+    const eventType = req.body.type;
+    const paymentId = req.body.data?.id;
+
+    if (eventType.includes('payment') && paymentId) {
+      await paymentQueue.add({ paymentId });
+      logger.info({ paymentId }, 'Pago agregado a cola de procesamiento');
+    }
+
+    res.status(200).send('OK');
+  } catch (error) {
+    logger.error('Error en webhook', error);
+    res.status(500).send('Error processing webhook');
+  }
 };
 
 export const createCheckoutProPreference = async (req, res) => {
   try {
     const { userId, planType } = req.body;
-    
-    if (!userId || !planType) {
-      return res.status(400).json({ 
-        success: false,
-        error: 'Faltan campos requeridos: userId y planType'
-      });
-    }
-
-    if (!PLANS_MERCADOPAGO[planType]) {
-      return res.status(400).json({
-        success: false,
-        error: `Tipo de plan inválido: ${planType}`
-      });
-    }
-
     const user = await Usuario.findByPk(userId);
-    if (!user) {
-      return res.status(404).json({ 
-        success: false,
-        error: 'Usuario no encontrado'
-      });
-    }
+    
+    // Validación centralizada
+    validatePreferenceData(userId, planType, user);
 
     const plan = PLANS_MERCADOPAGO[planType];
     const baseUrl = process.env.API_BASE_URL;
 
+    // Configuración de preferencia con valores por defecto
     const preferenceData = {
       items: [
         {
-          id: `sub-${planType}`,
+          id: `sub-${planType}-${crypto.randomBytes(4).toString('hex')}`,
           title: `Suscripción ${planType.toUpperCase()}`,
           description: plan.description,
           quantity: 1,
           unit_price: plan.amount,
           currency_id: plan.currency_id,
-          picture_url: 'https://tuapp.com/logo.png'
+          picture_url: process.env.PAYMENT_LOGO_URL || 'https://tuapp.com/logo.png'
         }
       ],
       payer: {
@@ -66,14 +119,19 @@ export const createCheckoutProPreference = async (req, res) => {
         identification: {
           type: "CC",
           number: user.documento_usuario || "00000000"
+        },
+        address: {
+          zip_code: user.codigo_postal || "000000",
+          street_name: user.direccion || "Sin especificar"
         }
       },
       payment_methods: {
         installments: 1,
         default_installments: 1,
-        excluded_payment_types: [{ id: "ticket" }, { id: "atm" }]
+        excluded_payment_types: [{ id: "ticket" }, { id: "atm" }],
+        excluded_payment_methods: []
       },
-      external_reference: `USER_${userId}_PLAN_${planType}`,
+      external_reference: `USER_${userId}_PLAN_${planType}_${Date.now()}`,
       notification_url: `${baseUrl}/api/payments/webhook`,
       back_urls: {
         success: `${baseUrl}/api/payments/success-redirect?user_id=${userId}&plan_type=${planType}`,
@@ -81,109 +139,87 @@ export const createCheckoutProPreference = async (req, res) => {
         pending: `${baseUrl}/api/payments/pending-redirect?user_id=${userId}`
       },
       auto_return: "approved",
-      metadata: {
-        user_id: userId,
-        plan_type: planType,
-        app: "qfinder",
-        deeplink_success: `qfinder://payment/success?user_id=${userId}&plan_type=${planType}`,
-        deeplink_failure: `qfinder://payment/failure?user_id=${userId}`,
-        deeplink_pending: `qfinder://payment/pending?user_id=${userId}`
-      },
-      statement_descriptor: `QFINDER ${planType.toUpperCase()}`
+      metadata: generatePaymentMetadata(userId, planType),
+      statement_descriptor: `QFINDER ${planType.toUpperCase()}`,
+      date_of_expiration: new Date(Date.now() + 3600 * 1000 * 24).toISOString() // 24 horas de expiración
     };
 
     const preference = await createPreference(preferenceData);
     
+    // Registrar la creación de preferencia en la base de datos
+    await Subscription.create({
+      usuario_id: userId,
+      mercado_pago_id: preference.id,
+      tipo_suscripcion: planType,
+      estado_suscripcion: 'pending',
+      datos_pago: JSON.stringify(preference)
+    });
+
     res.status(200).json({
       success: true,
       init_point: preference.init_point,
       sandbox_init_point: preference.sandbox_init_point,
-      preference_id: preference.id
+      preference_id: preference.id,
+      expires_at: preference.date_of_expiration
     });
   } catch (error) {
-    console.error('Error en createCheckoutProPreference:', error);
-    res.status(500).json({ 
-      success: false,
-      error: 'Error al crear preferencia de pago',
-      details: error.message
-    });
-  }
-};
-
-const extractId = (resource) => {
-  if (!resource) return null;
-  const parts = resource.split('/');
-  return parts[parts.length - 1];
-};
-
-export const handleWebhook = async (req, res) => {
-  try {
-    // Verificar firma primero (seguridad importante)
-    const signature = req.headers['x-signature'] || req.headers['x-signature-sha256'];
-    const isValid = verifyWebhookSignature(req.rawBody || req.body, signature, process.env.MERCADOPAGO_WEBHOOK_SECRET);
-    
-    if (!isValid) {
-      console.warn('⚠️ Firma de webhook inválida');
-      return res.status(401).send('Firma no válida');
-    }
-
-    const webhookData = req.body;
-    console.log('📨 Webhook recibido:', JSON.stringify(webhookData, null, 2));
-
-    // Extraer información según el formato de Mercado Pago
-    const eventType = webhookData.type || 'payment'; // payment es el valor por defecto
-    const resourceId = webhookData.data?.id || webhookData.id;
-
-    if (!resourceId) {
-      console.warn('⚠️ Webhook sin ID válido');
-      return res.status(400).send('ID no válido');
-    }
-
-    console.log(`🔍 Procesando evento: ${eventType} - ID: ${resourceId}`);
-
-    if (eventType === 'payment') {
-      const payment = await getPayment(resourceId);
-      console.log('💰 Estado del pago:', payment.status);
-
-      switch (payment.status) {
-        case PAYMENT_STATUS.approved:
-          await processApprovedPayment(payment);
-          break;
-        case PAYMENT_STATUS.pending:
-        case PAYMENT_STATUS.in_process:
-          await processPendingPayment(payment);
-          break;
-        case PAYMENT_STATUS.rejected:
-        case PAYMENT_STATUS.cancelled:
-          await processRejectedPayment(payment);
-          break;
-        default:
-          console.log(`⚠️ Estado de pago no manejado: ${payment.status}`);
-      }
-    } else if (eventType === 'subscription') {
-      // Lógica para manejar suscripciones (si aplica)
-      console.log('🔄 Evento de suscripción recibido:', resourceId);
-    } else if (eventType === 'test') {
-      console.log('🧪 Webhook de prueba recibido');
-      return res.status(200).send('Webhook de prueba recibido');
-    }
-
-    res.sendStatus(200);
-  } catch (error) {
-    console.error('❌ Error en handleWebhook:', {
+    console.error('Error en createCheckoutProPreference:', {
       error: error.message,
       stack: error.stack,
-      body: req.body
+      userId: req.body.userId,
+      planType: req.body.planType
     });
-    res.status(500).json({
+    
+    res.status(error.statusCode || 500).json({ 
       success: false,
-      error: 'Error procesando webhook',
-      details: error.message
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };
 
+// Función mejorada para manejar eventos de pago
+async function handlePaymentEvent(webhookData, res) {
+  try {
+    const paymentId = extractId(webhookData.data?.id || webhookData.id);
+    const payment = await getPayment(paymentId);
+    
+    console.log(`💰 Procesando pago ${paymentId} con estado: ${payment.status}`);
+
+    // Sistema de reintentos para pagos pendientes
+    if (payment.status === PAYMENT_STATUS.pending.value) {
+      await processPendingPaymentWithRetry(payment);
+      return res.status(200).send('Pago pendiente procesado');
+    }
+
+    // Procesamiento según estado
+    switch (payment.status) {
+      case PAYMENT_STATUS.approved.value:
+        await processApprovedPayment(payment);
+        break;
+      case PAYMENT_STATUS.rejected.value:
+      case PAYMENT_STATUS.cancelled.value:
+        await processRejectedPayment(payment);
+        break;
+      default:
+        console.warn(`Estado de pago no manejado: ${payment.status}`);
+    }
+
+    res.status(200).send('Webhook procesado exitosamente');
+  } catch (error) {
+    console.error('Error en handlePaymentEvent:', {
+      paymentId: webhookData.data?.id,
+      error: error.message,
+      stack: error.stack
+    });
+    res.status(500).send('Error procesando evento de pago');
+  }
+}
+
+// Procesamiento de pagos aprobados con mayor robustez
 async function processApprovedPayment(payment) {
+  const transaction = await models.sequelize.transaction();
+  
   try {
     const { external_reference, id } = payment;
 
@@ -191,41 +227,33 @@ async function processApprovedPayment(payment) {
       throw new Error('El pago no contiene external_reference');
     }
 
-    // Formato esperado: USER_123_PLAN_plus
     const [_, userId, __, planType] = external_reference.split('_');
-
     if (!userId || !planType) {
       throw new Error(`Formato de external_reference inválido: ${external_reference}`);
     }
 
-    const user = await Usuario.findByPk(userId);
-    if (!user) {
-      throw new Error(`Usuario con ID ${userId} no encontrado`);
-    }
+    const [user, existingPayment] = await Promise.all([
+      Usuario.findByPk(userId, { transaction }),
+      Subscription.findOne({ where: { mercado_pago_id: id }, transaction })
+    ]);
 
-    // Verifica si ya se procesó este pago
-    const existingPayment = await Subscription.findOne({
-      where: { mercado_pago_id: id }
-    });
-
+    if (!user) throw new Error(`Usuario con ID ${userId} no encontrado`);
     if (existingPayment) {
-      console.log(`El pago ${id} ya fue procesado anteriormente.`);
-      return;
+      console.log(`Pago ${id} ya procesado. Actualizando datos...`);
+      await existingPayment.update({ datos_pago: JSON.stringify(payment) }, { transaction });
+      return await transaction.commit();
     }
 
-    // Verifica que el plan sea válido
-    const planKeys = Object.keys(PLANS_MERCADOPAGO);
-    if (!planKeys.includes(planType)) {
+    if (!Object.keys(PLANS_MERCADOPAGO).includes(planType)) {
       throw new Error(`Tipo de plan inválido: ${planType}`);
     }
 
-    // Crea o actualiza la suscripción en la DB
     const fechaInicio = new Date();
     const fechaRenovacion = new Date();
     fechaRenovacion.setMonth(fechaInicio.getMonth() + 1);
 
-    const [subscription, created] = await Subscription.upsert({
-      id_usuario: userId,
+    await Subscription.create({
+      usuario_id: userId,
       mercado_pago_id: id,
       plan_id: `plan-${planType}`,
       tipo_suscripcion: planType,
@@ -235,35 +263,52 @@ async function processApprovedPayment(payment) {
       fecha_inicio: fechaInicio,
       fecha_renovacion: fechaRenovacion,
       datos_pago: JSON.stringify(payment)
-    });
+    }, { transaction });
 
-    // Actualiza el estado de membresía del usuario
     await Usuario.update(
       { membresia: planType },
-      { where: { id_usuario: userId } }
+      { where: { id_usuario: userId }, transaction }
     );
 
-    console.log(`✅ Suscripción ${created ? 'creada' : 'actualizada'} para el usuario ${userId}`);
-    console.log(`🔄 Membresía del usuario ${userId} actualizada a ${planType}`);
+    await transaction.commit();
+    console.log(`✅ Suscripción creada para usuario ${userId}`);
   } catch (error) {
+    await transaction.rollback();
     console.error('❌ Error en processApprovedPayment:', {
-      mensaje: error.message,
       paymentId: payment?.id,
+      error: error.message,
       stack: error.stack
     });
     throw error;
   }
 }
 
-async function processPendingPayment(payment) {
-  console.log(`Procesando pago pendiente: ${payment.id}`);
-  // Lógica para pagos pendientes
+// Sistema de reintentos para pagos pendientes
+async function processPendingPaymentWithRetry(payment, attempt = 1) {
+  const MAX_ATTEMPTS = 3;
+  const RETRY_DELAY = 5000; // 5 segundos
+  
+  try {
+    const updatedPayment = await getPayment(payment.id);
+    
+    if (updatedPayment.status !== PAYMENT_STATUS.pending.value) {
+      return await handlePaymentStatusChange(updatedPayment);
+    }
+
+    if (attempt < MAX_ATTEMPTS) {
+      setTimeout(() => {
+        processPendingPaymentWithRetry(payment, attempt + 1);
+      }, RETRY_DELAY);
+    } else {
+      console.warn(`Pago ${payment.id} sigue pendiente después de ${MAX_ATTEMPTS} intentos`);
+    }
+  } catch (error) {
+    console.error(`Error en reintento ${attempt} para pago ${payment.id}:`, error);
+  }
 }
 
-async function processRejectedPayment(payment) {
-  console.log(`Procesando pago rechazado: ${payment.id}`);
-  // Lógica para pagos rechazados
-}
+// Función para verificar pagos con caché
+const paymentVerificationCache = new Map();
 
 export const verifyPayment = async (req, res) => {
   try {
@@ -276,31 +321,59 @@ export const verifyPayment = async (req, res) => {
       });
     }
 
-    const payment = await getPayment(paymentId);
-    const subscription = await Subscription.findOne({
-      where: { mercado_pago_id: paymentId }
-    });
+    // Verificar caché primero
+    if (paymentVerificationCache.has(paymentId)) {
+      const cached = paymentVerificationCache.get(paymentId);
+      if (Date.now() - cached.timestamp < 30000) { // 30 segundos de caché
+        return res.json(cached.data);
+      }
+    }
 
-    res.json({
+    const [payment, subscription] = await Promise.all([
+      getPayment(paymentId),
+      Subscription.findOne({ where: { mercado_pago_id: paymentId } })
+    ]);
+
+    const result = {
       success: true,
       payment: {
         id: payment.id,
         status: payment.status,
-        amount: payment.amount,
-        currency: payment.currency,
+        status_label: PAYMENT_STATUS[payment.status]?.label || 'Desconocido',
+        amount: payment.transaction_amount,
+        currency: payment.currency_id,
         date_created: payment.date_created,
         date_approved: payment.date_approved,
-        external_reference: payment.external_reference
+        external_reference: payment.external_reference,
+        payment_method: payment.payment_method_id
       },
       processed: !!subscription,
-      subscription
+      subscription: subscription ? {
+        id: subscription.id_subscription,
+        plan_type: subscription.tipo_suscripcion,
+        status: subscription.estado_suscripcion,
+        start_date: subscription.fecha_inicio,
+        renewal_date: subscription.fecha_renovacion
+      } : null
+    };
+
+    // Almacenar en caché
+    paymentVerificationCache.set(paymentId, {
+      data: result,
+      timestamp: Date.now()
     });
+
+    res.json(result);
   } catch (error) {
-    console.error('Error en verifyPayment:', error);
+    console.error('Error en verifyPayment:', {
+      paymentId: req.params.paymentId,
+      error: error.message,
+      stack: error.stack
+    });
     res.status(500).json({
       success: false,
       error: 'Error verificando pago',
-      details: error.message
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
