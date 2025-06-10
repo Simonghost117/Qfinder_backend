@@ -68,13 +68,13 @@ router.get('/perfil',
 router.get('/listarUsuarios',
     verifyTokenWeb,
     validateRol(['Administrador', 'Super']),
-    paginationMiddleware(5),
+    paginationMiddleware(10),
     listarUsuarios
 );
 router.get('/listarAdmin',
     verifyTokenWeb,
     validateRol(['Administrador', 'Super']),
-    paginationMiddleware(5),
+    paginationMiddleware(10),
     listarAdmin
 );
 //Actualizar usuarios en general por parte del administrador (no puede actualizar a otro administrador)

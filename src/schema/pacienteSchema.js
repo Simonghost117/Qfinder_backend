@@ -74,7 +74,7 @@ export const ActPacienteSchema = z.object({
       message: "La escritura del diagnostico no puede exceder los 100 carácteres"
     }),
   nivel_autonomia: z.enum(['alta', 'baja', 'media']).optional(),
-  imagen_paciente: z.string(),
+  imagen_paciente: z.string().optional(),
 })
 
 export const ActPaciente2 = z.object({

@@ -37,7 +37,7 @@ router.post('/crear',
 router.get('/listar2', 
   verifyTokenWeb,
   validateRol(['Administrador', 'Super']),
-  paginationMiddleware(5),
+  paginationMiddleware(10),
   listarMedicamentos2
 );
 router.put('/actualizar/:id',

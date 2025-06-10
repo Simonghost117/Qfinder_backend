@@ -47,7 +47,7 @@ router.delete('/eliminarPaciente/:id_paciente',
 router.get('/todosPacientes', 
     verifyTokenWeb,
     validateRol(['Administrador', 'Super']),
-    paginationMiddleware(5),
+    paginationMiddleware(10),
     listarTodosPacientes
 )
 router.get('/listarPacientes2/:id_usuario',
