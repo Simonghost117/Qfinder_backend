@@ -112,15 +112,15 @@ export const createCheckoutProPreference = async (req, res) => {
 export const handleWebhook = async (req, res) => {
   try {
     // Validación estricta de la firma
-    const isValidSignature = verifyWebhookSignature(req);
+    // const isValidSignature = verifyWebhookSignature(req);
     
-    if (!isValidSignature) {
-      console.error('Intento de webhook no autorizado', {
-        headers: req.headers,
-        body: req.body
-      });
-      return res.sendStatus(401);
-    }
+    // if (!isValidSignature) {
+    //   console.error('Intento de webhook no autorizado', {
+    //     headers: req.headers,
+    //     body: req.body
+    //   });
+    //   return res.sendStatus(401);
+    // }
 
     console.log('Webhook válido recibido:', {
       type: req.body.type,
