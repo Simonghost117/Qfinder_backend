@@ -310,11 +310,13 @@ export const verifyPayment = async (req, res) => {
       Subscription.findOne({ where: { mercado_pago_id: paymentId } })
     ]);
 
-    const [payment, subscription] = await Promise.race([
-      paymentPromise,
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout al verificar pago')), TIMEOUT)
-    ]);
+const [payment, subscription] = await Promise.race([
+  paymentPromise,
+  new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('Timeout al verificar pago')), TIMEOUT)
+  )
+]);
+
 
     res.json({
       success: true,
