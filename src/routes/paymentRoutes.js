@@ -22,7 +22,7 @@ router.post('/checkout-pro', verifyToken, createCheckoutProPreference);
 router.get('/verify-payment/:paymentId', verifyToken, verifyPayment);
 // Webhook Mercado Pago (sin autenticación)
 router.post('/webhook', webhookMiddleware, handleWebhook);
-app.get('/webhook', verifyWebhookConfig);
+router.get('/webhook', verifyWebhookConfig);
 // paymentRoutes.js
 router.get('/success-redirect', successRedirect);
 router.get('/failure-redirect', failureRedirect);
