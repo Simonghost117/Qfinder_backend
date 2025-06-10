@@ -12,10 +12,10 @@ export const EpisodioSalud = sequelize.define('episodio_salud', {
         type: DataTypes.INTEGER,
         allowNull: false
     },
-    tipo: {
-        type: DataTypes.STRING,
-        allowNull: false,
-    },
+    // tipo: {
+    //     type: DataTypes.STRING,
+    //     allowNull: false,
+    // },
     fecha_hora_inicio: {
         type: DataTypes.DATE,
         allowNull: false

@@ -33,7 +33,7 @@ export class EpisodioSaludController {
       this.responderExito(res, 201, 'Episodio creado exitosamente', {
         id: episodio.id_episodio,
         id_paciente: episodio.id_paciente,
-        tipo: episodio.tipo,
+        // tipo: episodio.tipo,
         titulo: episodio.titulo,
         // severidad: episodio.severidad,
         estado: episodio.estado,
@@ -192,7 +192,7 @@ export class EpisodioSaludController {
   static prepararDatosCreacion(req, id_paciente) {
     return {
       id_paciente,
-      tipo: req.body.tipo,
+      // tipo: req.body.tipo,
       fecha_hora_inicio: req.body.fecha_hora_inicio || new Date(),
       fecha_hora_fin: req.body.fecha_hora_fin || null,
       titulo: req.body.titulo,

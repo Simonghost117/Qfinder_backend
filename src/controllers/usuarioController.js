@@ -630,7 +630,7 @@ export const registerUsuario = async (req, res) => {
 
 export const actualizarAdmin = async (req, res) => {
   try {
-    const { id_usuario } = req.usuario;
+    const { id_usuario } = req.user;
     const { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, imagen_usuario } = req.body;
 
     const usuario = await Usuario.findByPk(id_usuario);
@@ -639,14 +639,14 @@ export const actualizarAdmin = async (req, res) => {
     }
 
     let nueva_imagen;
-    try {
-      nueva_imagen = await imgBase64(imagen_usuario, usuario.imagen_usuario);
-    } catch (error) {
-      return res.status(400).json({ 
-        success: false,
-        message: error.message 
-      });
-    }
+        try {
+          nueva_imagen = await manejarImagenes(imagen_usuario, usuario.imagen_usuario);
+        } catch (error) {
+          return res.status(400).json({ 
+            success: false,
+            message: error.message 
+          });
+        }
 
     const dataToUpdate = { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, imagen_usuario: nueva_imagen };
 
