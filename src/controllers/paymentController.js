@@ -110,73 +110,60 @@ async function processApprovedPayment(payment) {
 }
 
 export const handleWebhook = async (req, res) => {
-  console.log('🔔 Nuevo webhook recibido', {
-    headers: req.headers,
-    query: req.query
-  });
-
-  // Responder inmediatamente a MercadoPago
-  res.status(200).end();
-
-  try {
-    // Verificar si es un ping de prueba
-    if (req.query.type === 'test') {
-      console.log('✅ Webhook de prueba recibido');
-      return;
-    }
-
-    // Verificar firma del webhook
-    const signature = req.headers['x-signature'] || req.headers['x-signature-sha256'];
-    const webhookSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
-
-    if (!signature || !webhookSecret) {
-      console.warn('⚠️ Firma no proporcionada o secreto no configurado');
-      return;
-    }
-
-    const isValid = verifyWebhookSignature(req.rawBody || req.body, signature, webhookSecret);
-    if (!isValid) {
-      console.warn('⚠️ Firma de webhook inválida');
-      return;
-    }
-
-    // Procesar según el tipo de webhook (de manera asíncrona)
-    const eventType = req.body.type || req.query.type;
-    console.log(`📌 Tipo de evento: ${eventType}`);
-
-    // Usar setTimeout o cola de mensajes para procesar en segundo plano
-    setTimeout(async () => {
-      try {
-        switch (eventType) {
-          case 'payment':
-          case 'payment.updated':
-            const paymentId = req.body.data?.id || req.query['data.id'];
-            if (!paymentId) {
-              console.error('Payment ID missing');
-              return;
-            }
-            
-            const payment = await getPayment(paymentId);
-            await processApprovedPayment(payment);
-            break;
-          
-          case 'subscription':
-          case 'subscription_preapproval':
-            console.log('Evento de suscripción recibido:', req.body);
-            break;
-          
-          default:
-            console.warn(`⚠️ Tipo de webhook no manejado: ${eventType}`);
-        }
-      } catch (error) {
-        console.error('❌ Error en procesamiento asíncrono:', error);
+  // 1. Responder inmediatamente
+  res.status(200).send('OK');
+  
+  // 2. Extraer el trabajo pesado a un proceso separado
+  process.nextTick(async () => {
+    try {
+      console.log('🔔 Iniciando procesamiento de webhook en segundo plano');
+      
+      // Verificar si es un ping de prueba
+      if (req.query.type === 'test') {
+        console.log('✅ Webhook de prueba recibido');
+        return;
       }
-    }, 0);
 
-  } catch (error) {
-    console.error('❌ Error en handleWebhook:', error);
-  }
+      // Verificación de firma
+      const signature = req.headers['x-signature'] || req.headers['x-signature-sha256'];
+      const webhookSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
+
+      if (!signature || !webhookSecret) {
+        console.warn('⚠️ Firma no proporcionada o secreto no configurado');
+        return;
+      }
+
+      const isValid = verifyWebhookSignature(req.rawBody || req.body, signature, webhookSecret);
+      if (!isValid) {
+        console.warn('⚠️ Firma de webhook inválida');
+        return;
+      }
+
+      // Procesamiento real
+      const eventType = req.body.type || req.query.type;
+      const paymentId = req.body.data?.id || req.query['data.id'];
+      
+      if (eventType.includes('payment') && paymentId) {
+        console.log(`🔄 Procesando pago ${paymentId}`);
+        await processPaymentBackground(paymentId);
+      }
+    } catch (error) {
+      console.error('❌ Error en procesamiento background:', error);
+    }
+  });
 };
+
+// Función separada para el procesamiento
+async function processPaymentBackground(paymentId) {
+  try {
+    const payment = await getPayment(paymentId);
+    await processApprovedPayment(payment);
+    console.log(`✅ Pago ${paymentId} procesado correctamente`);
+  } catch (error) {
+    console.error(`❌ Error procesando pago ${paymentId}:`, error);
+    // Aquí puedes agregar reintentos o notificaciones
+  }
+}
 // Controlador para verificar estado de pago
 export const verifyPayment = async (req, res) => {
   try {
