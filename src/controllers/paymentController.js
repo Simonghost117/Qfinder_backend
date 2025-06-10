@@ -118,25 +118,31 @@ const extractId = (resource) => {
 
 export const handleWebhook = async (req, res) => {
   try {
-    const topic = req.query.topic || req.body.topic;
-    const id =
-      req.query.id ||
-      (req.body.data && req.body.data.id) ||
-      extractId(req.body.resource);
-
-    if (!topic || !id) {
-      console.warn('⚠️ Webhook recibido sin topic o id válido:', {
-        headers: req.headers,
-        body: req.body,
-        query: req.query
-      });
-      return res.sendStatus(400);
+    // Verificar firma primero (seguridad importante)
+    const signature = req.headers['x-signature'] || req.headers['x-signature-sha256'];
+    const isValid = verifyWebhookSignature(req.rawBody || req.body, signature, process.env.MERCADOPAGO_WEBHOOK_SECRET);
+    
+    if (!isValid) {
+      console.warn('⚠️ Firma de webhook inválida');
+      return res.status(401).send('Firma no válida');
     }
 
-    console.log('📨 Webhook recibido:', { topic, id });
+    const webhookData = req.body;
+    console.log('📨 Webhook recibido:', JSON.stringify(webhookData, null, 2));
 
-    if (topic === 'payment') {
-      const payment = await getPayment(id);
+    // Extraer información según el formato de Mercado Pago
+    const eventType = webhookData.type || 'payment'; // payment es el valor por defecto
+    const resourceId = webhookData.data?.id || webhookData.id;
+
+    if (!resourceId) {
+      console.warn('⚠️ Webhook sin ID válido');
+      return res.status(400).send('ID no válido');
+    }
+
+    console.log(`🔍 Procesando evento: ${eventType} - ID: ${resourceId}`);
+
+    if (eventType === 'payment') {
+      const payment = await getPayment(resourceId);
       console.log('💰 Estado del pago:', payment.status);
 
       switch (payment.status) {
@@ -154,36 +160,12 @@ export const handleWebhook = async (req, res) => {
         default:
           console.log(`⚠️ Estado de pago no manejado: ${payment.status}`);
       }
-
-    } else if (topic === 'merchant_order') {
-      const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
-      const resource = req.body.resource;
-
-      try {
-        const orderResponse = await axios.get(resource, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`
-          }
-        });
-
-        const order = orderResponse.data;
-        console.log('📦 Detalles de la merchant_order recibida:', order);
-
-        if (order.payments?.length) {
-          for (const p of order.payments) {
-            if (p.status === 'approved') {
-              const paymentDetail = await getPayment(p.id);
-              await processApprovedPayment(paymentDetail);
-            }
-          }
-        }
-
-      } catch (err) {
-        console.error('❌ Error al consultar merchant_order:', {
-          mensaje: err.message,
-          stack: err.stack
-        });
-      }
+    } else if (eventType === 'subscription') {
+      // Lógica para manejar suscripciones (si aplica)
+      console.log('🔄 Evento de suscripción recibido:', resourceId);
+    } else if (eventType === 'test') {
+      console.log('🧪 Webhook de prueba recibido');
+      return res.status(200).send('Webhook de prueba recibido');
     }
 
     res.sendStatus(200);
@@ -200,7 +182,6 @@ export const handleWebhook = async (req, res) => {
     });
   }
 };
-
 
 async function processApprovedPayment(payment) {
   try {
