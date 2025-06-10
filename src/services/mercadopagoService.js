@@ -1,22 +1,8 @@
 import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
-import { configureMercadoPago } from '../config/mercadopago.js';
+import { configureMercadoPago } from '../config/mercadopagoConfig.js';
 
 const client = configureMercadoPago();
-export const configureMercadoPago = () => {
-  const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
-  
-  return new MercadoPagoConfig({
-    accessToken: accessToken,
-    options: {
-      timeout: 60000, // 60 segundos
-      socketTimeout: 60000,
-      connectionTimeout: 60000,
-      retries: 3,
-      retryDelay: 3000,
-      sandbox: process.env.NODE_ENV !== 'production'
-    }
-  });
-};
+
 export const createPreference = async (preferenceData) => {
   try {
     if (!preferenceData.items || preferenceData.items.length === 0) {
