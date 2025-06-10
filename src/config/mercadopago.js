@@ -20,40 +20,54 @@ export const configureMercadoPago = () => {
   });
 };
 
-export const verifyWebhookSignature = (body, signatureHeader) => {
+export const verifyWebhookSignature = (body, signatureHeader, secret) => {
   console.log('🔍 Verificando firma...');
-  console.log('Body recibido:', typeof body, body);
-  console.log('Signature header:', signatureHeader);
-
-  if (!signatureHeader) {
-    console.warn('⚠️ No signature header present');
+  
+  if (!signatureHeader || !secret) {
+    console.warn('⚠️ Faltan parámetros para verificación');
     return false;
   }
 
-  const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
-  console.log('Secret key:', secret ? '***' : 'UNDEFINED!');
-
   try {
-    const [tsPart, v1Part] = signatureHeader.split(',');
-    const ts = tsPart?.split('=')[1];
-    const v1 = v1Part?.split('=')[1];
+    // Extraer timestamp y firma del header
+    const parts = signatureHeader.split(',');
+    const signatureParts = {};
+    
+    parts.forEach(part => {
+      const [key, value] = part.split('=');
+      signatureParts[key] = value;
+    });
 
-    console.log('Timestamp:', ts);
-    console.log('Firma recibida (v1):', v1);
+    const ts = signatureParts.ts;
+    const v1 = signatureParts.v1;
 
     if (!ts || !v1) {
       console.warn('⚠️ Firma mal formada');
       return false;
     }
 
-    const payload = `${ts}:${typeof body === 'string' ? body : JSON.stringify(body)}`;
-    console.log('Payload usado:', payload);
+    // Preparar el payload para verificación
+    let payload;
+    if (typeof body === 'string') {
+      // Si es string (body raw), usarlo directamente
+      payload = `${ts}:${body}`;
+    } else if (body instanceof Buffer) {
+      // Si es Buffer, convertirlo a string
+      payload = `${ts}:${body.toString()}`;
+    } else {
+      // Si es objeto, convertirlo a JSON stringificado
+      payload = `${ts}:${JSON.stringify(body)}`;
+    }
 
+    console.log('Payload usado para firma:', payload);
+
+    // Generar firma HMAC-SHA256
     const generatedSignature = crypto
       .createHmac('sha256', secret)
       .update(payload)
       .digest('hex');
 
+    console.log('Firma recibida:', v1);
     console.log('Firma generada:', generatedSignature);
     console.log('Coinciden?:', generatedSignature === v1);
 

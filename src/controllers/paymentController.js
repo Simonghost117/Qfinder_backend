@@ -125,82 +125,48 @@ export const handleWebhook = async (req, res) => {
   });
 
   try {
+    // Verificar firma del webhook
     const signature = req.headers['x-signature'];
-    if (!signature) {
-      console.warn('⚠️ Webhook sin firma:', req.headers);
-      return res.sendStatus(401);
+    const webhookSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
+
+    if (!signature || !webhookSecret) {
+      console.warn('⚠️ Firma no proporcionada o secreto no configurado');
+      return res.status(401).json({ error: 'Firma no proporcionada o secreto no configurado' });
     }
 
-    const isValid = verifyWebhookSignature(req.rawBody || req.body, signature);
+    // Usar el cuerpo RAW para verificación
+    const rawBody = req.rawBody || Buffer.from(JSON.stringify(req.body));
+    const isValid = verifyWebhookSignature(rawBody, signature, webhookSecret);
+
     if (!isValid) {
       console.warn('⚠️ Firma de webhook inválida');
-      return res.sendStatus(403);
+      return res.status(403).json({ error: 'Firma inválida' });
     }
 
-    const eventData = req.body || {};
-    const queryParams = req.query || {};
+    // Procesar según el tipo de webhook
+    const eventType = req.body.type || req.query.type;
+    console.log(`📌 Tipo de evento: ${eventType}`);
 
-    if (eventData.action === 'payment.created' && eventData.data?.id) {
-      const payment = await getPayment(eventData.data.id);
-      await processPaymentBasedOnStatus(payment);
-      return res.sendStatus(200);
+    switch (eventType) {
+      case 'subscription_preapproval':
+        await handleSubscriptionUpdate(req.body);
+        break;
+      
+      case 'payment':
+        await handlePaymentNotification(req.body);
+        break;
+      
+      default:
+        console.warn(`⚠️ Tipo de webhook no manejado: ${eventType}`);
     }
 
-    const topic = queryParams.type || eventData.type;
-    const id = queryParams['data.id'] || (eventData.data && eventData.data.id);
-
-    if (!topic || !id) {
-      console.warn('⚠️ Webhook recibido sin topic o id válido');
-      return res.sendStatus(400);
-    }
-
-    console.log(`📨 Webhook recibido - Tipo: ${topic}, ID: ${id}`);
-
-    if (topic === 'payment') {
-      const payment = await getPayment(id);
-      await processPaymentBasedOnStatus(payment);
-    } else if (topic === 'merchant_order') {
-      const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
-      const resource = eventData.resource;
-
-      try {
-        const orderResponse = await axios.get(resource, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`
-          }
-        });
-
-        const order = orderResponse.data;
-        console.log('📦 Detalles de la merchant_order recibida:', order);
-
-        if (order.payments?.length) {
-          for (const p of order.payments) {
-            if (p.status === 'approved') {
-              const paymentDetail = await getPayment(p.id);
-              await processApprovedPayment(paymentDetail);
-            }
-          }
-        }
-      } catch (err) {
-        notifyErrorToMonitoringSystem(err, {
-          action: 'merchant_order_processing',
-          orderId: id
-        });
-        console.error('❌ Error al consultar merchant_order:', err.message);
-      }
-    }
-
-    res.sendStatus(200);
+    return res.status(200).json({ success: true });
+    
   } catch (error) {
-    notifyErrorToMonitoringSystem(error, {
-      action: 'handleWebhook',
-      body: req.body
-    });
-    console.error('❌ Error en handleWebhook:', error.message);
-    res.status(500).json({
-      success: false,
+    console.error('❌ Error en handleWebhook:', error);
+    return res.status(500).json({ 
       error: 'Error procesando webhook',
-      details: error.message
+      details: error.message 
     });
   }
 };

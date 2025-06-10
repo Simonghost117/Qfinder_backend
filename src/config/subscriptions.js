@@ -6,7 +6,7 @@ export const SUBSCRIPTION_LIMITS = {
 
 export const PLANS_MERCADOPAGO = {
   plus: {
-    description: "Plan Plus - 5 pacientes y 3 colaboradores",
+    description: "Plan Plus - 5 pacientes y 5 colaboradores",
     amount: 2000, // $10,000 COP
     currency_id: "COP",
     frequency: 1, // mensual
