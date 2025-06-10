@@ -368,10 +368,9 @@ export const listarUsuarios = async (req, res) => {
       const searchTerm = req.query.busqueda.toLowerCase(); // Normalizamos el término de búsqueda
       
       where[Op.or] = [
-        // Búsqueda insensible a mayúsculas/minúsculas usando LOWER
         { 
           nombre_usuario: { 
-            [Op.iLike]: `%${searchTerm}%` // Op.iLike para PostgreSQL (insensible a mayúsculas)
+            [Op.iLike]: `%${searchTerm}%` 
           } 
         },
         { 
@@ -384,15 +383,7 @@ export const listarUsuarios = async (req, res) => {
             [Op.iLike]: `%${searchTerm}%` 
           } 
         },
-        // Alternativa para MySQL/MariaDB:
-        /*
-        sequelize.where(
-          sequelize.fn('LOWER', sequelize.col('nombre_usuario')),
-          'LIKE',
-          `%${searchTerm}%`
-        ),
-        */
-        // Búsqueda por identificación exacta (sin importar mayúsculas)
+      
         sequelize.where(
           sequelize.fn('LOWER', sequelize.col('identificacion_usuario')),
           '=',
@@ -403,7 +394,7 @@ export const listarUsuarios = async (req, res) => {
 
     const result = await PaginationService.paginate(Usuario, {
       where,
-      order: [['id_usuario', 'ASC']],
+      order: [['id_usuario', 'DESC']],
       req,
       transformData: (usuarios) => usuarios.map(usuario => ({
         id_usuario: usuario.id_usuario,
@@ -425,25 +416,61 @@ export const listarUsuarios = async (req, res) => {
   }
 }
 export const listarAdmin = async (req, res) => {
-  try {
-    const usuarios = await Usuario.findAll(
-      {
-      where: {
-        tipo_usuario: 'Administrador'
-      }, order: [['id_usuario', 'ASC']]
-      }
-  );
-    res.status(200).json(usuarios.map(usuario => ({
-      id_usuario: usuario.id_usuario,
-      nombre_usuario: usuario.nombre_usuario,
-      apellido_usuario: usuario.apellido_usuario,
-      identificacion_usuario: usuario.identificacion_usuario,
-      direccion_usuario: usuario.direccion_usuario,
-      telefono_usuario: usuario.telefono_usuario,
-      correo_usuario: usuario.correo_usuario,
-      tipo_usuario: usuario.tipo_usuario,
-      estado_usuario: usuario.estado_usuario
-    })));
+  try { 
+    const where = {
+      tipo_usuario: 'Administrador'
+    };
+  
+    if (req.query.estado) {
+      where.estado_usuario = req.query.estado;
+    }
+    
+    if (req.query.busqueda) {
+      const searchTerm = req.query.busqueda.toLowerCase(); 
+      
+      where[Op.or] = [
+        { 
+          nombre_usuario: { 
+            [Op.iLike]: `%${searchTerm}%` 
+          } 
+        },
+        { 
+          apellido_usuario: { 
+            [Op.iLike]: `%${searchTerm}%` 
+          } 
+        },
+        { 
+          correo_usuario: { 
+            [Op.iLike]: `%${searchTerm}%` 
+          } 
+        },
+      
+        sequelize.where(
+          sequelize.fn('LOWER', sequelize.col('identificacion_usuario')),
+          '=',
+          searchTerm
+        )
+      ];
+    }
+
+    const result = await PaginationService.paginate(Usuario, {
+      where,
+      order: [['id_usuario', 'DESC']],
+      req,
+      transformData: (usuarios) => usuarios.map(usuario => ({
+        id_usuario: usuario.id_usuario,
+        nombre_usuario: usuario.nombre_usuario,
+        apellido_usuario: usuario.apellido_usuario,
+        identificacion_usuario: usuario.identificacion_usuario,
+        direccion_usuario: usuario.direccion_usuario,
+        telefono_usuario: usuario.telefono_usuario,
+        correo_usuario: usuario.correo_usuario,
+        tipo_usuario: usuario.tipo_usuario,
+        estado_usuario: usuario.estado_usuario
+      }))
+    });
+
+    res.status(200).json(result);
   } catch (error) {
     console.log('Error al listar los usuarios', error);
     res.status(500).json({ message: "Erro interno del servidor al listar los administradores"})

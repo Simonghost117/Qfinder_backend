@@ -5,7 +5,7 @@ import { models } from '../models/index.js';
 import axios from 'axios';
 const { Usuario, Subscription } = models;
 
-// Mapeo de estados de pago
+// Estados de pago
 const PAYMENT_STATUS = {
   pending: 'pending',
   approved: 'approved',
@@ -16,6 +16,312 @@ const PAYMENT_STATUS = {
   cancelled: 'cancelled',
   refunded: 'refunded',
   charged_back: 'charged_back'
+};
+
+// Registrar errores
+const notifyErrorToMonitoringSystem = (error, context = {}) => {
+  console.error('🚨 Error crítico:', { error: error.message, ...context });
+};
+
+// Procesar pagos según estado
+async function processPaymentBasedOnStatus(payment) {
+  console.log(`🔍 Procesando pago ${payment.id} con estado: ${payment.status}`);
+
+  switch (payment.status) {
+    case PAYMENT_STATUS.approved:
+      await processApprovedPayment(payment);
+      break;
+    case PAYMENT_STATUS.pending:
+    case PAYMENT_STATUS.in_process:
+      await processPendingPayment(payment);
+      break;
+    case PAYMENT_STATUS.rejected:
+    case PAYMENT_STATUS.cancelled:
+      await processRejectedPayment(payment);
+      break;
+    default:
+      console.log(`⚠️ Estado de pago no manejado: ${payment.status}`);
+  }
+}
+
+// Procesar pago aprobado
+async function processApprovedPayment(payment) {
+  const transaction = await models.sequelize.transaction();
+  try {
+    const { external_reference, id } = payment;
+
+    if (!external_reference) {
+      throw new Error('El pago no contiene external_reference');
+    }
+
+    const [_, userId, __, planType] = external_reference.split('_');
+
+    if (!userId || !planType) {
+      throw new Error(`Formato de external_reference inválido: ${external_reference}`);
+    }
+
+    const user = await Usuario.findByPk(userId, { transaction });
+    if (!user) {
+      throw new Error(`Usuario con ID ${userId} no encontrado`);
+    }
+
+    const existingPayment = await Subscription.findOne({
+      where: { mercado_pago_id: id },
+      transaction
+    });
+
+    if (existingPayment) {
+      console.log(`ℹ️ El pago ${id} ya fue procesado anteriormente.`);
+      await transaction.commit();
+      return;
+    }
+
+    const planKeys = Object.keys(PLANS_MERCADOPAGO);
+    if (!planKeys.includes(planType)) {
+      throw new Error(`Tipo de plan inválido: ${planType}`);
+    }
+
+    const fechaInicio = new Date();
+    const fechaRenovacion = new Date();
+    fechaRenovacion.setMonth(fechaInicio.getMonth() + 1);
+
+    const [subscription] = await Subscription.upsert({
+      id_usuario: userId,
+      mercado_pago_id: id,
+      plan_id: `plan-${planType}`,
+      tipo_suscripcion: planType,
+      estado_suscripcion: 'active',
+      limite_pacientes: SUBSCRIPTION_LIMITS[planType].pacientes,
+      limite_cuidadores: SUBSCRIPTION_LIMITS[planType].cuidadores,
+      fecha_inicio: fechaInicio,
+      fecha_renovacion: fechaRenovacion,
+      datos_pago: JSON.stringify(payment)
+    }, { transaction });
+
+    await Usuario.update(
+      { membresia: planType },
+      { where: { id_usuario: userId }, transaction }
+    );
+
+    await transaction.commit();
+    console.log(`✅ Suscripción actualizada para el usuario ${userId}`);
+  } catch (error) {
+    await transaction.rollback();
+    notifyErrorToMonitoringSystem(error, {
+      paymentId: payment?.id,
+      action: 'processApprovedPayment'
+    });
+    throw error;
+  }
+}
+
+// Controlador principal del webhook
+export const handleWebhook = async (req, res) => {
+  console.log('🔔 Nuevo webhook recibido', {
+    headers: req.headers,
+    body: req.body,
+    query: req.query,
+    ip: req.ip
+  });
+
+  try {
+    const signature = req.headers['x-signature'];
+    if (!signature) {
+      console.warn('⚠️ Webhook sin firma:', req.headers);
+      return res.sendStatus(401);
+    }
+
+    const isValid = verifyWebhookSignature(req.rawBody || req.body, signature);
+    if (!isValid) {
+      console.warn('⚠️ Firma de webhook inválida');
+      return res.sendStatus(403);
+    }
+
+    const eventData = req.body || {};
+    const queryParams = req.query || {};
+
+    if (eventData.action === 'payment.created' && eventData.data?.id) {
+      const payment = await getPayment(eventData.data.id);
+      await processPaymentBasedOnStatus(payment);
+      return res.sendStatus(200);
+    }
+
+    const topic = queryParams.type || eventData.type;
+    const id = queryParams['data.id'] || (eventData.data && eventData.data.id);
+
+    if (!topic || !id) {
+      console.warn('⚠️ Webhook recibido sin topic o id válido');
+      return res.sendStatus(400);
+    }
+
+    console.log(`📨 Webhook recibido - Tipo: ${topic}, ID: ${id}`);
+
+    if (topic === 'payment') {
+      const payment = await getPayment(id);
+      await processPaymentBasedOnStatus(payment);
+    } else if (topic === 'merchant_order') {
+      const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
+      const resource = eventData.resource;
+
+      try {
+        const orderResponse = await axios.get(resource, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`
+          }
+        });
+
+        const order = orderResponse.data;
+        console.log('📦 Detalles de la merchant_order recibida:', order);
+
+        if (order.payments?.length) {
+          for (const p of order.payments) {
+            if (p.status === 'approved') {
+              const paymentDetail = await getPayment(p.id);
+              await processApprovedPayment(paymentDetail);
+            }
+          }
+        }
+      } catch (err) {
+        notifyErrorToMonitoringSystem(err, {
+          action: 'merchant_order_processing',
+          orderId: id
+        });
+        console.error('❌ Error al consultar merchant_order:', err.message);
+      }
+    }
+
+    res.sendStatus(200);
+  } catch (error) {
+    notifyErrorToMonitoringSystem(error, {
+      action: 'handleWebhook',
+      body: req.body
+    });
+    console.error('❌ Error en handleWebhook:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Error procesando webhook',
+      details: error.message
+    });
+  }
+};
+
+// Endpoint para verificación del webhook
+export const verifyWebhookConfig = async (req, res) => {
+  try {
+    const challenge = req.query.challenge;
+    if (!challenge) {
+      return res.status(400).send('Falta el parámetro challenge');
+    }
+    
+    console.log('✅ Webhook verification challenge received');
+    res.status(200).send(challenge);
+  } catch (error) {
+    notifyErrorToMonitoringSystem(error, {
+      action: 'verifyWebhookConfig'
+    });
+    console.error('Error verificando webhook:', error);
+    res.status(500).send('Error verificando webhook');
+  }
+};
+
+// Controlador para verificar estado de pago
+export const verifyPayment = async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+    
+    if (!paymentId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Se requiere un paymentId válido'
+      });
+    }
+
+    const payment = await getPayment(paymentId);
+    const subscription = await Subscription.findOne({
+      where: { mercado_pago_id: paymentId }
+    });
+
+    res.json({
+      success: true,
+      payment: {
+        id: payment.id,
+        status: payment.status,
+        amount: payment.amount,
+        currency: payment.currency,
+        date_created: payment.date_created,
+        date_approved: payment.date_approved,
+        external_reference: payment.external_reference
+      },
+      processed: !!subscription,
+      subscription
+    });
+  } catch (error) {
+    notifyErrorToMonitoringSystem(error, {
+      action: 'verifyPayment',
+      paymentId: req.params.paymentId
+    });
+    console.error('Error en verifyPayment:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error verificando pago',
+      details: error.message
+    });
+  }
+};
+
+// Controladores de redirección
+export const successRedirect = async (req, res) => {
+  const { user_id, plan_type } = req.query;
+  const deeplink = `qfinder://payment/success?user_id=${user_id}&plan_type=${plan_type}`;
+  
+  res.send(`
+    <html>
+      <head>
+        <meta http-equiv="refresh" content="0; url=${deeplink}" />
+        <script>window.location.href = "${deeplink}";</script>
+      </head>
+      <body>
+        <p>Redirigiendo a la aplicación...</p>
+        <a href="${deeplink}">Si no eres redirigido, haz clic aquí</a>
+      </body>
+    </html>
+  `);
+};
+
+export const failureRedirect = async (req, res) => {
+  const { user_id } = req.query;
+  const deeplink = `qfinder://payment/failure?user_id=${user_id}`;
+  
+  res.send(`
+    <html>
+      <head>
+        <meta http-equiv="refresh" content="0; url=${deeplink}" />
+        <script>window.location.href = "${deeplink}";</script>
+      </head>
+      <body>
+        <p>Redirigiendo a la aplicación...</p>
+        <a href="${deeplink}">Si no eres redirigido, haz clic aquí</a>
+      </body>
+    </html>
+  `);
+};
+
+export const pendingRedirect = async (req, res) => {
+  const { user_id } = req.query;
+  const deeplink = `qfinder://payment/pending?user_id=${user_id}`;
+  
+  res.send(`
+    <html>
+      <head>
+        <meta http-equiv="refresh" content="0; url=${deeplink}" />
+        <script>window.location.href = "${deeplink}";</script>
+      </head>
+      <body>
+        <p>Redirigiendo a la aplicación...</p>
+        <a href="${deeplink}">Si no eres redirigido, haz clic aquí</a>
+      </body>
+    </html>
+  `);
 };
 
 export const createCheckoutProPreference = async (req, res) => {
@@ -84,10 +390,7 @@ export const createCheckoutProPreference = async (req, res) => {
       metadata: {
         user_id: userId,
         plan_type: planType,
-        app: "qfinder",
-        deeplink_success: `qfinder://payment/success?user_id=${userId}&plan_type=${planType}`,
-        deeplink_failure: `qfinder://payment/failure?user_id=${userId}`,
-        deeplink_pending: `qfinder://payment/pending?user_id=${userId}`
+        app: "qfinder"
       },
       statement_descriptor: `QFINDER ${planType.toUpperCase()}`
     };
@@ -108,273 +411,4 @@ export const createCheckoutProPreference = async (req, res) => {
       details: error.message
     });
   }
-};
-
-const extractId = (resource) => {
-  if (!resource) return null;
-  const parts = resource.split('/');
-  return parts[parts.length - 1];
-};
-
-export const handleWebhook = async (req, res) => {
-  try {
-    const topic = req.query.topic || req.body.topic;
-    const id =
-      req.query.id ||
-      (req.body.data && req.body.data.id) ||
-      extractId(req.body.resource);
-
-    if (!topic || !id) {
-      console.warn('⚠️ Webhook recibido sin topic o id válido:', {
-        headers: req.headers,
-        body: req.body,
-        query: req.query
-      });
-      return res.sendStatus(400);
-    }
-
-    console.log('📨 Webhook recibido:', { topic, id });
-
-    if (topic === 'payment') {
-      const payment = await getPayment(id);
-      console.log('💰 Estado del pago:', payment.status);
-
-      switch (payment.status) {
-        case PAYMENT_STATUS.approved:
-          await processApprovedPayment(payment);
-          break;
-        case PAYMENT_STATUS.pending:
-        case PAYMENT_STATUS.in_process:
-          await processPendingPayment(payment);
-          break;
-        case PAYMENT_STATUS.rejected:
-        case PAYMENT_STATUS.cancelled:
-          await processRejectedPayment(payment);
-          break;
-        default:
-          console.log(`⚠️ Estado de pago no manejado: ${payment.status}`);
-      }
-
-    } else if (topic === 'merchant_order') {
-      const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
-      const resource = req.body.resource;
-
-      try {
-        const orderResponse = await axios.get(resource, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`
-          }
-        });
-
-        const order = orderResponse.data;
-        console.log('📦 Detalles de la merchant_order recibida:', order);
-
-        if (order.payments?.length) {
-          for (const p of order.payments) {
-            if (p.status === 'approved') {
-              const paymentDetail = await getPayment(p.id);
-              await processApprovedPayment(paymentDetail);
-            }
-          }
-        }
-
-      } catch (err) {
-        console.error('❌ Error al consultar merchant_order:', {
-          mensaje: err.message,
-          stack: err.stack
-        });
-      }
-    }
-
-    res.sendStatus(200);
-  } catch (error) {
-    console.error('❌ Error en handleWebhook:', {
-      error: error.message,
-      stack: error.stack,
-      body: req.body
-    });
-    res.status(500).json({
-      success: false,
-      error: 'Error procesando webhook',
-      details: error.message
-    });
-  }
-};
-
-
-async function processApprovedPayment(payment) {
-  try {
-    const { external_reference, id } = payment;
-
-    if (!external_reference) {
-      throw new Error('El pago no contiene external_reference');
-    }
-
-    // Formato esperado: USER_123_PLAN_plus
-    const [_, userId, __, planType] = external_reference.split('_');
-
-    if (!userId || !planType) {
-      throw new Error(`Formato de external_reference inválido: ${external_reference}`);
-    }
-
-    const user = await Usuario.findByPk(userId);
-    if (!user) {
-      throw new Error(`Usuario con ID ${userId} no encontrado`);
-    }
-
-    // Verifica si ya se procesó este pago
-    const existingPayment = await Subscription.findOne({
-      where: { mercado_pago_id: id }
-    });
-
-    if (existingPayment) {
-      console.log(`El pago ${id} ya fue procesado anteriormente.`);
-      return;
-    }
-
-    // Verifica que el plan sea válido
-    const planKeys = Object.keys(PLANS_MERCADOPAGO);
-    if (!planKeys.includes(planType)) {
-      throw new Error(`Tipo de plan inválido: ${planType}`);
-    }
-
-    // Crea o actualiza la suscripción en la DB
-    const fechaInicio = new Date();
-    const fechaRenovacion = new Date();
-    fechaRenovacion.setMonth(fechaInicio.getMonth() + 1);
-
-    const [subscription, created] = await Subscription.upsert({
-      id_usuario: userId,
-      mercado_pago_id: id,
-      plan_id: `plan-${planType}`,
-      tipo_suscripcion: planType,
-      estado_suscripcion: 'active',
-      limite_pacientes: SUBSCRIPTION_LIMITS[planType].pacientes,
-      limite_cuidadores: SUBSCRIPTION_LIMITS[planType].cuidadores,
-      fecha_inicio: fechaInicio,
-      fecha_renovacion: fechaRenovacion,
-      datos_pago: JSON.stringify(payment)
-    });
-
-    // Actualiza el estado de membresía del usuario
-    await Usuario.update(
-      { membresia: planType },
-      { where: { id_usuario: userId } }
-    );
-
-    console.log(`✅ Suscripción ${created ? 'creada' : 'actualizada'} para el usuario ${userId}`);
-    console.log(`🔄 Membresía del usuario ${userId} actualizada a ${planType}`);
-  } catch (error) {
-    console.error('❌ Error en processApprovedPayment:', {
-      mensaje: error.message,
-      paymentId: payment?.id,
-      stack: error.stack
-    });
-    throw error;
-  }
-}
-
-async function processPendingPayment(payment) {
-  console.log(`Procesando pago pendiente: ${payment.id}`);
-  // Lógica para pagos pendientes
-}
-
-async function processRejectedPayment(payment) {
-  console.log(`Procesando pago rechazado: ${payment.id}`);
-  // Lógica para pagos rechazados
-}
-
-export const verifyPayment = async (req, res) => {
-  try {
-    const { paymentId } = req.params;
-    
-    if (!paymentId) {
-      return res.status(400).json({
-        success: false,
-        error: 'Se requiere un paymentId válido'
-      });
-    }
-
-    const payment = await getPayment(paymentId);
-    const subscription = await Subscription.findOne({
-      where: { mercado_pago_id: paymentId }
-    });
-
-    res.json({
-      success: true,
-      payment: {
-        id: payment.id,
-        status: payment.status,
-        amount: payment.amount,
-        currency: payment.currency,
-        date_created: payment.date_created,
-        date_approved: payment.date_approved,
-        external_reference: payment.external_reference
-      },
-      processed: !!subscription,
-      subscription
-    });
-  } catch (error) {
-    console.error('Error en verifyPayment:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error verificando pago',
-      details: error.message
-    });
-  }
-};
-
-// Controladores de redirección (mantenidos igual)
-export const successRedirect = async (req, res) => {
-  const { user_id, plan_type } = req.query;
-  const deeplink = `qfinder://payment/success?user_id=${user_id}&plan_type=${plan_type}`;
-  
-  res.send(`
-    <html>
-      <head>
-        <meta http-equiv="refresh" content="0; url=${deeplink}" />
-        <script>window.location.href = "${deeplink}";</script>
-      </head>
-      <body>
-        <p>Redirigiendo a la aplicación...</p>
-        <a href="${deeplink}">Si no eres redirigido, haz clic aquí</a>
-      </body>
-    </html>
-  `);
-};
-
-export const failureRedirect = async (req, res) => {
-  const { user_id } = req.query;
-  const deeplink = `qfinder://payment/failure?user_id=${user_id}`;
-  
-  res.send(`
-    <html>
-      <head>
-        <meta http-equiv="refresh" content="0; url=${deeplink}" />
-        <script>window.location.href = "${deeplink}";</script>
-      </head>
-      <body>
-        <p>Redirigiendo a la aplicación...</p>
-        <a href="${deeplink}">Si no eres redirigido, haz clic aquí</a>
-      </body>
-    </html>
-  `);
-};
-
-export const pendingRedirect = async (req, res) => {
-  const { user_id } = req.query;
-  const deeplink = `qfinder://payment/pending?user_id=${user_id}`;
-  
-  res.send(`
-    <html>
-      <head>
-        <meta http-equiv="refresh" content="0; url=${deeplink}" />
-        <script>window.location.href = "${deeplink}";</script>
-      </head>
-      <body>
-        <p>Redirigiendo a la aplicación...</p>
-        <a href="${deeplink}">Si no eres redirigido, haz clic aquí</a>
-      </body>
-    </html>
-  `);
 };

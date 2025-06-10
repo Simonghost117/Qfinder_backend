@@ -4,7 +4,7 @@ const { Paciente, Familiar, CodigoQR, Colaborador } = models;
 import { generarQRPaciente } from "../controllers/codigoQrController.js";
 import Usuario from "../models/usuario.model.js";
 import { manejarImagenes } from "../utils/imgBase64.js";
-;
+import { PaginationService } from "../utils/paginationUtils.js";
 
 
 // Registrar un nuevo paciente
@@ -316,26 +316,41 @@ export const eliminarPaciente = async (req, res) => {
 
 export const listarTodosPacientes = async (req, res) => {
   try {
-    const pacientes = await Paciente.findAll({
-      include: [{
+      const include = [{
         model: Usuario,
         as: 'usuario',
         required: false,
         attributes:['nombre_usuario', 'apellido_usuario', 'correo_usuario'],
         
-      }], order: [['id_paciente', 'ASC']]
-    });
+      }]
 
-    if (!pacientes) {
-      return res.status(404).json({
-        success: false,
-        message: "No se encontraron pacientes."
-      });
-    }
+    const result = await PaginationService.paginate(Paciente, {
+      include,
+      order: [['id_paciente', 'DESC']],
+      req,
+      transformData: (pacientes) => pacientes.map(paciente => ({
+        // Personaliza según los campos que necesites
+        id_paciente: paciente.id_paciente,
+        nombre: paciente.nombre,
+        apellido: paciente.apellido,
+        identificacion: paciente.identificacion,
+        fecha_nacimiento: paciente.fecha_nacimiento,
+        sexo: paciente.sexo,
+        diagnostico_principal: paciente.diagnostico_principal,
+        nivel_autonomia: paciente.nivel_autonomia,
+        imagen_paciente: paciente.imagen_paciente,
+        usuario: {
+          nombre: paciente.usuario?.nombre_usuario,
+          apellido: paciente.usuario?.apellido_usuario,
+          email: paciente.usuario?.correo_usuario
+        }
+      }))
+    });
 
     res.status(200).json({
       success: true,
-      data: pacientes
+      data: result.data,
+      meta: result.meta
     });
   } catch (error) {
     console.error("Error en listarTodosPacientes:", error);
@@ -476,6 +491,41 @@ export const actualizarPaciente2 = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error al actualizar el paciente',
+      error: process.env.NODE_ENV === 'development' ? error.message : null
+    });
+  }
+};
+
+
+// Listar pacientes por usuario
+export const listarPacientes2 = async (req, res) => {
+  try {
+    const id_usuario = req.usuario.id;
+  
+    const pacientes = await getPacientesByUsuario(id_usuario);
+
+    const pacientesFormateados = pacientes.map(p => ({
+      id: p.id_paciente,
+      nombre: p.nombre,
+      apellido: p.apellido,
+      identificacion: p.identificacion,
+      fecha_nacimiento: p.fecha_nacimiento,
+      sexo: p.sexo,
+      diagnostico_principal: p.diagnostico_principal,
+      imagen_paciente: p.imagen_paciente,
+      es_cuidador_principal: p.Familiars?.some(f => f.cuidador_principal) || false,
+      parentesco: p.Familiars?.[0]?.parentesco || 'tutor'
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: pacientesFormateados
+    });
+  } catch (error) {
+    console.error("Error en listarPacientes:", error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al listar pacientes',
       error: process.env.NODE_ENV === 'development' ? error.message : null
     });
   }

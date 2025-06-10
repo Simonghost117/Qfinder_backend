@@ -20,53 +20,46 @@ export const configureMercadoPago = () => {
   });
 };
 
-export const verifyWebhookSignature = (req) => {
+export const verifyWebhookSignature = (body, signatureHeader) => {
+  console.log('🔍 Verificando firma...');
+  console.log('Body recibido:', typeof body, body);
+  console.log('Signature header:', signatureHeader);
+
+  if (!signatureHeader) {
+    console.warn('⚠️ No signature header present');
+    return false;
+  }
+
+  const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
+  console.log('Secret key:', secret ? '***' : 'UNDEFINED!');
+
   try {
-    const signatureHeader = req.headers['x-signature'];
-    
-    if (!signatureHeader) {
-      console.error('Header x-signature no encontrado');
-      return false;
-    }
-
-    // Extraer timestamp y firma del header
     const [tsPart, v1Part] = signatureHeader.split(',');
-    const timestamp = tsPart.split('=')[1];
-    const signature = v1Part.split('=')[1];
-    
-    if (!timestamp || !signature) {
-      console.error('Formato de firma inválido', signatureHeader);
+    const ts = tsPart?.split('=')[1];
+    const v1 = v1Part?.split('=')[1];
+
+    console.log('Timestamp:', ts);
+    console.log('Firma recibida (v1):', v1);
+
+    if (!ts || !v1) {
+      console.warn('⚠️ Firma mal formada');
       return false;
     }
 
-    const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
-    if (!secret) {
-      console.error('MERCADOPAGO_WEBHOOK_SECRET no configurado');
-      return false;
-    }
+    const payload = `${ts}:${typeof body === 'string' ? body : JSON.stringify(body)}`;
+    console.log('Payload usado:', payload);
 
-    // Usar el body raw (debe configurarse en el middleware)
-    const payload = req.rawBody || JSON.stringify(req.body);
-    
     const generatedSignature = crypto
       .createHmac('sha256', secret)
-      .update(`${timestamp}:${payload}`)
+      .update(payload)
       .digest('hex');
 
-    const isValid = signature === generatedSignature;
-    
-    if (!isValid) {
-      console.error('Firma no válida', {
-        received: signature,
-        generated: generatedSignature,
-        timestamp,
-        payload: payload.substring(0, 100) + '...'
-      });
-    }
+    console.log('Firma generada:', generatedSignature);
+    console.log('Coinciden?:', generatedSignature === v1);
 
-    return isValid;
+    return generatedSignature === v1;
   } catch (error) {
-    console.error('Error validando firma webhook:', error);
+    console.error('❌ Error en verifyWebhookSignature:', error);
     return false;
   }
 };
