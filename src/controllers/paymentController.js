@@ -112,15 +112,17 @@ async function processApprovedPayment(payment) {
 export const handleWebhook = async (req, res) => {
   console.log('🔔 Nuevo webhook recibido', {
     headers: req.headers,
-    body: req.body,
     query: req.query
   });
+
+  // Responder inmediatamente a MercadoPago
   res.status(200).end();
+
   try {
     // Verificar si es un ping de prueba
     if (req.query.type === 'test') {
       console.log('✅ Webhook de prueba recibido');
-      return res.status(200).json({ status: 'ok', test: true });
+      return;
     }
 
     // Verificar firma del webhook
@@ -129,59 +131,50 @@ export const handleWebhook = async (req, res) => {
 
     if (!signature || !webhookSecret) {
       console.warn('⚠️ Firma no proporcionada o secreto no configurado');
-      return res.status(401).json({ error: 'Unauthorized' });
+      return;
     }
 
     const isValid = verifyWebhookSignature(req.rawBody || req.body, signature, webhookSecret);
     if (!isValid) {
       console.warn('⚠️ Firma de webhook inválida');
-      return res.status(403).json({ error: 'Invalid signature' });
+      return;
     }
 
-    // Procesar según el tipo de webhook
+    // Procesar según el tipo de webhook (de manera asíncrona)
     const eventType = req.body.type || req.query.type;
     console.log(`📌 Tipo de evento: ${eventType}`);
 
-    switch (eventType) {
-      case 'payment':
-      case 'payment.updated':
-        const paymentId = req.body.data?.id || req.query['data.id'];
-        if (!paymentId) {
-          return res.status(400).json({ error: 'Payment ID missing' });
+    // Usar setTimeout o cola de mensajes para procesar en segundo plano
+    setTimeout(async () => {
+      try {
+        switch (eventType) {
+          case 'payment':
+          case 'payment.updated':
+            const paymentId = req.body.data?.id || req.query['data.id'];
+            if (!paymentId) {
+              console.error('Payment ID missing');
+              return;
+            }
+            
+            const payment = await getPayment(paymentId);
+            await processApprovedPayment(payment);
+            break;
+          
+          case 'subscription':
+          case 'subscription_preapproval':
+            console.log('Evento de suscripción recibido:', req.body);
+            break;
+          
+          default:
+            console.warn(`⚠️ Tipo de webhook no manejado: ${eventType}`);
         }
-        
-        const payment = await getPayment(paymentId);
-        await processApprovedPayment(payment);
-        break;
-      
-      case 'subscription':
-      case 'subscription_preapproval':
-        console.log('Evento de suscripción recibido:', req.body);
-        // Aquí puedes agregar lógica específica para suscripciones recurrentes
-        break;
-      
-      case 'plan':
-      case 'subscription_plan':
-        console.log('Evento de plan recibido:', req.body);
-        break;
-      
-      default:
-        console.warn(`⚠️ Tipo de webhook no manejado: ${eventType}`);
-        // Respondemos 200 aunque no lo manejemos para que MP no reintente
-    }
+      } catch (error) {
+        console.error('❌ Error en procesamiento asíncrono:', error);
+      }
+    }, 0);
 
-    return res.status(200).json({ success: true });
-    
   } catch (error) {
-    console.error('❌ Error en handleWebhook:', {
-      message: error.message,
-      stack: error.stack,
-      body: req.body
-    });
-    return res.status(500).json({ 
-      error: 'Internal server error',
-      details: error.message 
-    });
+    console.error('❌ Error en handleWebhook:', error);
   }
 };
 // Controlador para verificar estado de pago
