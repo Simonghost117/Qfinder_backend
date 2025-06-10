@@ -111,24 +111,21 @@ export const createCheckoutProPreference = async (req, res) => {
 
 export const handleWebhook = async (req, res) => {
   try {
-    // Validación estricta de la firma
-    // const isValidSignature = verifyWebhookSignature(req);
-    
-    // if (!isValidSignature) {
-    //   console.error('Intento de webhook no autorizado', {
-    //     headers: req.headers,
-    //     body: req.body
-    //   });
-    //   return res.sendStatus(401);
-    // }
+    // Extrae datos de body o query
+    const type = req.body.type || req.query.type;
+    const data = req.body.data || (req.query['data.id'] && { id: req.query['data.id'] });
 
-    console.log('Webhook válido recibido:', {
-      type: req.body.type,
-      data: req.body.data
-    });
+    if (!type || !data || !data.id) {
+      console.warn('Webhook recibido sin tipo o datos válidos:', {
+        headers: req.headers,
+        body: req.body,
+        query: req.query
+      });
+      return res.sendStatus(400);
+    }
 
-    const { type, data } = req.body;
-    
+    console.log('Webhook válido recibido:', { type, data });
+
     if (type === 'payment') {
       const payment = await getPayment(data.id);
       console.log('Estado del pago:', payment.status);
@@ -137,22 +134,22 @@ export const handleWebhook = async (req, res) => {
         case PAYMENT_STATUS.approved:
           await processApprovedPayment(payment);
           break;
-          
+
         case PAYMENT_STATUS.pending:
         case PAYMENT_STATUS.in_process:
           await processPendingPayment(payment);
           break;
-          
+
         case PAYMENT_STATUS.rejected:
         case PAYMENT_STATUS.cancelled:
           await processRejectedPayment(payment);
           break;
-          
+
         default:
           console.log(`Estado de pago no manejado: ${payment.status}`);
       }
     }
-    
+
     res.sendStatus(200);
   } catch (error) {
     console.error('Error en handleWebhook:', {
@@ -160,13 +157,14 @@ export const handleWebhook = async (req, res) => {
       stack: error.stack,
       body: req.body
     });
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       error: 'Error procesando webhook',
       details: error.message
     });
   }
 };
+
 
 async function processApprovedPayment(payment) {
   try {
