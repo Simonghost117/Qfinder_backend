@@ -12,11 +12,27 @@ import { verifyToken, verifyTokenWeb } from '../middlewares/verifyToken.js';
 import validateSchema from '../middlewares/validatoreSchema.js';
 import { redesSchema } from '../schema/redesSchema.js';
 import { esAdministradorRed } from '../middlewares/validacionesRed.js';
-import { validateAdmin } from '../middlewares/validateAdmin.js';
+import { validateAdmin, validateRol } from '../middlewares/validateAdmin.js';
+import { 
+    // requirePlusOrPro, 
+    verifyAccess } from '../middlewares/permissionsSuscription.js';
 
 const router = express.Router();
 // En redes.routes.js
+//🟢
 router.get('/obtenerIdRed', verifyToken, obtenerIdRedPorNombre)
+//🔴
+router.post('/crearMovil',
+    verifyToken,
+    // requirePlusOrPro(),
+    verifyAccess({ 
+    allowedRoles: ['Usuario', 'Administrador'],
+    blockFree: true // Esto activará el bloqueo para Free
+  }), 
+    validateSchema(redesSchema),
+    crearRed
+)
+//🟢
 router.get('/listarRedes',
     verifyToken,
     listarRedes
@@ -45,18 +61,19 @@ router.get('/redNombre',
 //ADMINISTRADOR
 router.post('/crear',
     verifyTokenWeb,
-    validateAdmin,
+    validateRol(['Administrador', 'Super']),
     validateSchema(redesSchema),
     crearRed
 )
 router.put('/actualizarRedW/:id_red',
     verifyTokenWeb,
+    validateRol(['Administrador', 'Super']),
     validateSchema(redesSchema),
     actualizarRed
 )
 router.delete('/eliminarRedW/:id_red',
     verifyTokenWeb,
-    validateAdmin,
+    validateRol(['Administrador', 'Super']),
     eliminarRed
 )
 export default router;

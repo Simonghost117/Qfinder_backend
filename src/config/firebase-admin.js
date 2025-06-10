@@ -2,15 +2,8 @@ import { initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getDatabase } from 'firebase-admin/database';
 import admin from 'firebase-admin';
-<<<<<<< HEAD
-import dotenv from "dotenv";
-dotenv.config()
-=======
-import { getMessaging } from 'firebase-admin/messaging';
-
-import dotenv from 'dotenv';
-dotenv.config();
->>>>>>> origin/test
+// import dotenv from 'dotenv';
+// dotenv.config();
 
 // Configuración desde variables de entorno
 const serviceAccount = {

@@ -16,7 +16,7 @@ export const verifyToken = async (req, res, next) => {
 
     // Buscar usuario en base de datos
     const usuario = await Usuario.findByPk(decoded.id, {
-      attributes: ['id_usuario', 'tipo_usuario', 'estado_usuario', 'correo_usuario']
+      attributes: ['id_usuario', 'tipo_usuario', 'estado_usuario', 'correo_usuario', 'membresia']
     });
 
     if (!usuario || usuario.estado_usuario !== 'Activo') {
@@ -40,7 +40,8 @@ export const verifyToken = async (req, res, next) => {
     req.user = {
       id_usuario: usuario.id_usuario,
       tipo_usuario: usuario.tipo_usuario,
-      correo: usuario.correo_usuario
+      correo: usuario.correo_usuario,
+      membresia: usuario.membresia 
     };
 
     next();
