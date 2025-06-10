@@ -129,22 +129,14 @@ export const handleWebhook = async (req, res) => {
     const signature = req.headers['x-signature'];
     const webhookSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
 
-    if (!signature) {
-      console.warn('⚠️ Webhook sin firma');
-      return res.status(401).json({ error: 'Firma no proporcionada' });
+    if (!signature || !webhookSecret) {
+      console.warn('⚠️ Firma no proporcionada o secreto no configurado');
+      return res.status(401).json({ error: 'Firma no proporcionada o secreto no configurado' });
     }
 
     // Usar el cuerpo RAW para verificación
-    const rawBody = req.rawBody || JSON.stringify(req.body);
-    const body = typeof rawBody === 'string' ? JSON.parse(rawBody) : rawBody;
-
-    console.log('🔍 Verificando firma...', {
-      body: body,
-      signature: signature,
-      secret: webhookSecret ? '***' : 'NO CONFIGURADO'
-    });
-
-    const isValid = verifyWebhookSignature(body, signature, webhookSecret);
+    const rawBody = req.rawBody || Buffer.from(JSON.stringify(req.body));
+    const isValid = verifyWebhookSignature(rawBody, signature, webhookSecret);
 
     if (!isValid) {
       console.warn('⚠️ Firma de webhook inválida');
