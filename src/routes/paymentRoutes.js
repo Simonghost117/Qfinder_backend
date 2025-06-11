@@ -13,19 +13,22 @@ const router = express.Router();
 // Middleware para webhooks que preserva el body raw
 const webhookMiddleware = express.raw({
   type: 'application/json',
+  limit: '10mb', // Asegurar suficiente capacidad
   verify: (req, res, buf, encoding) => {
     try {
       if (buf && buf.length) {
-        req.rawBody = buf; // Almacena el buffer exacto
-        // Opcional: parsear el JSON para tener req.body
+        // Guardar el buffer exacto sin modificaciones
+        req.rawBody = buf;
+        
+        // Opcional: parsear el JSON para tener req.body disponible
         try {
           req.body = JSON.parse(buf.toString(encoding || 'utf8'));
         } catch (e) {
-          console.warn('⚠️ No se pudo parsear el body JSON');
+          console.warn('⚠️ No se pudo parsear el body JSON (esto puede ser normal para webhooks)');
         }
       }
     } catch (e) {
-      console.error('❌ Error setting rawBody', e);
+      console.error('❌ Error configurando rawBody', e);
       throw e;
     }
   }

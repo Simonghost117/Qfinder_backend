@@ -236,111 +236,184 @@ export const createCheckoutProPreference = async (req, res) => {
 };
 
 export const handleWebhook = async (req, res) => {
+  // 1. Configuración inicial y logs de depuración
+  const requestId = req.headers['x-request-id'] || `webhook-${Date.now()}`;
+  console.log(`🔔 Webhook recibido [${requestId}]`, {
+    method: req.method,
+    url: req.originalUrl,
+    headers: Object.keys(req.headers),
+    bodySize: req.rawBody?.length || 0
+  });
+
   try {
-    // Verificación de firma del webhook
+    // 2. Verificación de firma del webhook (paso crítico)
     if (process.env.MERCADOPAGO_WEBHOOK_SECRET) {
-const signature = req.headers['x-signature'];
-const requestBody = req.rawBody ? req.rawBody.toString('utf8') : JSON.stringify(req.body);
+      const signature = req.headers['x-signature'];
+      const requestBody = req.rawBody ? req.rawBody.toString('utf8') : '';
+
+      if (!signature) {
+        console.warn(`⚠️ [${requestId}] Faltan headers de firma`, {
+          headers: req.headers
+        });
+        return res.status(400).json({ 
+          error: 'Missing signature headers',
+          requestId
+        });
+      }
+
+      console.log(`🔍 [${requestId}] Verificando firma...`, {
+        signatureHeader: signature,
+        bodyLength: requestBody.length
+      });
+
       try {
         const isValid = verifyWebhookSignature(requestBody, signature);
         if (!isValid) {
-          console.warn('⚠️ Webhook con firma inválida recibido', {
+          console.warn(`⚠️ [${requestId}] Webhook con firma inválida`, {
             headers: req.headers,
-            body: req.body
+            bodySample: requestBody.substring(0, 200),
+            rawBodyHash: crypto.createHash('sha256').update(requestBody).digest('hex')
           });
-          return res.status(403).json({ error: 'Firma inválida' });
+          return res.status(403).json({ 
+            error: 'Invalid signature',
+            requestId,
+            details: 'La firma del webhook no pudo ser verificada'
+          });
         }
       } catch (sigError) {
-        console.error('❌ Error verificando firma del webhook:', sigError);
-        return res.status(400).json({ error: 'Error verificando firma' });
+        console.error(`❌ [${requestId}] Error verificando firma:`, {
+          error: sigError.message,
+          stack: sigError.stack
+        });
+        return res.status(400).json({ 
+          error: 'Signature verification failed',
+          requestId,
+          details: process.env.NODE_ENV === 'development' ? sigError.message : undefined
+        });
       }
     }
 
-    // Manejo de webhooks de suscripción
-    const subscriptionType = req.query.type || req.body.type;
-    const subscriptionId = req.query['data.id'] || req.body.data?.id || req.body.id;
+    // 3. Procesamiento del cuerpo del webhook
+    let webhookData;
+    try {
+      webhookData = req.body || (req.rawBody ? JSON.parse(req.rawBody.toString('utf8')) : {});
+    } catch (parseError) {
+      console.error(`❌ [${requestId}] Error parseando body:`, parseError.message);
+      return res.status(400).json({ 
+        error: 'Invalid JSON body',
+        requestId
+      });
+    }
+
+    // 4. Manejo de webhooks de suscripción
+    const subscriptionType = req.query.type || webhookData.type;
+    const subscriptionId = req.query['data.id'] || webhookData.data?.id || webhookData.id;
 
     if (subscriptionType && subscriptionId) {
-      console.log('📨 Webhook de suscripción recibido:', { 
+      console.log(`📨 [${requestId}] Webhook de suscripción`, { 
         type: subscriptionType,
         id: subscriptionId,
-        action: req.body.action 
+        action: webhookData.action 
       });
 
-      switch (subscriptionType) {
-        case 'subscription_preapproval':
-          await processSubscriptionUpdate(req.body);
-          return res.sendStatus(200);
-        case 'subscription_authorized_payment':
-          await processSubscriptionPayment(req.body);
-          return res.sendStatus(200);
-        default:
-          console.warn(`⚠️ Tipo de suscripción no manejado: ${subscriptionType}`);
-          return res.sendStatus(200);
+      try {
+        switch (subscriptionType) {
+          case 'subscription_preapproval':
+            await processSubscriptionUpdate(webhookData);
+            return res.sendStatus(200);
+          case 'subscription_authorized_payment':
+            await processSubscriptionPayment(webhookData);
+            return res.sendStatus(200);
+          default:
+            console.warn(`⚠️ [${requestId}] Tipo de suscripción no manejado: ${subscriptionType}`);
+            return res.sendStatus(200);
+        }
+      } catch (subscriptionError) {
+        console.error(`❌ [${requestId}] Error procesando suscripción:`, {
+          error: subscriptionError.message,
+          stack: subscriptionError.stack
+        });
+        return res.status(500).json({
+          error: 'Subscription processing failed',
+          requestId
+        });
       }
     }
 
-    // Manejo de webhooks tradicionales
-    const topic = req.query.topic || req.body.topic;
-    const id = req.query.id || req.body.data?.id || extractId(req.body.resource);
+    // 5. Manejo de webhooks tradicionales
+    const topic = req.query.topic || webhookData.topic;
+    const id = req.query.id || webhookData.data?.id || extractId(webhookData.resource);
 
     if (!topic || !id) {
-      console.warn('⚠️ Webhook recibido sin topic o id válido:', {
-        headers: req.headers,
-        body: req.body,
-        query: req.query
+      console.warn(`⚠️ [${requestId}] Webhook sin topic o ID válido`, {
+        query: req.query,
+        body: webhookData
       });
       return res.sendStatus(400);
     }
 
-    console.log('📨 Webhook recibido:', { topic, id });
+    console.log(`📨 [${requestId}] Webhook procesado`, { topic, id });
 
-    if (topic === 'payment') {
-      const payment = await getPayment(id);
-      console.log('💰 Estado del pago:', payment.status);
+    try {
+      if (topic === 'payment') {
+        const payment = await getPayment(id);
+        console.log(`💰 [${requestId}] Estado del pago: ${payment.status}`);
 
-      switch (payment.status) {
-        case PAYMENT_STATUS.approved:
-        case PAYMENT_STATUS.authorized:
-          await processApprovedPayment(payment);
-          break;
-        case PAYMENT_STATUS.pending:
-        case PAYMENT_STATUS.in_process:
-          await processPendingPayment(payment);
-          break;
-        case PAYMENT_STATUS.rejected:
-        case PAYMENT_STATUS.cancelled:
-          await processRejectedPayment(payment);
-          break;
-        default:
-          console.log(`⚠️ Estado de pago no manejado: ${payment.status}`);
+        switch (payment.status) {
+          case PAYMENT_STATUS.approved:
+          case PAYMENT_STATUS.authorized:
+            await processApprovedPayment(payment);
+            break;
+          case PAYMENT_STATUS.pending:
+          case PAYMENT_STATUS.in_process:
+            await processPendingPayment(payment);
+            break;
+          case PAYMENT_STATUS.rejected:
+          case PAYMENT_STATUS.cancelled:
+            await processRejectedPayment(payment);
+            break;
+          default:
+            console.log(`⚠️ [${requestId}] Estado de pago no manejado: ${payment.status}`);
+        }
+      } 
+      else if (topic === 'merchant_order') {
+        await processMerchantOrder(webhookData.resource);
       }
-    } 
-    else if (topic === 'merchant_order') {
-      await processMerchantOrder(req.body.resource);
+
+      return res.sendStatus(200);
+    } catch (processingError) {
+      console.error(`❌ [${requestId}] Error procesando webhook:`, {
+        error: processingError.message,
+        stack: processingError.stack,
+        topic,
+        id
+      });
+      return res.status(500).json({
+        error: 'Webhook processing failed',
+        requestId
+      });
     }
 
-    res.sendStatus(200);
   } catch (error) {
-    console.error('❌ Error en handleWebhook:', {
+    console.error(`❌ [${requestId}] Error crítico en handleWebhook:`, {
       error: {
         name: error.name,
         message: error.message,
         stack: error.stack
       },
-      body: req.body,
-      query: req.query,
+      rawBodySample: req.rawBody?.toString('utf8').substring(0, 200),
       timestamp: new Date().toISOString()
     });
     
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      error: 'Error procesando webhook',
+      error: 'Internal server error',
+      requestId,
       details: process.env.NODE_ENV === 'development' ? {
         message: error.message,
-        stack: error.stack
+        errorCode: error.code
       } : undefined,
-      reference: `WEBHOOK-ERR-${Date.now()}`
+      reference: `WEBHOOK-ERR-${requestId}`
     });
   }
 };

@@ -19,6 +19,7 @@ export const configureMercadoPago = () => {
     }
   });
 };
+
 export const verifyWebhookSignature = (payload, signatureHeader) => {
   try {
     if (!signatureHeader) {
@@ -47,11 +48,9 @@ export const verifyWebhookSignature = (payload, signatureHeader) => {
       return false;
     }
 
-    // Asegurar que el payload sea string sin espacios ni saltos de línea
-    const payloadString = typeof payload === 'string' 
-      ? payload 
-      : JSON.stringify(payload).replace(/\s+/g, '');
-
+    // IMPORTANTE: No modificar el payload de ninguna manera
+    const payloadString = typeof payload === 'string' ? payload : JSON.stringify(payload);
+    
     // Crear la firma esperada
     const dataToSign = `${timestamp}:${payloadString}`;
     const generatedSignature = crypto
@@ -59,17 +58,21 @@ export const verifyWebhookSignature = (payload, signatureHeader) => {
       .update(dataToSign)
       .digest('hex');
 
-    // Comparación exacta (sin timingSafeEqual que puede causar problemas)
+    // Comparación exacta
     const isValid = receivedSignature === generatedSignature;
     
     if (!isValid) {
-      console.error('❌ Firma no válida', {
+      console.error('❌ Firma no válida - Detalles:', {
         received: receivedSignature,
         generated: generatedSignature,
         timestamp,
-        payloadSample: payloadString.substring(0, 100),
-        dataToSign: dataToSign.substring(0, 100),
-        secret: secret.substring(0, 3) + '...' // No loguear el secret completo
+        payloadLength: payloadString.length,
+        dataToSignLength: dataToSign.length,
+        secretConfigured: !!secret,
+        // Depuración adicional
+        payloadFirst100: payloadString.substring(0, 100),
+        generatedFirst100: generatedSignature.substring(0, 100),
+        receivedFirst100: receivedSignature.substring(0, 100)
       });
     }
 
