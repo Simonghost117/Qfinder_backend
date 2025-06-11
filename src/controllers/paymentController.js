@@ -245,8 +245,22 @@ export const handleWebhook = async (req, res) => {
     url: req.originalUrl,
     rawBodyLength: req.rawBody?.length || 0,
     hasSignature: !!req.headers['x-signature'],
+    headers: {
+      'content-type': req.headers['content-type'],
+      'content-length': req.headers['content-length']
+    }
   });
 
+    if (!req.rawBody || req.rawBody.length === 0) {
+    console.error(`❌ [${requestId}] Cuerpo de solicitud vacío. Detalles:`, {
+      rawBodyExists: !!req.rawBody,
+      rawBodyLength: req.rawBody?.length,
+      bodyExists: !!req.body,
+      bodyType: typeof req.body,
+      headers: req.headers
+    });
+    return res.status(400).json({ error: 'Missing request body' });
+  }
   try {
     // 🔐 1. Verificación de firma (si hay un secret configurado)
     if (process.env.MERCADOPAGO_WEBHOOK_SECRET) {

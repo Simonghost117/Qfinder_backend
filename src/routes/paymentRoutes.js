@@ -11,30 +11,27 @@ import { verifyToken } from '../middlewares/verifyToken.js';
 
 const router = express.Router();
 // Middleware para webhooks que preserva el body raw
-const webhookMiddleware = express.raw({
-  type: 'application/json',
+const rawBodyMiddleware = express.raw({
+  type: '*/*', // Acepta cualquier tipo de contenido
   limit: '10mb',
   verify: (req, res, buf, encoding) => {
-    try {
-      if (buf && buf.length) {
-        // Almacena el buffer exacto como rawBody
-        req.rawBody = Buffer.from(buf); // Crear una nueva copia del buffer
-        
-        // Intenta parsear el JSON para tener req.body
+    if (buf && buf.length > 0) {
+      req.rawBody = buf;
+      console.log(`📦 Middleware - RawBody recibido (${buf.length} bytes)`);
+      
+      // Intenta parsear JSON solo si el contenido es JSON
+      if (req.headers['content-type']?.includes('application/json')) {
         try {
           req.body = JSON.parse(buf.toString(encoding || 'utf8'));
+          console.log('🔄 Body parseado correctamente');
         } catch (e) {
-          console.warn('⚠️ No se pudo parsear el body JSON', e.message);
-          req.body = {}; // Asigna un objeto vacío si falla el parseo
+          console.warn('⚠️ Error parseando JSON:', e.message);
+          req.body = {};
         }
-      } else {
-        console.warn('⚠️ Buffer vacío o no definido');
-        req.rawBody = Buffer.from([]); // Asigna un buffer vacío
-        req.body = {};
       }
-    } catch (e) {
-      console.error('❌ Error configurando rawBody', e);
-      req.rawBody = Buffer.from([]);
+    } else {
+      console.warn('⚠️ Middleware - Buffer vacío o no definido');
+      req.rawBody = Buffer.alloc(0);
       req.body = {};
     }
   }
@@ -44,7 +41,7 @@ const webhookMiddleware = express.raw({
 router.post('/checkout-pro', verifyToken, createCheckoutProPreference);
 router.get('/verify-payment/:paymentId', verifyToken, verifyPayment);
 // Webhook Mercado Pago (sin autenticación)
-router.post('/webhook', webhookMiddleware, handleWebhook);
+router.post('/webhook', rawBodyMiddleware, handleWebhook);
 // paymentRoutes.js
 router.get('/success-redirect', successRedirect);
 router.get('/failure-redirect', failureRedirect);
