@@ -19,7 +19,6 @@ router.get('/verify-payment/:paymentId', verifyToken, verifyPayment);
 // Ruta de webhook con diagnóstico y manejo especial
 router.post(
   '/webhook',
-  debugMiddleware,
   express.raw({ type: 'application/json' }), // ✅ Captura raw body correctamente
   (req, res, next) => {
     // Convertir buffer a string y parsear JSON si es necesario
