@@ -27,7 +27,7 @@ export const verifyWebhookSignature = (payload, signatureHeader) => {
       return false;
     }
 
-    // Extraer timestamp y firma del header
+    // Parsear el header de firma
     const signatureParts = {};
     signatureHeader.split(',').forEach(part => {
       const [key, value] = part.split('=');
@@ -38,21 +38,18 @@ export const verifyWebhookSignature = (payload, signatureHeader) => {
     const receivedSignature = signatureParts.v1;
     
     if (!timestamp || !receivedSignature) {
-      console.error('❌ Formato de firma inválido:', signatureHeader);
+      console.error('❌ Formato de firma inválido');
       return false;
     }
 
     const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
     if (!secret) {
-      console.error('❌ MERCADOPAGO_WEBHOOK_SECRET no configurado');
+      console.error('❌ Secret no configurado');
       return false;
     }
 
-    // IMPORTANTE: No modificar el payload de ninguna manera
-    const payloadString = typeof payload === 'string' ? payload : JSON.stringify(payload);
-    
     // Crear la firma esperada
-    const dataToSign = `${timestamp}:${payloadString}`;
+    const dataToSign = `${timestamp}:${payload}`;
     const generatedSignature = crypto
       .createHmac('sha256', secret)
       .update(dataToSign)
@@ -62,23 +59,17 @@ export const verifyWebhookSignature = (payload, signatureHeader) => {
     const isValid = receivedSignature === generatedSignature;
     
     if (!isValid) {
-      console.error('❌ Firma no válida - Detalles:', {
-        received: receivedSignature,
-        generated: generatedSignature,
+      console.error('❌ Firma no válida', {
+        received: receivedSignature.substring(0, 32) + '...',
+        generated: generatedSignature.substring(0, 32) + '...',
         timestamp,
-        payloadLength: payloadString.length,
-        dataToSignLength: dataToSign.length,
-        secretConfigured: !!secret,
-        // Depuración adicional
-        payloadFirst100: payloadString.substring(0, 100),
-        generatedFirst100: generatedSignature.substring(0, 100),
-        receivedFirst100: receivedSignature.substring(0, 100)
+        payloadLength: payload.length
       });
     }
 
     return isValid;
   } catch (error) {
-    console.error('❌ Error validando firma webhook:', error.message);
+    console.error('❌ Error validando firma:', error.message);
     return false;
   }
 };
