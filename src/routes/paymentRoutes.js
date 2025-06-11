@@ -11,18 +11,22 @@ import { verifyToken } from '../middlewares/verifyToken.js';
 
 const router = express.Router();
 // Middleware para webhooks que preserva el body raw
-const webhookMiddleware = express.json({
+const webhookMiddleware = express.raw({
+  type: 'application/json',
   verify: (req, res, buf, encoding) => {
     try {
       if (buf && buf.length) {
-        // Guardar el buffer original sin conversión
-        req.rawBody = buf;
-        // También parsear el JSON para tener req.body
-        req.body = JSON.parse(buf.toString(encoding || 'utf8'));
+        req.rawBody = buf; // Almacena el buffer exacto
+        // Opcional: parsear el JSON para tener req.body
+        try {
+          req.body = JSON.parse(buf.toString(encoding || 'utf8'));
+        } catch (e) {
+          console.warn('⚠️ No se pudo parsear el body JSON');
+        }
       }
     } catch (e) {
-      console.error('Error setting rawBody', e);
-      throw e; // Propagar el error
+      console.error('❌ Error setting rawBody', e);
+      throw e;
     }
   }
 });

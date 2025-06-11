@@ -19,41 +19,39 @@ export const configureMercadoPago = () => {
     }
   });
 };
-
-// En mercadopago.js - modificar la función verifyWebhookSignature
 export const verifyWebhookSignature = (payload, signatureHeader) => {
   try {
     if (!signatureHeader) {
-      console.error('Header de firma no encontrado');
+      console.error('❌ Header de firma no encontrado');
       return false;
     }
 
-    // Parsear el header de firma
+    // Extraer timestamp y firma del header
     const signatureParts = {};
     signatureHeader.split(',').forEach(part => {
       const [key, value] = part.split('=');
-      if (key && value) {
-        signatureParts[key.trim()] = value.trim();
-      }
+      if (key && value) signatureParts[key.trim()] = value.trim();
     });
 
     const timestamp = signatureParts.ts;
     const receivedSignature = signatureParts.v1;
     
     if (!timestamp || !receivedSignature) {
-      console.error('Formato de firma inválido:', signatureHeader);
+      console.error('❌ Formato de firma inválido:', signatureHeader);
       return false;
     }
 
     const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
     if (!secret) {
-      console.error('MERCADOPAGO_WEBHOOK_SECRET no configurado');
+      console.error('❌ MERCADOPAGO_WEBHOOK_SECRET no configurado');
       return false;
     }
 
-    // IMPORTANTE: Asegurarse que el payload sea string y no esté modificado
-    const payloadString = typeof payload === 'string' ? payload : JSON.stringify(payload);
-    
+    // Asegurar que el payload sea string sin espacios ni saltos de línea
+    const payloadString = typeof payload === 'string' 
+      ? payload 
+      : JSON.stringify(payload).replace(/\s+/g, '');
+
     // Crear la firma esperada
     const dataToSign = `${timestamp}:${payloadString}`;
     const generatedSignature = crypto
@@ -61,22 +59,23 @@ export const verifyWebhookSignature = (payload, signatureHeader) => {
       .update(dataToSign)
       .digest('hex');
 
-    // Comparación segura
+    // Comparación exacta (sin timingSafeEqual que puede causar problemas)
     const isValid = receivedSignature === generatedSignature;
     
     if (!isValid) {
-      console.error('Firma no válida', {
+      console.error('❌ Firma no válida', {
         received: receivedSignature,
         generated: generatedSignature,
         timestamp,
-        payloadSample: payloadString.substring(0, 100) + '...',
-        signatureHeader
+        payloadSample: payloadString.substring(0, 100),
+        dataToSign: dataToSign.substring(0, 100),
+        secret: secret.substring(0, 3) + '...' // No loguear el secret completo
       });
     }
 
     return isValid;
   } catch (error) {
-    console.error('Error validando firma webhook:', error);
+    console.error('❌ Error validando firma webhook:', error.message);
     return false;
   }
 };
