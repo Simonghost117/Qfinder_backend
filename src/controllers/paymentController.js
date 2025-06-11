@@ -67,14 +67,15 @@ export const handleWebhook = async (req, res) => {
     if (!isValid) {
       logger.warn('Firma de webhook inválida', {
         headers: req.headers,
-        rawBody: req.rawBody
+        rawBody: req.rawBody.toString()
       });
       return res.status(401).send('Invalid signature');
     }
-
+ const jsonBody = JSON.parse(req.body.toString());
     // Procesar evento
-    const eventType = req.body.type;
-    const paymentId = req.body.data?.id;
+  
+    const eventType = jsonBody.type;
+    const paymentId = jsonBody.data?.id;
 
     if (eventType.includes('payment') && paymentId) {
       await paymentQueue.add({ paymentId });
