@@ -11,51 +11,6 @@ import { verifyToken } from '../middlewares/verifyToken.js';
 
 const router = express.Router();
 
-// Versión mejorada del middleware para raw body
-const rawBodyMiddleware = (req, res, next) => {
-  const chunks = [];
-
-  req.on('data', (chunk) => {
-    chunks.push(chunk);
-  });
-
-  req.on('end', () => {
-    try {
-      req.rawBody = Buffer.concat(chunks);
-
-      if (req.headers['content-type']?.includes('application/json')) {
-        try {
-          req.body = JSON.parse(req.rawBody.toString('utf8'));
-        } catch (err) {
-          console.warn('⚠️ JSON inválido en body:', err.message);
-          req.body = {};
-        }
-      }
-
-      console.log(`📦 RawBody recibido (${req.rawBody.length} bytes)`);
-      next();
-    } catch (err) {
-      console.error('❌ Error procesando raw body:', err);
-      res.status(500).send('Error interno procesando raw body');
-    }
-  });
-
-  req.on('error', (err) => {
-    console.error('❌ Error en stream del request:', err);
-    res.status(500).send('Error en el stream de datos');
-  });
-};
-
-
-// Middleware de diagnóstico para verificar el flujo
-const debugMiddleware = (req, res, next) => {
-  console.log('🔍 Headers recibidos:', {
-    'content-type': req.headers['content-type'],
-    'content-length': req.headers['content-length'],
-    'x-signature': req.headers['x-signature']
-  });
-  next();
-};
 
 // Rutas de pagos protegidas
 router.post('/checkout-pro', verifyToken, createCheckoutProPreference);
@@ -64,15 +19,21 @@ router.get('/verify-payment/:paymentId', verifyToken, verifyPayment);
 // Ruta de webhook con diagnóstico y manejo especial
 router.post(
   '/webhook',
-  debugMiddleware,  // Middleware de diagnóstico
-  rawBodyMiddleware,  // Middleware para raw body
+  debugMiddleware,
+  express.raw({ type: 'application/json' }), // ✅ Captura raw body correctamente
   (req, res, next) => {
-    // Verificación adicional del body
-    if (!req.rawBody || req.rawBody.length === 0) {
-      console.error('❌ Error crítico: rawBody no está disponible');
-      return res.status(400).json({ error: 'Missing request body' });
+    // Convertir buffer a string y parsear JSON si es necesario
+    try {
+      req.rawBody = req.body;
+      req.body = JSON.parse(req.rawBody.toString('utf-8'));
+
+      console.log(`📦 RawBody recibido (${req.rawBody.length} bytes)`);
+
+      next();
+    } catch (err) {
+      console.error('❌ Error al parsear el rawBody:', err);
+      return res.status(400).json({ error: 'Invalid JSON body' });
     }
-    next();
   },
   handleWebhook
 );
