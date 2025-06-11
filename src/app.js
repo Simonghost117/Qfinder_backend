@@ -11,6 +11,9 @@ import { EventEmitter } from 'events';
 startAllJobs();
 // Configuración de entorno
 dotenv.config();
+
+// Inicialización de la app
+const app = express();
 if (process.env.RAILWAY_ENVIRONMENT) {
   app.use((req, res, next) => {
     // Aumentar timeout para webhooks
@@ -20,9 +23,6 @@ if (process.env.RAILWAY_ENVIRONMENT) {
     next();
   });
 }
-// Inicialización de la app
-const app = express();
-
 // Configuración de EventEmitter
 EventEmitter.defaultMaxListeners = 15;
 
