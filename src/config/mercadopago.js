@@ -22,20 +22,26 @@ export const configureMercadoPago = () => {
 
 export const verifyWebhookSignature = (req) => {
   try {
-    const signatureHeader = req.headers['x-signature'];
+    // Verifica si el header existe (puede venir en diferentes formatos)
+    const signatureHeader = req.headers['x-signature'] || req.headers['x-signature-sha256'];
     
     if (!signatureHeader) {
-      console.error('Header x-signature no encontrado');
+      console.error('Header de firma no encontrado en:', req.headers);
       return false;
     }
 
-    // Extraer timestamp y firma del header
-    const [tsPart, v1Part] = signatureHeader.split(',');
-    const timestamp = tsPart.split('=')[1];
-    const signature = v1Part.split('=')[1];
+    // Maneja el formato de MercadoPago (ts=timestamp,v1=firma)
+    const signatureParts = {};
+    signatureHeader.split(',').forEach(part => {
+      const [key, value] = part.split('=');
+      signatureParts[key.trim()] = value.trim();
+    });
+
+    const timestamp = signatureParts.ts;
+    const signature = signatureParts.v1;
     
     if (!timestamp || !signature) {
-      console.error('Formato de firma inválido', signatureHeader);
+      console.error('Formato de firma inválido:', signatureHeader);
       return false;
     }
 
@@ -45,7 +51,7 @@ export const verifyWebhookSignature = (req) => {
       return false;
     }
 
-    // Usar el body raw (debe configurarse en el middleware)
+    // Usa el rawBody que guardó el middleware
     const payload = req.rawBody || JSON.stringify(req.body);
     
     const generatedSignature = crypto
