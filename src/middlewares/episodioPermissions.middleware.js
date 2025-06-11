@@ -4,7 +4,7 @@ import { handleError } from '../utils/errorHandler.js';
 import Colaborador from '../models/colaborador.model.js';
 
 
-export const checkEpisodioPermissions = (allowedRoles = ['Usuario', 'Familiar', 'Administrador']) => {
+export const checkEpisodioPermissions = (allowedRoles = ['Usuario', 'Familiar', 'Administrador', 'Colaborador']) => {
   return async (req, res, next) => {
     try {
       console.log('Iniciando verificación de permisos...'); // Debug

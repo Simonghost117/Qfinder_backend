@@ -3,6 +3,7 @@ import Paciente from '../models/paciente.model.js';
 import Medicamento from '../models/medicamento.model.js';
 import { parseFrequency } from '../utils/conversionFrecuencia.js';
 
+// Asigna medicamnetos a cualquier paciente
 export const asignarMedicamento = async (req, res) => {
   try {
     const { id_paciente, id_medicamento, fecha_inicio, fecha_fin, dosis, frecuencia } = req.body;
