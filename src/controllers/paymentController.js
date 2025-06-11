@@ -76,42 +76,166 @@ const calculateRenewalDate = (startDate, planType) => {
 
 // Controladores principales
 export const createCheckoutProPreference = async (req, res) => {
-};
-async function processApprovedPayment(payment) {
-  const externalRef = payment.external_reference;
-  const [_, userId, __, planType] = externalRef.split('_');
-  
-  // Verificar si ya existe una suscripción para evitar duplicados
-  const existingSub = await Subscription.findOne({
-    where: { id_usuario: userId, estado_suscripcion: 'active' }
-  });
-  
-  if (existingSub) {
-    console.log(`Active subscription already exists for user ${userId}`);
-    return;
+  const transaction = await models.sequelize.transaction();
+  try {
+    const { userId, planType } = req.body;
+    
+    if (!userId || !planType) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        error: 'Faltan campos requeridos',
+        required: ['userId', 'planType'],
+        received: { userId, planType }
+      });
+    }
+
+    const plan = PLANS_MERCADOPAGO[planType.toLowerCase()];
+    if (!plan) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        error: `Tipo de plan inválido: ${planType}`,
+        availablePlans: Object.keys(PLANS_MERCADOPAGO)
+      });
+    }
+
+    const user = await Usuario.findByPk(userId, { transaction });
+    if (!user) {
+      await transaction.rollback();
+      return res.status(404).json({ 
+        success: false,
+        error: 'Usuario no encontrado'
+      });
+    }
+
+    // Verificar si el usuario ya tiene una suscripción activa
+    const existingSubscription = await Subscription.findOne({
+      where: { 
+        id_usuario: userId, 
+        estado_suscripcion: [SUBSCRIPTION_STATUS.active, SUBSCRIPTION_STATUS.pending] 
+      },
+      transaction
+    });
+
+    if (existingSubscription) {
+      await transaction.rollback();
+      return res.status(409).json({
+        success: false,
+        error: 'El usuario ya tiene una suscripción activa o pendiente',
+        currentSubscription: {
+          id: existingSubscription.id,
+          plan: existingSubscription.tipo_suscripcion,
+          status: existingSubscription.estado_suscripcion
+        }
+      });
+    }
+
+    const baseUrl = process.env.API_BASE_URL;
+    const externalRef = `USER_${userId}_PLAN_${planType.toUpperCase()}`;
+
+    const preferenceData = {
+      items: [{
+        title: `Suscripción ${planType.toUpperCase()}`,
+        description: plan.description,
+        quantity: 1,
+        unit_price: plan.amount,
+        currency_id: plan.currency_id,
+        picture_url: plan.picture_url || 'https://tuapp.com/logo.png'
+      }],
+      payer: {
+        email: user.correo_usuario,
+        name: user.nombre_usuario,
+        surname: user.apellido_usuario || '',
+        identification: {
+          type: "CC",
+          number: user.documento_usuario || "00000000"
+        }
+      },
+      payment_methods: {
+        installments: 1,
+        default_installments: 1,
+        excluded_payment_types: [{ id: "ticket" }, { id: "atm" }]
+      },
+      external_reference: externalRef,
+      notification_url: `${baseUrl}/api/payments/webhook`,
+      back_urls: {
+        success: `${baseUrl}/api/payments/success-redirect?user_id=${userId}&plan_type=${planType}`,
+        failure: `${baseUrl}/api/payments/failure-redirect?user_id=${userId}`,
+        pending: `${baseUrl}/api/payments/pending-redirect?user_id=${userId}`
+      },
+      auto_return: "approved",
+      metadata: {
+        user_id: userId,
+        plan_type: planType,
+        app: "qfinder",
+        deeplink_success: `qfinder://payment/success?user_id=${userId}&plan_type=${planType}`,
+        deeplink_failure: `qfinder://payment/failure?user_id=${userId}`,
+        deeplink_pending: `qfinder://payment/pending?user_id=${userId}`
+      },
+      statement_descriptor: `QFINDER ${planType.toUpperCase()}`
+    };
+
+    if (plan.frequency && plan.frequency_type) {
+      preferenceData.auto_recurring = {
+        frequency: plan.frequency,
+        frequency_type: plan.frequency_type,
+        transaction_amount: plan.amount,
+        currency_id: plan.currency_id
+      };
+    }
+
+    const preference = await createPreference(preferenceData);
+    
+    // Registrar la creación de la preferencia
+    await Subscription.create({
+      id_usuario: userId,
+      mercado_pago_id: preference.id,
+      plan_id: `plan-${planType}`,
+      tipo_suscripcion: planType,
+      estado_suscripcion: SUBSCRIPTION_STATUS.pending,
+      datos_pago: JSON.stringify({
+        preference_id: preference.id,
+        status: 'preference_created',
+        date_created: new Date(),
+        amount: plan.amount,
+        currency: plan.currency_id
+      })
+    }, { transaction });
+    
+    await transaction.commit();
+    
+    res.status(200).json({
+      success: true,
+      init_point: preference.init_point,
+      sandbox_init_point: preference.sandbox_init_point,
+      preference_id: preference.id,
+      external_reference: externalRef
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error('Error en createCheckoutProPreference:', {
+      error: {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      },
+      requestBody: req.body,
+      timestamp: new Date().toISOString()
+    });
+    
+    res.status(500).json({ 
+      success: false,
+      error: 'Error al crear preferencia de pago',
+      details: process.env.NODE_ENV === 'development' ? {
+        message: error.message,
+        stack: error.stack
+      } : undefined,
+      reference: `ERR-${Date.now()}`
+    });
   }
+};
 
-  // Crear nueva suscripción
-  await Subscription.create({
-    id_usuario: userId,
-    mercado_pago_id: payment.id,
-    plan_id: `plan-${planType}`,
-    tipo_suscripcion: planType,
-    estado_suscripcion: 'active',
-    limite_pacientes: SUBSCRIPTION_LIMITS[planType].pacientes,
-    limite_cuidadores: SUBSCRIPTION_LIMITS[planType].cuidadores,
-    fecha_inicio: new Date(),
-    fecha_renovacion: new Date(new Date().setMonth(new Date().getMonth() + 1))
-  });
-
-  // Actualizar membresía del usuario
-  await Usuario.update(
-    { membresia: planType },
-    { where: { id_usuario: userId } }
-  );
-  
-  console.log(`Created subscription for user ${userId} with plan ${planType}`);
-}
 export const handleWebhook = async (req, res) => {
   const requestId = req.headers['x-request-id'] || `webhook-${Date.now()}`;
   let responded = false;
