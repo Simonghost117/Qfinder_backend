@@ -1,79 +1,72 @@
 import { MercadoPagoConfig } from 'mercadopago';
 import crypto from 'crypto';
 
-// Configuración principal de MercadoPago
-export const client = new MercadoPagoConfig({
-  accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN,
-  options: {
-    timeout: 15000,
-    idempotencyKey: `mp-${Date.now()}`,
-    integratorId: process.env.MERCADOPAGO_INTEGRATOR_ID,
-    sandbox: process.env.NODE_ENV !== 'production'
-  }
-});
 export const configureMercadoPago = () => {
+  const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
+  const isSandbox = process.env.NODE_ENV !== 'production';
+  
+  if (!accessToken) {
+    throw new Error('MERCADOPAGO_ACCESS_TOKEN no está definido en las variables de entorno');
+  }
+
   return new MercadoPagoConfig({
-    accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN,
+    accessToken: accessToken,
     options: {
       timeout: 15000,
-      sandbox: process.env.NODE_ENV !== 'production'
+      idempotencyKey: `mp-${Date.now()}`,
+      integratorId: process.env.MERCADOPAGO_INTEGRATOR_ID,
+      sandbox: isSandbox
     }
   });
 };
-export const verifyWebhookSignature = (body, signatureHeader, secret) => {
-  if (!signatureHeader || !secret) {
-    console.warn('⚠️ Faltan parámetros para verificación');
-    return false;
-  }
 
+export const verifyWebhookSignature = (req) => {
   try {
-    const parts = signatureHeader.split(',');
-    const signatureParts = {};
-
-    parts.forEach(part => {
-      const [key, value] = part.split('=');
-      signatureParts[key] = value;
-    });
-
-    const timestamp = signatureParts.ts;
-    const receivedSignature = signatureParts.v1;
-
-    if (!timestamp || !receivedSignature) {
-      console.warn('⚠️ Firma mal formada');
+    const signatureHeader = req.headers['x-signature'];
+    
+    if (!signatureHeader) {
+      console.error('Header x-signature no encontrado');
       return false;
     }
 
-    // Preparar payload SIN convertir Buffer a string
-    let payload;
-    if (Buffer.isBuffer(body)) {
-      payload = Buffer.concat([Buffer.from(`${timestamp}:`), body]);
-    } else if (typeof body === 'string') {
-      payload = `${timestamp}:${body}`;
-    } else {
-      payload = `${timestamp}:${JSON.stringify(body)}`;
+    // Extraer timestamp y firma del header
+    const [tsPart, v1Part] = signatureHeader.split(',');
+    const timestamp = tsPart.split('=')[1];
+    const signature = v1Part.split('=')[1];
+    
+    if (!timestamp || !signature) {
+      console.error('Formato de firma inválido', signatureHeader);
+      return false;
     }
 
+    const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
+    if (!secret) {
+      console.error('MERCADOPAGO_WEBHOOK_SECRET no configurado');
+      return false;
+    }
+
+    // Usar el body raw (debe configurarse en el middleware)
+    const payload = req.rawBody || JSON.stringify(req.body);
+    
     const generatedSignature = crypto
       .createHmac('sha256', secret)
-      .update(payload)
+      .update(`${timestamp}:${payload}`)
       .digest('hex');
 
-    const signatureMatches = crypto.timingSafeEqual(
-      Buffer.from(generatedSignature, 'hex'),
-      Buffer.from(receivedSignature, 'hex')
-    );
-
-    if (!signatureMatches) {
-      console.error('❌ Firma no coincide', {
-        payload: payload.toString(), // para debug
-        receivedSignature,
-        generatedSignature
+    const isValid = signature === generatedSignature;
+    
+    if (!isValid) {
+      console.error('Firma no válida', {
+        received: signature,
+        generated: generatedSignature,
+        timestamp,
+        payload: payload.substring(0, 100) + '...'
       });
     }
 
-    return signatureMatches;
+    return isValid;
   } catch (error) {
-    console.error('❌ Error en verifyWebhookSignature:', error);
+    console.error('Error validando firma webhook:', error);
     return false;
   }
 };
