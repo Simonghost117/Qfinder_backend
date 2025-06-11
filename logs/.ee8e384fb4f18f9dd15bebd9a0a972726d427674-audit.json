@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "C:\\Users\\ASUS\\OneDrive\\Escritorio\\QfindeR\\final\\back\\Qfinder_backend\\logs\\.ee8e384fb4f18f9dd15bebd9a0a972726d427674-audit.json",
+    "files": [
+        {
+            "date": 1749683457957,
+            "name": "C:\\Users\\ASUS\\OneDrive\\Escritorio\\QfindeR\\final\\back\\Qfinder_backend\\logs\\application-2025-06-11.log",
+            "hash": "ec31fe8c49dc51136542f33dc9c3751eaa2290c40d5eabc6abca72db3d747be3"
+        }
+    ],
+    "hashType": "sha256"
+}
