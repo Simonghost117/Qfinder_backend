@@ -239,6 +239,9 @@ export const createCheckoutProPreference = async (req, res) => {
 export const handleWebhook = async (req, res) => {
   const requestId = req.headers['x-request-id'] || `webhook-${Date.now()}`;
   let responded = false;
+console.log('✅ handleWebhook ejecutado');
+console.log('🧾 Cuerpo:', req.body);
+console.log('📦 RawBody:', req.rawBody?.toString());
 
   const safeRespond = (status, message = null) => {
     if (!responded) {
