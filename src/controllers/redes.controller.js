@@ -105,8 +105,9 @@ export const actualizarRed = async (req, res) => {
       success: true,
       message: 'Red actualizada exitosamente', 
       data: {
-        nombre_red: datosActualizados.nombre_red,
-        descripcion_red: datosActualizados.descripcion_red,
+        nombre_red: redActualizada.nombre_red,
+        descripcion_red: redActualizada.descripcion_red,
+        imagen_red: redActualizada.imagen_red
       }
      });
   } catch (error) {
