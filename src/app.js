@@ -14,7 +14,17 @@ dotenv.config();
 
 // Inicialización de la app
 const app = express();
+app.use('/api/webhook', webhookRoutes)
 
+if (process.env.RAILWAY_ENVIRONMENT) {
+  app.use((req, res, next) => {
+    // Aumentar timeout para webhooks
+    if (req.path.includes('/webhook')) {
+      req.socket.setTimeout(60000);
+    }
+    next();
+  });
+}
 // Configuración de EventEmitter
 EventEmitter.defaultMaxListeners = 15;
 
@@ -66,7 +76,7 @@ import firebaseRoutes from './routes/firebase.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import colaboradorRoutes from './routes/colaborador.routes.js';
 // Después de inicializar tu aplicación
-
+import webhookRoutes from './routes/webhookRoutes.js';
 
 // Endpoint raíz informativo
 app.get('/', (req, res) => {

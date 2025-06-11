@@ -59,6 +59,11 @@ router.get('/redNombre',
 )
 
 //ADMINISTRADOR
+router.get('/listarRedesW',
+    verifyTokenWeb,
+    validateRol(['Administrador', 'Super']),
+    listarRedes
+)
 router.post('/crear',
     verifyTokenWeb,
     validateRol(['Administrador', 'Super']),

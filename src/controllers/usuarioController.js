@@ -583,6 +583,8 @@ export const registerUsuario = async (req, res) => {
       
     } 
 
+    console.log("req.user: ", req.user)
+
     const userData = {
       nombre_usuario,
       apellido_usuario,
@@ -595,6 +597,8 @@ export const registerUsuario = async (req, res) => {
     
 
     const idExiste = await Usuario.findOne({ where: { identificacion_usuario: userData.identificacion_usuario } });
+
+    console.log("idExiste: ", idExiste)
     if (idExiste) {
       return res.status(400).json({ error: 'El número de identificación ya está registrado' });
     }
@@ -605,6 +609,8 @@ export const registerUsuario = async (req, res) => {
       correo_usuario,
       contrasena_usuario: passwordHash,
     });
+
+    console.log("usuario: ", usuario)
     
     res.status(200).json({ 
       message: 'Usuario registrado exitosamente',
@@ -622,6 +628,7 @@ export const registerUsuario = async (req, res) => {
     });
     
   } catch (error) {
+    console.log(error)
     res.status(500).json({ 
       error: 'Error en registro', 
       details: error.message 

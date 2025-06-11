@@ -20,60 +20,56 @@ export const configureMercadoPago = () => {
   });
 };
 
-export const verifyWebhookSignature = (body, signatureHeader, secret) => {
-  console.log('🔍 Verificando firma...');
-  
-  if (!signatureHeader || !secret) {
-    console.warn('⚠️ Faltan parámetros para verificación');
-    return false;
-  }
-
+export const verifyWebhookSignature = (payload, signatureHeader) => {
   try {
-    // Extraer timestamp y firma del header
-    const parts = signatureHeader.split(',');
-    const signatureParts = {};
-    
-    parts.forEach(part => {
-      const [key, value] = part.split('=');
-      signatureParts[key] = value;
-    });
-
-    const ts = signatureParts.ts;
-    const v1 = signatureParts.v1;
-
-    if (!ts || !v1) {
-      console.warn('⚠️ Firma mal formada');
+    if (!signatureHeader) {
+      console.error('❌ Header de firma no encontrado');
       return false;
     }
 
-    // Preparar el payload para verificación
-    let payload;
-    if (typeof body === 'string') {
-      // Si es string (body raw), usarlo directamente
-      payload = `${ts}:${body}`;
-    } else if (body instanceof Buffer) {
-      // Si es Buffer, convertirlo a string
-      payload = `${ts}:${body.toString()}`;
-    } else {
-      // Si es objeto, convertirlo a JSON stringificado
-      payload = `${ts}:${JSON.stringify(body)}`;
+    // Parsear el header de firma
+    const signatureParts = {};
+    signatureHeader.split(',').forEach(part => {
+      const [key, value] = part.split('=');
+      if (key && value) signatureParts[key.trim()] = value.trim();
+    });
+
+    const timestamp = signatureParts.ts;
+    const receivedSignature = signatureParts.v1;
+    
+    if (!timestamp || !receivedSignature) {
+      console.error('❌ Formato de firma inválido');
+      return false;
     }
 
-    console.log('Payload usado para firma:', payload);
+    const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
+    if (!secret) {
+      console.error('❌ Secret no configurado');
+      return false;
+    }
 
-    // Generar firma HMAC-SHA256
+    // Crear la firma esperada
+    const dataToSign = `${timestamp}:${payload}`;
     const generatedSignature = crypto
       .createHmac('sha256', secret)
-      .update(payload)
+      .update(dataToSign)
       .digest('hex');
 
-    console.log('Firma recibida:', v1);
-    console.log('Firma generada:', generatedSignature);
-    console.log('Coinciden?:', generatedSignature === v1);
+    // Comparación exacta
+    const isValid = receivedSignature === generatedSignature;
+    
+    if (!isValid) {
+      console.error('❌ Firma no válida', {
+        received: receivedSignature.substring(0, 32) + '...',
+        generated: generatedSignature.substring(0, 32) + '...',
+        timestamp,
+        payloadLength: payload.length
+      });
+    }
 
-    return generatedSignature === v1;
+    return isValid;
   } catch (error) {
-    console.error('❌ Error en verifyWebhookSignature:', error);
+    console.error('❌ Error validando firma:', error.message);
     return false;
   }
 };
