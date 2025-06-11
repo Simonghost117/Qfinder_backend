@@ -101,4 +101,27 @@ router.post('/webhook-test', rawBodyMiddleware, (req, res) => {
   });
 });
 
+router.post('/webhook-debug', rawBodyMiddleware, async (req, res) => {
+  const start = Date.now();
+  
+  // Simular diferentes escenarios
+  const simulate = req.query.simulate || 'normal';
+  
+  if (simulate === 'timeout') {
+    // No responder para probar timeout
+    return;
+  }
+  
+  if (simulate === 'delay') {
+    await new Promise(resolve => setTimeout(resolve, 40000));
+  }
+
+  res.json({
+    status: 'success',
+    processingTime: `${Date.now() - start}ms`,
+    rawBodyLength: req.rawBody?.length,
+    body: req.body,
+    headers: req.headers
+  });
+});
 export default router;

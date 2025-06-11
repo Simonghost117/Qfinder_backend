@@ -237,6 +237,13 @@ export const createCheckoutProPreference = async (req, res) => {
 };
 
 export const handleWebhook = async (req, res) => {
+    req.setTimeout(60000, () => {
+    console.warn('⚠️ Timeout de la solicitud');
+  });
+  
+  res.setTimeout(60000, () => {
+    console.error('❌ Timeout de la respuesta');
+  });
   const requestId = req.headers['x-request-id'] || `webhook-${Date.now()}`;
   
   // Debug inicial

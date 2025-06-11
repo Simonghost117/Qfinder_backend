@@ -11,7 +11,15 @@ import { EventEmitter } from 'events';
 startAllJobs();
 // Configuración de entorno
 dotenv.config();
-
+if (process.env.RAILWAY_ENVIRONMENT) {
+  app.use((req, res, next) => {
+    // Aumentar timeout para webhooks
+    if (req.path.includes('/webhook')) {
+      req.socket.setTimeout(60000);
+    }
+    next();
+  });
+}
 // Inicialización de la app
 const app = express();
 
