@@ -67,7 +67,7 @@ router.post(
   debugMiddleware,  // Middleware de diagnóstico
   rawBodyMiddleware,  // Middleware para raw body
   (req, res, next) => {
-    Verificación adicional del body
+    // Verificación adicional del body
     if (!req.rawBody || req.rawBody.length === 0) {
       console.error('❌ Error crítico: rawBody no está disponible');
       return res.status(400).json({ error: 'Missing request body' });
