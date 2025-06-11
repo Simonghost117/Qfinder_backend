@@ -237,93 +237,88 @@ export const createCheckoutProPreference = async (req, res) => {
 };
 
 export const handleWebhook = async (req, res) => {
-
   const requestId = req.headers['x-request-id'] || `webhook-${Date.now()}`;
-  
-  // Debug inicial
-  console.log(`🔔 [${requestId}] Webhook recibido`, {
-    method: req.method,
-    url: req.originalUrl,
-    rawBodyLength: req.rawBody?.length || 0,
-    hasSignature: !!req.headers['x-signature'],
-    headers: {
-      'content-type': req.headers['content-type'],
-      'content-length': req.headers['content-length']
+  let responded = false;
+
+  const safeRespond = (status, message = null) => {
+    if (!responded) {
+      responded = true;
+      if (message) {
+        res.status(status).json({ error: message, reference: requestId });
+      } else {
+        res.sendStatus(status);
+      }
+    } else {
+      console.warn(`⚠️ [${requestId}] Ya se envió una respuesta HTTP, ignorando respuesta duplicada`);
     }
-  });
+  };
+
+  try {
+    // Log inicial del webhook recibido
+    console.log(`🔔 [${requestId}] Webhook recibido`, {
+      method: req.method,
+      url: req.originalUrl,
+      headers: {
+        'content-type': req.headers['content-type'],
+        'content-length': req.headers['content-length'],
+        'x-signature': req.headers['x-signature'],
+      },
+      rawBodyLength: req.rawBody?.length || 0,
+    });
 
     if (!req.rawBody || req.rawBody.length === 0) {
-    console.error(`❌ [${requestId}] Cuerpo de solicitud vacío. Detalles:`, {
-      rawBodyExists: !!req.rawBody,
-      rawBodyLength: req.rawBody?.length,
-      bodyExists: !!req.body,
-      bodyType: typeof req.body,
-      headers: req.headers
-    });
-try {
-  res.sendStatus(200);
-} catch (err) {
-  console.error(`[${requestId}] ❌ Error al enviar respuesta 200:`, err.message);
-}
+      console.error(`❌ [${requestId}] Cuerpo de solicitud vacío`);
+      return safeRespond(400, 'Missing request body');
+    }
 
-  }
-    // ✅ Responder lo antes posible
-  res.sendStatus(200);
-  try {
-    // 🔐 1. Verificación de firma (si hay un secret configurado)
+    // Responder rápido para evitar timeouts
+    res.sendStatus(200);
+    responded = true;
+
+    // 🔐 Verificar firma
     if (process.env.MERCADOPAGO_WEBHOOK_SECRET) {
       const signature = req.headers['x-signature'];
-      
       if (!signature) {
         console.warn(`⚠️ [${requestId}] Faltan headers de firma`);
-        return res.status(400).json({ error: 'Missing signature headers' });
-      }
-
-      // Asegurarse de que el rawBody existe
-      if (!req.rawBody || req.rawBody.length === 0) {
-        console.error(`❌ [${requestId}] No se recibió rawBody`);
-        return res.status(400).json({ error: 'Missing request body' });
+        return;
       }
 
       const requestBody = req.rawBody.toString('utf8');
-      
-      // Log de depuración (sin exponer datos sensibles)
-      console.log(`🔍 [${requestId}] Verificando firma con:`, {
-        bodyHash: crypto.createHash('sha256').update(requestBody).digest('hex').substring(0, 16) + '...',
-        signature: signature.substring(0, 16) + '...',
+      const isValid = verifyWebhookSignature(requestBody, signature);
+
+      console.log(`🔍 [${requestId}] Firma verificada`, {
+        isValid,
+        hash: crypto.createHash('sha256').update(requestBody).digest('hex').slice(0, 16),
+        signatureShort: signature.slice(0, 16) + '...',
       });
 
-      const isValid = verifyWebhookSignature(requestBody, signature);
-      
       if (!isValid) {
-        console.warn(`⚠️ [${requestId}] Firma inválida`, {
-          receivedSignature: signature.substring(0, 32) + '...',
-        });
-        return res.status(403).json({ error: 'Invalid signature' });
+        console.warn(`⚠️ [${requestId}] Firma inválida`);
+        return;
       }
     }
 
-    // 📦 2. Parsear el body del webhook
+    // 📦 Parsear body del webhook
     let webhookData;
     try {
       webhookData = req.body || JSON.parse(req.rawBody.toString('utf8'));
     } catch (parseError) {
       console.error(`❌ [${requestId}] Error parseando body:`, parseError.message);
-      return res.status(400).json({ error: 'Invalid JSON body' });
+      return;
     }
 
-    // 🔄 3. Manejar diferentes tipos de webhooks
+    // 🔄 Identificar el tipo de evento
     const topic = req.query.topic || webhookData.topic;
     const id = req.query.id || webhookData.data?.id || extractId(webhookData.resource);
 
     if (!topic || !id) {
-      console.warn(`⚠️ [${requestId}] Webhook sin topic o ID válido`);
-      return res.sendStatus(400);
+      console.warn(`⚠️ [${requestId}] Falta topic o ID`);
+      return;
     }
 
-    console.log(`📨 [${requestId}] Procesando webhook:`, { topic, id });
+    console.log(`📨 [${requestId}] Procesando webhook`, { topic, id });
 
-    // 💰 4. Manejar pagos
+    // 💰 Manejar pago
     if (topic === 'payment') {
       try {
         const payment = await getPayment(id);
@@ -343,35 +338,32 @@ try {
             await processRejectedPayment(payment);
             break;
           default:
-            console.log(`⚠️ [${requestId}] Estado de pago no manejado: ${payment.status}`);
+            console.warn(`⚠️ [${requestId}] Estado no manejado: ${payment.status}`);
         }
       } catch (paymentError) {
         console.error(`❌ [${requestId}] Error procesando pago:`, paymentError.message);
-        return res.status(500).json({ error: 'Payment processing failed' });
+        return;
       }
-    } 
-    // 🛒 5. Manejar órdenes de compra
+    }
+
+    // 🛒 Manejar orden de compra
     else if (topic === 'merchant_order') {
       try {
         await processMerchantOrder(webhookData.resource);
       } catch (orderError) {
         console.error(`❌ [${requestId}] Error procesando orden:`, orderError.message);
-        return res.status(500).json({ error: 'Order processing failed' });
+        return;
       }
     }
 
-    // ✅ 6. Respuesta exitosa
-    return res.sendStatus(200);
-
+    // Final log
+    console.log(`✅ [${requestId}] Webhook procesado correctamente`);
   } catch (error) {
-    console.error(`❌ [${requestId}] Error crítico en handleWebhook:`, {
-      error: error.message,
+    console.error(`❌ [${requestId}] Error crítico en webhook:`, {
+      message: error.message,
       stack: error.stack,
     });
-    return res.status(500).json({ 
-      error: 'Internal server error',
-      reference: requestId,
-    });
+    safeRespond(500, 'Internal server error');
   }
 };
 
