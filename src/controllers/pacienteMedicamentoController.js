@@ -3,6 +3,7 @@ import Paciente from '../models/paciente.model.js';
 import Medicamento from '../models/medicamento.model.js';
 import { parseFrequency } from '../utils/conversionFrecuencia.js';
 
+// Asigna medicamnetos a cualquier paciente
 export const asignarMedicamento = async (req, res) => {
   try {
     const { id_paciente, id_medicamento, fecha_inicio, fecha_fin, dosis, frecuencia } = req.body;
@@ -32,17 +33,17 @@ export const listarMedicamentosPorPaciente = async (req, res) => {
     const { id_paciente } = req.params;
     const { id_usuario } = req.user;
 
-    // Verificar que el paciente pertenece al usuario
-    const paciente = await Paciente.findOne({
-      where: { id_paciente, id_usuario }
-    });
+    // // Verificar que el paciente pertenece al usuario
+    // const paciente = await Paciente.findOne({
+    //   where: { id_paciente, id_usuario }
+    // });
 
-    if (!paciente) {
-      return res.status(403).json({ 
-        success: false,
-        message: 'No tienes permisos para acceder a este paciente'
-      });
-    }
+    // if (!paciente) {
+    //   return res.status(403).json({ 
+    //     success: false,
+    //     message: 'No tienes permisos para acceder a este paciente'
+    //   });
+    // }
 
     const asignaciones = await PacienteMedicamento.findAll({
       where: { id_paciente },

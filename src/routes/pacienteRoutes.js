@@ -7,7 +7,7 @@ import { register, listarPacientes, getPacienteById, actualizarPaciente, elimina
 import validateSchema from "../middlewares/validatoreSchema.js"
 import {PacienteSchema, ActPacienteSchema, ActPaciente2} from "../schema/pacienteSchema.js";
 import { verifyToken, verifyTokenWeb } from '../middlewares/verifyToken.js';
-import { checkEpisodioPermissions } from '../middlewares/episodioPermissions.middleware.js';
+import { checkEpisodioPermissions, validatePermissions } from '../middlewares/episodioPermissions.middleware.js';
 import { validateAdmin, validateRol } from '../middlewares/validateAdmin.js';
 import { paginationMiddleware } from '../middlewares/pagination.js';
 const router = express.Router();
@@ -33,12 +33,14 @@ router.get('/listarPacientes/:id_paciente',
 router.put('/actualizarPaciente/:id_paciente', 
     verifyToken, 
     checkEpisodioPermissions([ 'Usuario']), 
+    validatePermissions(['responsable', ]),
     validateSchema(ActPacienteSchema), 
     actualizarPaciente
 );
 router.delete('/eliminarPaciente/:id_paciente', 
     verifyToken, 
     checkEpisodioPermissions([ 'Usuario']),
+    validatePermissions(['responsable', ]),
     eliminarPaciente
 );
 

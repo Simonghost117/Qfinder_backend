@@ -1,10 +1,10 @@
-import Paciente from '../models/paciente.model.js';
-import { Familiar } from '../models/Familiar.js';
 import { handleError } from '../utils/errorHandler.js';
-import Colaborador from '../models/colaborador.model.js';
+
+import { models } from "../models/index.js";
+const { Familiar, Colaborador, Paciente } = models;
 
 
-export const checkEpisodioPermissions = (allowedRoles = ['Usuario', 'Familiar', 'Administrador']) => {
+export const checkEpisodioPermissions = (allowedRoles = ['Usuario', 'Familiar', 'Administrador', 'Colaborador']) => {
   return async (req, res, next) => {
     try {
       console.log('Iniciando verificación de permisos...'); // Debug
@@ -143,6 +143,61 @@ export const checkEpisodioPermissions = (allowedRoles = ['Usuario', 'Familiar', 
         }
       });
       handleError(res, error);
+    }
+  };
+};
+
+export const validatePermissions = (allowedRoles = ['responsable', 'colaborador']) => {
+  return async (req, res, next) => {
+    try {
+      const userId = req.user?.id_usuario;
+      const pacienteId = req.body?.id_paciente || req.params?.id_paciente || req.query?.id_paciente;
+
+      if (!userId || !pacienteId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Faltan datos necesarios para la verificación de permisos'
+        });
+      }
+
+      const esResponsable = await Familiar.findOne({
+        where: {
+          id_usuario: userId,
+          id_paciente: pacienteId,
+          // parentesco: 'tutor', // Asumiendo que 'tutor' es el rol de responsable
+          // cuidador_principal: true // Asumiendo que esto identifica al responsable principal
+        }
+      });
+
+      if (esResponsable && allowedRoles.includes('responsable')) {
+        return next(); // Tiene permiso como responsable
+      }
+
+      // Verificar si el usuario es colaborador del paciente
+      const esColaborador = await Colaborador.findOne({
+        where: {
+          id_usuario: userId,
+          id_paciente: pacienteId
+        }
+      });
+
+      if (esColaborador && allowedRoles.includes('colaborador')) {
+        return next(); // Tiene permiso como colaborador
+      }
+
+      return res.status(403).json({
+        success: false,
+        error: 'No tienes permisos para acceder a la información de este paciente'
+      });
+
+    } catch (error) {
+      console.error('Error en validatePermissions:', {
+        error: error.message,
+      });
+      res.status(500).json({
+        success: false,
+        error: 'Error al verificar permisos'
+      });
     }
   };
 };
