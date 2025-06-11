@@ -42,42 +42,4 @@ router.get('/success-redirect', successRedirect);
 router.get('/failure-redirect', failureRedirect);
 router.get('/pending-redirect', pendingRedirect);
 
-// Ruta de prueba para diagnóstico
-router.post('/webhook-test', rawBodyMiddleware, (req, res) => {
-  res.json({
-    status: 'success',
-    rawBodyReceived: !!req.rawBody,
-    rawBodyLength: req.rawBody?.length,
-    bodyContent: req.body,
-    headers: {
-      'content-type': req.headers['content-type'],
-      'content-length': req.headers['content-length'],
-      'x-signature': req.headers['x-signature']
-    }
-  });
-});
-
-router.post('/webhook-debug', rawBodyMiddleware, async (req, res) => {
-  const start = Date.now();
-  
-  // Simular diferentes escenarios
-  const simulate = req.query.simulate || 'normal';
-  
-  if (simulate === 'timeout') {
-    // No responder para probar timeout
-    return;
-  }
-  
-  if (simulate === 'delay') {
-    await new Promise(resolve => setTimeout(resolve, 40000));
-  }
-
-  res.json({
-    status: 'success',
-    processingTime: `${Date.now() - start}ms`,
-    rawBodyLength: req.rawBody?.length,
-    body: req.body,
-    headers: req.headers
-  });
-});
 export default router;
