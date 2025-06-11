@@ -77,7 +77,41 @@ const calculateRenewalDate = (startDate, planType) => {
 // Controladores principales
 export const createCheckoutProPreference = async (req, res) => {
 };
+async function processApprovedPayment(payment) {
+  const externalRef = payment.external_reference;
+  const [_, userId, __, planType] = externalRef.split('_');
+  
+  // Verificar si ya existe una suscripción para evitar duplicados
+  const existingSub = await Subscription.findOne({
+    where: { id_usuario: userId, estado_suscripcion: 'active' }
+  });
+  
+  if (existingSub) {
+    console.log(`Active subscription already exists for user ${userId}`);
+    return;
+  }
 
+  // Crear nueva suscripción
+  await Subscription.create({
+    id_usuario: userId,
+    mercado_pago_id: payment.id,
+    plan_id: `plan-${planType}`,
+    tipo_suscripcion: planType,
+    estado_suscripcion: 'active',
+    limite_pacientes: SUBSCRIPTION_LIMITS[planType].pacientes,
+    limite_cuidadores: SUBSCRIPTION_LIMITS[planType].cuidadores,
+    fecha_inicio: new Date(),
+    fecha_renovacion: new Date(new Date().setMonth(new Date().getMonth() + 1))
+  });
+
+  // Actualizar membresía del usuario
+  await Usuario.update(
+    { membresia: planType },
+    { where: { id_usuario: userId } }
+  );
+  
+  console.log(`Created subscription for user ${userId} with plan ${planType}`);
+}
 export const handleWebhook = async (req, res) => {
   const requestId = req.headers['x-request-id'] || `webhook-${Date.now()}`;
   let responded = false;
