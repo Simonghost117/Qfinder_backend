@@ -14,6 +14,7 @@ dotenv.config();
 
 // Inicialización de la app
 const app = express();
+app.use('/api/payments', paymentRoutes);
 if (process.env.RAILWAY_ENVIRONMENT) {
   app.use((req, res, next) => {
     // Aumentar timeout para webhooks
