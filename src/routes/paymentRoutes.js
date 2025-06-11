@@ -15,13 +15,18 @@ const webhookMiddleware = express.json({
   verify: (req, res, buf, encoding) => {
     try {
       if (buf && buf.length) {
-        req.rawBody = buf.toString(encoding || 'utf8');
+        // Guardar el buffer original sin conversión
+        req.rawBody = buf;
+        // También parsear el JSON para tener req.body
+        req.body = JSON.parse(buf.toString(encoding || 'utf8'));
       }
     } catch (e) {
       console.error('Error setting rawBody', e);
+      throw e; // Propagar el error
     }
   }
 });
+
 // Ruta para crear preferencia de Checkout Pro
 router.post('/checkout-pro', verifyToken, createCheckoutProPreference);
 router.get('/verify-payment/:paymentId', verifyToken, verifyPayment);

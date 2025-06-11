@@ -27,11 +27,13 @@ export const verifyWebhookSignature = (payload, signatureHeader) => {
       return false;
     }
 
-    // Maneja el formato de MercadoPago (ts=timestamp,v1=firma)
+    // Extraer timestamp y firma
     const signatureParts = {};
     signatureHeader.split(',').forEach(part => {
       const [key, value] = part.split('=');
-      signatureParts[key.trim()] = value.trim();
+      if (key && value) {
+        signatureParts[key.trim()] = value.trim();
+      }
     });
 
     const timestamp = signatureParts.ts;
@@ -48,19 +50,27 @@ export const verifyWebhookSignature = (payload, signatureHeader) => {
       return false;
     }
 
+    // Asegurarse de que el payload sea exactamente el mismo que recibió MercadoPago
+    const payloadString = typeof payload === 'object' ? JSON.stringify(payload) : payload;
+    
     const generatedSignature = crypto
       .createHmac('sha256', secret)
-      .update(`${timestamp}:${payload}`)
+      .update(`${timestamp}:${payloadString}`)
       .digest('hex');
 
-    const isValid = signature === generatedSignature;
+    // Comparación segura contra timing attacks
+    const isValid = crypto.timingSafeEqual(
+      Buffer.from(signature, 'hex'),
+      Buffer.from(generatedSignature, 'hex')
+    );
     
     if (!isValid) {
       console.error('Firma no válida', {
         received: signature,
         generated: generatedSignature,
         timestamp,
-        payload: payload.substring(0, 100) + '...'
+        payload: payloadString.substring(0, 100) + '...',
+        signatureHeader
       });
     }
 

@@ -237,10 +237,11 @@ export const createCheckoutProPreference = async (req, res) => {
 
 export const handleWebhook = async (req, res) => {
   try {
-    // Verificación mejorada de firma del webhook
+    // Verificación de firma del webhook
     if (process.env.MERCADOPAGO_WEBHOOK_SECRET) {
       const signature = req.headers['x-signature'] || req.headers['x-signature-sha256'];
-      const requestBody = req.rawBody || JSON.stringify(req.body);
+      // Usar el buffer directamente sin conversión
+      const requestBody = req.rawBody ? req.rawBody.toString('utf8') : JSON.stringify(req.body);
       
       try {
         const isValid = verifyWebhookSignature(requestBody, signature);
