@@ -14,42 +14,38 @@ const router = express.Router();
 // Versión mejorada del middleware para raw body
 const rawBodyMiddleware = (req, res, next) => {
   const chunks = [];
-  
-  req.on('data', (chunk) => chunks.push(chunk));
-  
+
+  req.on('data', (chunk) => {
+    chunks.push(chunk);
+  });
+
   req.on('end', () => {
     try {
-      if (chunks.length > 0) {
-        req.rawBody = Buffer.concat(chunks);
-        console.log(`📦 RawBody recibido (${req.rawBody.length} bytes)`);
-        
-        // Solo parsear como JSON si el content-type es application/json
-        if (req.headers['content-type']?.includes('application/json')) {
-          try {
-            req.body = JSON.parse(req.rawBody.toString('utf8'));
-            console.log('🔄 Body parseado correctamente');
-          } catch (e) {
-            console.warn('⚠️ Error parseando JSON:', e.message);
-            req.body = {};
-          }
+      req.rawBody = Buffer.concat(chunks);
+
+      if (req.headers['content-type']?.includes('application/json')) {
+        try {
+          req.body = JSON.parse(req.rawBody.toString('utf8'));
+        } catch (err) {
+          console.warn('⚠️ JSON inválido en body:', err.message);
+          req.body = {};
         }
-      } else {
-        req.rawBody = Buffer.alloc(0);
-        req.body = {};
-        console.warn('⚠️ Solicitud sin cuerpo recibida');
       }
+
+      console.log(`📦 RawBody recibido (${req.rawBody.length} bytes)`);
       next();
-    } catch (error) {
-      console.error('❌ Error en rawBodyMiddleware:', error);
-      res.status(500).json({ error: 'Internal server error' });
+    } catch (err) {
+      console.error('❌ Error procesando raw body:', err);
+      res.status(500).send('Error interno procesando raw body');
     }
   });
 
-  req.on('error', (error) => {
-    console.error('❌ Error en el stream de datos:', error);
-    res.status(500).json({ error: 'Request stream error' });
+  req.on('error', (err) => {
+    console.error('❌ Error en stream del request:', err);
+    res.status(500).send('Error en el stream de datos');
   });
 };
+
 
 // Middleware de diagnóstico para verificar el flujo
 const debugMiddleware = (req, res, next) => {
@@ -71,11 +67,11 @@ router.post(
   debugMiddleware,  // Middleware de diagnóstico
   rawBodyMiddleware,  // Middleware para raw body
   (req, res, next) => {
-    // Verificación adicional del body
-    // if (!req.rawBody || req.rawBody.length === 0) {
-    //   console.error('❌ Error crítico: rawBody no está disponible');
-    //   return res.status(400).json({ error: 'Missing request body' });
-    // }
+    Verificación adicional del body
+    if (!req.rawBody || req.rawBody.length === 0) {
+      console.error('❌ Error crítico: rawBody no está disponible');
+      return res.status(400).json({ error: 'Missing request body' });
+    }
     next();
   },
   handleWebhook
