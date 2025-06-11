@@ -260,7 +260,12 @@ export const handleWebhook = async (req, res) => {
       bodyType: typeof req.body,
       headers: req.headers
     });
-    return res.status(400).json({ error: 'Missing request body' });
+try {
+  res.sendStatus(200);
+} catch (err) {
+  console.error(`[${requestId}] ❌ Error al enviar respuesta 200:`, err.message);
+}
+
   }
     // ✅ Responder lo antes posible
   res.sendStatus(200);
