@@ -17,18 +17,25 @@ const webhookMiddleware = express.raw({
   verify: (req, res, buf, encoding) => {
     try {
       if (buf && buf.length) {
-        req.rawBody = buf; // Almacena el buffer exacto
+        // Almacena el buffer exacto como rawBody
+        req.rawBody = Buffer.from(buf); // Crear una nueva copia del buffer
         
-        // Opcional: parsear el JSON para tener req.body
+        // Intenta parsear el JSON para tener req.body
         try {
           req.body = JSON.parse(buf.toString(encoding || 'utf8'));
         } catch (e) {
-          console.warn('⚠️ No se pudo parsear el body JSON');
+          console.warn('⚠️ No se pudo parsear el body JSON', e.message);
+          req.body = {}; // Asigna un objeto vacío si falla el parseo
         }
+      } else {
+        console.warn('⚠️ Buffer vacío o no definido');
+        req.rawBody = Buffer.from([]); // Asigna un buffer vacío
+        req.body = {};
       }
     } catch (e) {
       console.error('❌ Error configurando rawBody', e);
-      throw e;
+      req.rawBody = Buffer.from([]);
+      req.body = {};
     }
   }
 });
