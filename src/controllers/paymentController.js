@@ -237,14 +237,7 @@ export const createCheckoutProPreference = async (req, res) => {
 };
 
 export const handleWebhook = async (req, res) => {
-   res.status(202).json({ status: 'processing' });
-    req.setTimeout(60000, () => {
-    console.warn('⚠️ Timeout de la solicitud');
-  });
-  
-  res.setTimeout(60000, () => {
-    console.error('❌ Timeout de la respuesta');
-  });
+
   const requestId = req.headers['x-request-id'] || `webhook-${Date.now()}`;
   
   // Debug inicial
@@ -269,6 +262,8 @@ export const handleWebhook = async (req, res) => {
     });
     return res.status(400).json({ error: 'Missing request body' });
   }
+    // ✅ Responder lo antes posible
+  res.sendStatus(200);
   try {
     // 🔐 1. Verificación de firma (si hay un secret configurado)
     if (process.env.MERCADOPAGO_WEBHOOK_SECRET) {
