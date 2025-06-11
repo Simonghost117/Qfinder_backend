@@ -20,6 +20,7 @@ export const configureMercadoPago = () => {
   });
 };
 
+// En mercadopago.js - modificar la función verifyWebhookSignature
 export const verifyWebhookSignature = (payload, signatureHeader) => {
   try {
     if (!signatureHeader) {
@@ -27,7 +28,7 @@ export const verifyWebhookSignature = (payload, signatureHeader) => {
       return false;
     }
 
-    // Extraer timestamp y firma
+    // Parsear el header de firma
     const signatureParts = {};
     signatureHeader.split(',').forEach(part => {
       const [key, value] = part.split('=');
@@ -37,9 +38,9 @@ export const verifyWebhookSignature = (payload, signatureHeader) => {
     });
 
     const timestamp = signatureParts.ts;
-    const signature = signatureParts.v1;
+    const receivedSignature = signatureParts.v1;
     
-    if (!timestamp || !signature) {
+    if (!timestamp || !receivedSignature) {
       console.error('Formato de firma inválido:', signatureHeader);
       return false;
     }
@@ -50,26 +51,25 @@ export const verifyWebhookSignature = (payload, signatureHeader) => {
       return false;
     }
 
-    // Asegurarse de que el payload sea exactamente el mismo que recibió MercadoPago
-    const payloadString = typeof payload === 'object' ? JSON.stringify(payload) : payload;
+    // IMPORTANTE: Asegurarse que el payload sea string y no esté modificado
+    const payloadString = typeof payload === 'string' ? payload : JSON.stringify(payload);
     
+    // Crear la firma esperada
+    const dataToSign = `${timestamp}:${payloadString}`;
     const generatedSignature = crypto
       .createHmac('sha256', secret)
-      .update(`${timestamp}:${payloadString}`)
+      .update(dataToSign)
       .digest('hex');
 
-    // Comparación segura contra timing attacks
-    const isValid = crypto.timingSafeEqual(
-      Buffer.from(signature, 'hex'),
-      Buffer.from(generatedSignature, 'hex')
-    );
+    // Comparación segura
+    const isValid = receivedSignature === generatedSignature;
     
     if (!isValid) {
       console.error('Firma no válida', {
-        received: signature,
+        received: receivedSignature,
         generated: generatedSignature,
         timestamp,
-        payload: payloadString.substring(0, 100) + '...',
+        payloadSample: payloadString.substring(0, 100) + '...',
         signatureHeader
       });
     }

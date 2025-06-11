@@ -239,10 +239,8 @@ export const handleWebhook = async (req, res) => {
   try {
     // Verificación de firma del webhook
     if (process.env.MERCADOPAGO_WEBHOOK_SECRET) {
-      const signature = req.headers['x-signature'] || req.headers['x-signature-sha256'];
-      // Usar el buffer directamente sin conversión
-      const requestBody = req.rawBody ? req.rawBody.toString('utf8') : JSON.stringify(req.body);
-      
+const signature = req.headers['x-signature'];
+const requestBody = req.rawBody ? req.rawBody.toString('utf8') : JSON.stringify(req.body);
       try {
         const isValid = verifyWebhookSignature(requestBody, signature);
         if (!isValid) {
