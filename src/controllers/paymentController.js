@@ -1,7 +1,7 @@
 import { createPreference, getPayment, searchPayments } from '../services/mercadopagoService.js';
 import { verifyWebhookSignature } from '../config/mercadopago.js';
 import { PLANS_MERCADOPAGO, SUBSCRIPTION_LIMITS } from '../config/subscriptions.js';
-import { models } from '../models/index.js';
+import { sequelize,models } from '../models/index.js';
 import axios from 'axios';
 import crypto from 'crypto'; 
 const { Usuario, Subscription } = models;
