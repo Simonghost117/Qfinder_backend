@@ -237,6 +237,7 @@ export const createCheckoutProPreference = async (req, res) => {
 };
 
 export const handleWebhook = async (req, res) => {
+   res.status(202).json({ status: 'processing' });
     req.setTimeout(60000, () => {
     console.warn('⚠️ Timeout de la solicitud');
   });
