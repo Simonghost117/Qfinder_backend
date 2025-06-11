@@ -20,13 +20,10 @@ export const configureMercadoPago = () => {
   });
 };
 
-export const verifyWebhookSignature = (req) => {
+export const verifyWebhookSignature = (payload, signatureHeader) => {
   try {
-    // Verifica si el header existe (puede venir en diferentes formatos)
-    const signatureHeader = req.headers['x-signature'] || req.headers['x-signature-sha256'];
-    
     if (!signatureHeader) {
-      console.error('Header de firma no encontrado en:', req.headers);
+      console.error('Header de firma no encontrado');
       return false;
     }
 
@@ -51,9 +48,6 @@ export const verifyWebhookSignature = (req) => {
       return false;
     }
 
-    // Usa el rawBody que guardó el middleware
-    const payload = req.rawBody || JSON.stringify(req.body);
-    
     const generatedSignature = crypto
       .createHmac('sha256', secret)
       .update(`${timestamp}:${payload}`)

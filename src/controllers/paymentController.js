@@ -240,7 +240,7 @@ export const handleWebhook = async (req, res) => {
     // Verificación mejorada de firma del webhook
     if (process.env.MERCADOPAGO_WEBHOOK_SECRET) {
       const signature = req.headers['x-signature'] || req.headers['x-signature-sha256'];
-      const requestBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+      const requestBody = req.rawBody || JSON.stringify(req.body);
       
       try {
         const isValid = verifyWebhookSignature(requestBody, signature);

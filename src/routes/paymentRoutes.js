@@ -12,8 +12,14 @@ import { verifyToken } from '../middlewares/verifyToken.js';
 const router = express.Router();
 // Middleware para webhooks que preserva el body raw
 const webhookMiddleware = express.json({
-  verify: (req, res, buf) => {
-    req.rawBody = buf.toString();
+  verify: (req, res, buf, encoding) => {
+    try {
+      if (buf && buf.length) {
+        req.rawBody = buf.toString(encoding || 'utf8');
+      }
+    } catch (e) {
+      console.error('Error setting rawBody', e);
+    }
   }
 });
 // Ruta para crear preferencia de Checkout Pro
