@@ -15,7 +15,7 @@ export const buscarUsuarioPorCorreo = async (req, res) => {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
-    const { nombre_usuario, apellido_usuario, correo_usuario } = usuario;
+    const { id_usuario, nombre_usuario, apellido_usuario, correo_usuario } = usuario;
 
     return res.status(200).json({
       id_usuario: id_usuario,
