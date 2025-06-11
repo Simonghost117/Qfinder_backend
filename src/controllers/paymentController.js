@@ -76,7 +76,7 @@ const calculateRenewalDate = (startDate, planType) => {
 
 // Controladores principales
 export const createCheckoutProPreference = async (req, res) => {
-  const transaction = await models.sequelize.transaction();
+  const transaction = await sequelize.transaction();
   try {
     const { userId, planType } = req.body;
     
