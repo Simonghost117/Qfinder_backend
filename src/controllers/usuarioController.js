@@ -672,6 +672,18 @@ export const actualizarAdmin = async (req, res) => {
     if (!usuario) {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
+    if( correo_usuario || identificacion_usuario ){
+      
+      const existeCorreo = await Usuario.findOne({ where: { correo_usuario, id_usuario: { [Op.ne]: id_usuario } } });
+      if (existeCorreo) {
+        return res.status(400).json({ error: 'El correo ya está registrado' });
+      }
+
+      const existeIdentificacion = await Usuario.findOne({ where: { identificacion_usuario, id_usuario: { [Op.ne]: id_usuario } } });
+      if (existeIdentificacion) {
+        return res.status(400).json({ error: 'El número de identificación ya está registrado' });
+      }
+    }
 
     let nueva_imagen;
         try {
