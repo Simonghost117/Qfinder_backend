@@ -10,9 +10,7 @@ const router = Router();
 
 router.get('/buscar/:correo', verifyToken, buscarUsuarioPorCorreo);
 
-router.post('/agregar', verifyToken, 
-    validatePermissions(['responsable']),
-    validarSchema(validarAgregarColaborador), agregarColaborador);
+router.post('/agregar', verifyToken, validatePermissions(['responsable']), validarSchema(validarAgregarColaborador), agregarColaborador);
 
 router.delete('/eliminar', verifyToken, eliminarColaborador);
 
