@@ -363,10 +363,9 @@ export const listarTodosPacientes = async (req, res) => {
 
 export const registerPaciente2 = async (req, res) => {
   try {
-    const { id_usuario } = req.params;
-
     // Desestructurar solo los campos esperados desde el body
     const {
+      id_usuario,
       nombre,
       apellido,
       identificacion,

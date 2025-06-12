@@ -75,7 +75,9 @@ export const usuarioAdmiAct = z.object({
     correo_usuario: z.string()
         .email({ message: "El correo electrónico debe tener un formato válido" }),
     tipo_usuario: z.enum(['Usuario', 'Medico', 'Administrador', 'Super']).optional(),
-    contrasena_usuario: z.string()
-        .min(8, { message: "La contraseña debe tener al menos 8 caracteres" }), 
+    // contrasena_usuario: z.string()
+    //     .min(8, { message: "La contraseña debe tener al menos 8 caracteres" }), 
     imagen_usuario: z.string().optional(),
+    tipo_suscripcion: z.enum(['free', 'plus', 'pro']).optional(),
+    estado_suscripcion: z.enum(['active', 'pending', 'paused', 'cancelled']).optional(),
 });

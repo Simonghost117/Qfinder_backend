@@ -58,7 +58,7 @@ router.get('/listarPacientes2/:id_usuario',
     // checkEpisodioPermissions(['Administrador']),
     listarPacientes2
 );
-router.post('/registrarPaciente2/:id_usuario',
+router.post('/registrarPaciente2',
     verifyTokenWeb,
     validateRol(['Administrador', 'Super']),
     validateSchema(PacienteSchema),
