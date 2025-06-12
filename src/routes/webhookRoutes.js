@@ -5,16 +5,24 @@ const router = express.Router();
 
 router.post(
   '/webhook',
-  express.raw({ type: 'application/json' }), // raw body solo aquí
-  (req, res, next) => {
+  express.raw({ type: 'application/json' }), // Asegurar raw body
+  async (req, res, next) => {
     try {
-      req.rawBody = req.body;
-      req.body = JSON.parse(req.rawBody.toString('utf-8'));
-      console.log(`📦 RawBody recibido (${req.rawBody.length} bytes)`);
+      // Guardar el cuerpo original como string
+      req.rawBody = req.body.toString('utf8');
+      
+      // Parsear el JSON para uso posterior
+      try {
+        req.body = JSON.parse(req.rawBody);
+      } catch (parseError) {
+        console.error('Error parsing JSON body:', parseError);
+        return res.status(400).json({ error: 'Invalid JSON body' });
+      }
+      
       next();
     } catch (err) {
-      console.error('❌ Error al parsear el rawBody:', err);
-      return res.status(400).json({ error: 'Invalid JSON body' });
+      console.error('Error in webhook middleware:', err);
+      return res.status(500).json({ error: 'Internal server error' });
     }
   },
   handleWebhook
