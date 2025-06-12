@@ -20,14 +20,15 @@ export const configureMercadoPago = () => {
   });
 };
 
-export const verifyWebhookSignature = (payload, signatureHeader) => {
+export const verifyWebhookSignature = (rawBody, signatureHeader) => {
   try {
-    if (!signatureHeader) {
-      console.error('❌ Header de firma no encontrado');
+    // 1. Validación básica de parámetros
+    if (!signatureHeader || !rawBody) {
+      console.error('❌ Faltan parámetros esenciales');
       return false;
     }
 
-    // Parsear el header de firma
+    // 2. Parsear el header de firma
     const signatureParts = {};
     signatureHeader.split(',').forEach(part => {
       const [key, value] = part.split('=');
@@ -36,40 +37,54 @@ export const verifyWebhookSignature = (payload, signatureHeader) => {
 
     const timestamp = signatureParts.ts;
     const receivedSignature = signatureParts.v1;
-    
+
     if (!timestamp || !receivedSignature) {
       console.error('❌ Formato de firma inválido');
       return false;
     }
 
+    // 3. Obtener el secret (asegúrate de que coincide EXACTAMENTE con el de MP)
     const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
     if (!secret) {
-      console.error('❌ Secret no configurado');
+      console.error('❌ Webhook secret no configurado');
       return false;
     }
 
-    // CORRECCIÓN: Usar punto (.) como separador en lugar de dos puntos (:)
+    // 4. Preparar el payload CORRECTO (usar el rawBody exacto)
+    const payload = typeof rawBody === 'string' ? rawBody : rawBody.toString('utf8');
     const dataToSign = `${timestamp}.${payload}`;
+
+    // 5. Generar la firma esperada
     const generatedSignature = crypto
       .createHmac('sha256', secret)
       .update(dataToSign)
       .digest('hex');
 
-    // Comparación exacta
-    const isValid = receivedSignature === generatedSignature;
-    
+    // 6. Comparación SEGURA de las firmas (a prueba de timing attacks)
+    const isValid = crypto.timingSafeEqual(
+      Buffer.from(receivedSignature, 'hex'),
+      Buffer.from(generatedSignature, 'hex')
+    );
+
     if (!isValid) {
       console.error('❌ Firma no válida', {
-        received: receivedSignature.substring(0, 32) + '...',
-        generated: generatedSignature.substring(0, 32) + '...',
+        received: receivedSignature?.substring(0, 32) + '...',
+        generated: generatedSignature?.substring(0, 32) + '...',
         timestamp,
-        payloadLength: payload.length
+        payloadLength: payload.length,
+        dataToSign: dataToSign.substring(0, 100) + '...' // Log parcial para debug
       });
     }
 
     return isValid;
   } catch (error) {
-    console.error('❌ Error validando firma:', error.message);
+    console.error('❌ Error crítico validando firma:', {
+      message: error.message,
+      stack: error.stack,
+      rawBodyType: typeof rawBody,
+      signatureHeader
+    });
     return false;
   }
 };
+
