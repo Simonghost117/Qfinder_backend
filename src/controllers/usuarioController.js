@@ -689,7 +689,18 @@ export const actualizarAdmin = async (req, res) => {
       where: { id_usuario: id_usuario },
     });
 
-    res.status(200).json({ message: 'Información del administrador actualizada exitosamente' });
+    res.status(200).json({ message: 'Información del administrador actualizada exitosamente',
+      usuario: {
+        id_usuario: usuario.id_usuario,
+        nombre_usuario: dataToUpdate.nombre_usuario,
+        apellido_usuario: dataToUpdate.apellido_usuario,
+        identificacion_usuario: dataToUpdate.identificacion_usuario,
+        direccion_usuario: dataToUpdate.direccion_usuario,
+        telefono_usuario: dataToUpdate.telefono_usuario,
+        correo_usuario: dataToUpdate.correo_usuario,
+        imagen_usuario: nueva_imagen
+      }
+     });
   } catch (error) {
     console.error('Error al actualizar el administrador:', error);
     res.status(500).json({ message: 'Error al actualizar el administrador', error });
