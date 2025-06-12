@@ -48,8 +48,8 @@ export const verifyWebhookSignature = (payload, signatureHeader) => {
       return false;
     }
 
-    // Crear la firma esperada
-    const dataToSign = `${timestamp}:${payload}`;
+    // CORRECCIÓN: Usar punto (.) como separador en lugar de dos puntos (:)
+    const dataToSign = `${timestamp}.${payload}`;
     const generatedSignature = crypto
       .createHmac('sha256', secret)
       .update(dataToSign)
