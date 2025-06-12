@@ -3,9 +3,10 @@ import Paciente from '../models/paciente.model.js';
 import Medicamento from '../models/medicamento.model.js';
 import { parseFrequency } from '../utils/conversionFrecuencia.js';
 
+// Asigna medicamnetos a cualquier paciente
 export const asignarMedicamento = async (req, res) => {
   try {
-    const { id_paciente, id_medicamento, fecha_inicio, fecha_fin, dosis, frecuencia } = req.body;
+    const { id_paciente, id_medicamento, fecha_inicio, hora_inicio , fecha_fin, dosis, frecuencia } = req.body;
     
     // Parsear y validar la frecuencia
     const frequencyData = parseFrequency(frecuencia);
@@ -15,6 +16,7 @@ export const asignarMedicamento = async (req, res) => {
       id_paciente,
       id_medicamento,
       fecha_inicio: fecha_inicio || new Date(), // Si no se proporciona, usa fecha actual
+      hora_inicio: hora_inicio || new Date().toISOString().split('T')[1].slice(0, 5), // Si no se proporciona, usa la hora actual
       fecha_fin,
       dosis,
       frecuencia: frequencyData.inHours,
@@ -32,17 +34,17 @@ export const listarMedicamentosPorPaciente = async (req, res) => {
     const { id_paciente } = req.params;
     const { id_usuario } = req.user;
 
-    // Verificar que el paciente pertenece al usuario
-    const paciente = await Paciente.findOne({
-      where: { id_paciente, id_usuario }
-    });
+    // // Verificar que el paciente pertenece al usuario
+    // const paciente = await Paciente.findOne({
+    //   where: { id_paciente, id_usuario }
+    // });
 
-    if (!paciente) {
-      return res.status(403).json({ 
-        success: false,
-        message: 'No tienes permisos para acceder a este paciente'
-      });
-    }
+    // if (!paciente) {
+    //   return res.status(403).json({ 
+    //     success: false,
+    //     message: 'No tienes permisos para acceder a este paciente'
+    //   });
+    // }
 
     const asignaciones = await PacienteMedicamento.findAll({
       where: { id_paciente },
@@ -58,7 +60,7 @@ export const listarMedicamentosPorPaciente = async (req, res) => {
           required: true
         }
       ],
-      attributes: ['id_pac_medicamento', 'fecha_inicio', 'fecha_fin', 'dosis', 'frecuencia'],
+      attributes: ['id_pac_medicamento', 'fecha_inicio','hora_inicio', 'fecha_fin', 'dosis', 'frecuencia'],
       order: [['fecha_inicio', 'DESC']] // Ordenar por fecha más reciente
     });
 
@@ -70,6 +72,7 @@ export const listarMedicamentosPorPaciente = async (req, res) => {
       return {
         id_pac_medicamento: asignacion.id_pac_medicamento,
         fecha_inicio: fechaInicio.toISOString().split('T')[0], // Formato YYYY-MM-DD
+        hora_inicio: asignacion.hora_inicio || fechaInicio.toISOString().split('T')[1].slice(0, 5), // Formato HH:mm
         fecha_fin: fechaFin.toISOString().split('T')[0],
         dosis: asignacion.dosis || 'No especificada',
         frecuencia: asignacion.frecuencia || 'No especificada',
@@ -123,14 +126,14 @@ export const listarAsignaciones = async (req, res) => {
 export const actualizarAsignacion = async (req, res) => {
   try {
     const { id } = req.params;
-    const { fecha_inicio, fecha_fin, dosis, frecuencia } = req.body;
+    const { fecha_inicio, hora_inicio, fecha_fin, dosis, frecuencia } = req.body;
 
     const frequencyData = parseFrequency(frecuencia);
 
     const asignacion = await PacienteMedicamento.findByPk(id);
     if (!asignacion) return res.status(404).json({ success: false, message: 'Asignación no encontrada' });
 
-    await asignacion.update({ fecha_inicio, fecha_fin, dosis, frecuencia: frequencyData.inHours });
+    await asignacion.update({ fecha_inicio, hora_inicio, fecha_fin, dosis, frecuencia: frequencyData.inHours });
 
     res.status(200).json({ success: true, data: asignacion });
   } catch (error) {

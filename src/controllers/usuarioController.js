@@ -1,9 +1,10 @@
 import jwt from 'jsonwebtoken';
-import Usuario from '../models/usuario.model.js';
 import { createAccessToken } from '../libs/jwt.js';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 import { imgBase64, manejarImagenes } from '../utils/imgBase64.js';
+import { models } from '../models/index.js';
+const { Usuario, Subscription } = models;
 
 dotenv.config();
 
@@ -383,7 +384,6 @@ export const listarUsuarios = async (req, res) => {
             [Op.iLike]: `%${searchTerm}%` 
           } 
         },
-      
         sequelize.where(
           sequelize.fn('LOWER', sequelize.col('identificacion_usuario')),
           '=',
@@ -394,6 +394,12 @@ export const listarUsuarios = async (req, res) => {
 
     const result = await PaginationService.paginate(Usuario, {
       where,
+      include: [{
+        model: Subscription,
+        as: 'subscription', 
+        required: false, // LEFT JOIN en lugar de INNER JOIN
+        attributes: ['tipo_suscripcion', 'estado_suscripcion', 'fecha_inicio', 'fecha_renovacion', 'limite_pacientes', 'limite_cuidadores']
+      }],
       order: [['id_usuario', 'DESC']],
       req,
       transformData: (usuarios) => usuarios.map(usuario => ({
@@ -405,14 +411,23 @@ export const listarUsuarios = async (req, res) => {
         telefono_usuario: usuario.telefono_usuario,
         correo_usuario: usuario.correo_usuario,
         tipo_usuario: usuario.tipo_usuario,
-        estado_usuario: usuario.estado_usuario
+        estado_usuario: usuario.estado_usuario,
+        // Información de la suscripción
+        suscripcion: usuario.subscription ? {
+          tipo: usuario.subscription.tipo_suscripcion,
+          estado: usuario.subscription.estado_suscripcion,
+          fecha_inicio: usuario.subscription.fecha_inicio,
+          fecha_renovacion: usuario.subscription.fecha_renovacion,
+          limite_pacientes: usuario.subscription.limite_pacientes,
+          limite_cuidadores: usuario.subscription.limite_cuidadores
+        } : null
       }))
     });
 
     res.status(200).json(result);
   } catch (error) {
     console.log('Error al listar los usuarios', error);
-    res.status(500).json({ message: "Erro interno del servidor al listar los usuarios"})
+    res.status(500).json({ message: "Error interno del servidor al listar los usuarios"})
   }
 }
 export const listarAdmin = async (req, res) => {
@@ -480,11 +495,16 @@ export const listarAdmin = async (req, res) => {
 export const actualizarUsuario = async (req, res) => {
   try {
     const { id_usuario } = req.params;
-    const { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, imagen_usuario, tipo_usuario} = req.body;
+    const { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, imagen_usuario, tipo_usuario, tipo_suscripcion, estado_suscripcion } = req.body;
     const usuario = await Usuario.findOne({
       where: {
         id_usuario: id_usuario
-      }, attributes: [ 'tipo_usuario' ]
+      }, attributes: [ 'tipo_usuario' ], 
+       include: [{
+        model: Subscription,
+        as: 'subscription', // Asegúrate de que coincida con tu asociación
+        required: false // LEFT JOIN (incluye usuarios sin suscripción)
+  }]
     })
     if (!usuario) {
       return res.status(404).json({ message: "Usuario no encontrado" });
@@ -515,7 +535,22 @@ export const actualizarUsuario = async (req, res) => {
     await Usuario.update(dataToUpdate, {
       where: { id_usuario: id_usuario },
     });
-    res.status(200).json({ message: 'Información del usuario actualizada exitosamente' });
+
+
+    if (usuario.subscription && (tipo_suscripcion || estado_suscripcion)) {
+      await Subscription.update(
+        {
+          tipo_suscripcion: tipo_suscripcion || usuario.subscription.tipo_suscripcion,
+          estado_suscripcion: estado_suscripcion || usuario.subscription.estado_suscripcion
+        },
+        { where: { id_usuario: id_usuario } }
+      );
+    }
+    res.status(200).json({ 
+      success: true,
+      message: 'Usuario actualizado correctamente' + 
+        (usuario.subscription ? ' (con suscripción actualizada)' : '') 
+    });
   } catch(error) {
     console.error('Error al actualizar el usuario', error);
     res.status(500).json({ message: "Error en el servidor al actualizar el usuario" });
@@ -662,7 +697,18 @@ export const actualizarAdmin = async (req, res) => {
       where: { id_usuario: id_usuario },
     });
 
-    res.status(200).json({ message: 'Información del administrador actualizada exitosamente' });
+    res.status(200).json({ message: 'Información del administrador actualizada exitosamente',
+      usuario: {
+        id_usuario: usuario.id_usuario,
+        nombre_usuario: dataToUpdate.nombre_usuario,
+        apellido_usuario: dataToUpdate.apellido_usuario,
+        identificacion_usuario: dataToUpdate.identificacion_usuario,
+        direccion_usuario: dataToUpdate.direccion_usuario,
+        telefono_usuario: dataToUpdate.telefono_usuario,
+        correo_usuario: dataToUpdate.correo_usuario,
+        imagen_usuario: nueva_imagen
+      }
+     });
   } catch (error) {
     console.error('Error al actualizar el administrador:', error);
     res.status(500).json({ message: 'Error al actualizar el administrador', error });

@@ -21,7 +21,7 @@ function wrap(method) {
 routerEpisodioSalud.post(
   '/episodioSalud/:id_paciente',
   verifyToken,
-  checkEpisodioPermissions(['Usuario']),//Medico tiene error de permisos
+  checkEpisodioPermissions(['Usuario', 'Colaborador']),//Medico tiene error de permisos
   uploadEpisodio,
   injectPacienteId,
   validateZodSchema(episodioSchema),
