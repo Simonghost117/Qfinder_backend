@@ -2,7 +2,8 @@ import express from 'express';
 import { register, listarPacientes, getPacienteById, actualizarPaciente, eliminarPaciente, listarTodosPacientes,
     registerPaciente2,
     actualizarPaciente2,
-    listarPacientes2
+    listarPacientes2,
+    obtenerRolPaciente
  } from '../controllers/pacienteController.js';
 import validateSchema from "../middlewares/validatoreSchema.js"
 import {PacienteSchema, ActPacienteSchema, ActPaciente2} from "../schema/pacienteSchema.js";
@@ -44,6 +45,11 @@ router.delete('/eliminarPaciente/:id_paciente',
     eliminarPaciente
 );
 
+//Esta ruta la creo para que valide si es responsable o si es colaborador, BUENO ALISON????
+router.get('/pacientes/:id_paciente/rol', 
+    verifyToken, 
+    obtenerRolPaciente);
+
 //ADMINISTRADOR
 
 router.get('/todosPacientes', 
@@ -75,6 +81,5 @@ router.delete('/eliminarPaciente2/:id_paciente',
     validateRol(['Administrador', 'Super']), 
     eliminarPaciente
 );
-
 
 export default router;

@@ -314,6 +314,48 @@ export const eliminarPaciente = async (req, res) => {
   }
 }
 
+export const obtenerRolPaciente = async (req, res) => {
+  const userId = req.user?.id_usuario;
+  const pacienteId = req.params.id_paciente;
+
+  try {
+    const esResponsable = await Familiar.findOne({
+      where: {
+        id_usuario: userId,
+        id_paciente: pacienteId,
+        // cuidador_principal: true // Descomenta si lo usas
+      }
+    });
+
+    if (esResponsable) {
+      return res.status(200).json({ success: true, rol: 'responsable' });
+    }
+
+    const esColaborador = await Colaborador.findOne({
+      where: {
+        id_usuario: userId,
+        id_paciente: pacienteId
+      }
+    });
+
+    if (esColaborador) {
+      return res.status(200).json({ success: true, rol: 'colaborador' });
+    }
+
+    return res.status(403).json({
+      success: false,
+      message: 'Sin permisos sobre este paciente'
+    });
+
+  } catch (error) {
+    console.error('Error en obtenerRolPaciente:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    });
+  }
+};
+
 export const listarTodosPacientes = async (req, res) => {
   try {
       const include = [{

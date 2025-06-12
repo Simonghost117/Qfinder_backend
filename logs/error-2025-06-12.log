@@ -1,0 +1,10 @@
+2025-06-12 11:00:12 [31merror[39m: SequelizeHostNotFoundError: getaddrinfo ENOTFOUND aws-0-us-east-2.pooler.supabase.com
+    at Client._connectionCallback (C:\Users\JHON HANZ\Documents\RIDER\QfindeR\Qfinder_backend\node_modules\sequelize\lib\dialects\postgres\connection-manager.js:136:24)
+    at Client._handleErrorWhileConnecting (C:\Users\JHON HANZ\Documents\RIDER\QfindeR\Qfinder_backend\node_modules\pg\lib\client.js:336:19)
+    at Client._handleErrorEvent (C:\Users\JHON HANZ\Documents\RIDER\QfindeR\Qfinder_backend\node_modules\pg\lib\client.js:346:19)
+    at Connection.emit (node:events:519:28)
+    at Socket.reportStreamError (C:\Users\JHON HANZ\Documents\RIDER\QfindeR\Qfinder_backend\node_modules\pg\lib\connection.js:57:12)
+    at Socket.emit (node:events:519:28)
+    at emitErrorNT (node:internal/streams/destroy:169:8)
+    at emitErrorCloseNT (node:internal/streams/destroy:128:3)
+    at process.processTicksAndRejections (node:internal/process/task_queues:82:21)
