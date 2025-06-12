@@ -19,41 +19,43 @@ export const configureMercadoPago = () => {
     }
   });
 };
-
 export const verifyWebhookSignature = (rawBody, signatureHeader) => {
   try {
-    // Validación básica
     if (!signatureHeader || !rawBody) {
       console.error('Missing signature header or raw body');
       return false;
     }
 
-    // Extraer timestamp y firma
+    // Extraer timestamp y firma de forma más robusta
     const signatureParts = {};
     signatureHeader.split(',').forEach(part => {
       const [key, value] = part.split('=');
-      if (key && value) signatureParts[key.trim()] = value.trim();
+      if (key && value) {
+        signatureParts[key.trim()] = value.trim().replace(/^"|"$/g, '');
+      }
     });
 
     const timestamp = signatureParts.ts;
     const receivedSignature = signatureParts.v1;
 
     if (!timestamp || !receivedSignature) {
-      console.error('Invalid signature format');
+      console.error('Invalid signature format - missing ts or v1');
       return false;
     }
 
-    // Obtener secret de entorno
     const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
     if (!secret) {
       console.error('Webhook secret not configured');
       return false;
     }
 
-    // Crear payload correcto (timestamp + rawBody)
-    const dataToSign = `${timestamp}.${rawBody}`;
+    // Asegurar que el rawBody es un string
+    const requestBody = typeof rawBody === 'string' ? rawBody : rawBody.toString('utf8');
+    
+    // Crear payload - importante sin espacios adicionales
+    const dataToSign = `${timestamp}.${requestBody}`.trim();
 
-    // Calcular firma esperada
+    // Calcular firma
     const generatedSignature = crypto
       .createHmac('sha256', secret)
       .update(dataToSign)
@@ -66,11 +68,12 @@ export const verifyWebhookSignature = (rawBody, signatureHeader) => {
     );
 
     if (!isValid) {
-      console.error('Signature mismatch', {
-        received: receivedSignature,
-        generated: generatedSignature,
+      console.error('Signature verification failed', {
+        receivedSignature,
+        generatedSignature,
         timestamp,
-        dataToSign: dataToSign.substring(0, 100) + '...'
+        dataToSign: dataToSign.substring(0, 100) + '...',
+        secretPresent: !!secret
       });
     }
 
@@ -80,4 +83,3 @@ export const verifyWebhookSignature = (rawBody, signatureHeader) => {
     return false;
   }
 };
-
