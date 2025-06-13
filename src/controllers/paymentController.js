@@ -262,7 +262,7 @@ export const handleWebhook = async (req, res) => {
     
     // Usar el cuerpo ya parseado por el middleware
     const webhookData = req.body;
-    const rawBody = req.rawBody?.toString('utf8') || JSON.stringify(webhookData);
+    const rawBody = req.rawBody; // tipo Buffer, intacto
 
     // Debug: Registrar los primeros 100 caracteres del cuerpo
     console.log(`📦 [${requestId}] Body (first 100 chars):`, rawBody.substring(0, 100));

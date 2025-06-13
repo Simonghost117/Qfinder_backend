@@ -15,6 +15,7 @@ dotenv.config();
 
 // Inicialización de la app
 const app = express();
+app.post('/webhook', express.raw({ type: 'application/json' }), handleWebhook);
 app.use('/api/webhook', webhookRoutes);
 
 
@@ -68,6 +69,7 @@ import firebaseRoutes from './routes/firebase.js';
 // ... otras importaciones
 import paymentRoutes from './routes/paymentRoutes.js';
 import colaboradorRoutes from './routes/colaborador.routes.js';
+import { handleWebhook } from './controllers/paymentController.js';
 // Después de inicializar tu aplicación
 
 
