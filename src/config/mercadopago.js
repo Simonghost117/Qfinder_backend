@@ -23,7 +23,7 @@ export const configureMercadoPago = () => {
 
 
 export const verifyWebhookSignature = (rawBody, receivedSignature) => {
-  const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
+  const secret = 'ca39d4db46bd8328f60bf0c98d6b4009ad0c19a0f2ee4156349aa16a219293aa';
 
   if (!secret) {
     console.warn('⚠️ No se configuró MERCADOPAGO_WEBHOOK_SECRET. Se omite la validación de firma.');
