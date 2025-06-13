@@ -347,31 +347,7 @@ export const handleWebhook = async (req, res) => {
   }
 };
 
-export const verifyWebhookSignature = (rawBody, receivedSignature) => {
-  const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
-  if (!secret) {
-    throw new Error('Webhook secret not configured');
-  }
 
-  const payloadBuffer = Buffer.isBuffer(rawBody)
-    ? rawBody
-    : Buffer.from(rawBody);
-
-  const generatedSignature = crypto
-    .createHmac('sha256', secret)
-    .update(payloadBuffer)
-    .digest('hex');
-
-  console.log('🔍 Verificación de firma:');
-  console.log('✉️ Cuerpo recibido:', payloadBuffer.toString('utf8'));
-  console.log('📨 Firma recibida:', receivedSignature);
-  console.log('🛠 Firma generada:', generatedSignature);
-
-  return crypto.timingSafeEqual(
-    Buffer.from(receivedSignature, 'hex'),
-    Buffer.from(generatedSignature, 'hex')
-  );
-};
 
 
 // Nuevas funciones auxiliares para manejar específicamente cada tipo
