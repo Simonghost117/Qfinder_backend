@@ -23,7 +23,7 @@ export const configureMercadoPago = () => {
 
 
 export const verifyWebhookSignature = (rawBody, receivedSignature) => {
-  const secret = 'ca39d4db46bd8328f60bf0c98d6b4009ad0c19a0f2ee4156349aa16a219293aa' // o directamente hardcoded si estás probando
+  const secret = 'fdcd32e1d236e21283a9cabbab2c048f401b6e83624f05feb64a711b71f3b58a' // o directamente hardcoded si estás probando
 
   // ✅ LOGS CRÍTICOS AQUÍ
   console.log('🧪 Secreto cargado (string):', JSON.stringify(secret));
