@@ -21,55 +21,35 @@ export const configureMercadoPago = () => {
 };
 
 export const verifyWebhookSignature = (rawBody, signatureHeader) => {
-  try {
-    if (!signatureHeader || !rawBody) {
-      console.error('❌ Faltan parámetros para verificación');
-      return false;
-    }
-
-    // Extraer componentes de la firma (nuevo formato de MercadoPago)
-    const [tsPart, v1Part] = signatureHeader.split(',');
-    const timestamp = tsPart?.split('=')[1]?.trim();
-    const receivedSignature = v1Part?.split('=')[1]?.trim();
-
-    if (!timestamp || !receivedSignature) {
-      console.error('❌ Firma malformada - falta timestamp o firma v1');
-      return false;
-    }
-
-    const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET?.trim();
-    if (!secret) {
-      console.error('❌ Secret no configurado en variables de entorno');
-      throw new Error('MERCADOPAGO_WEBHOOK_SECRET no definido');
-    }
-
-    // Prepara los datos para firmar (timestamp + cuerpo RAW)
-    const dataToSign = `${timestamp}.${rawBody.toString('utf8')}`;
-
-    // Genera la firma esperada
-    const generatedSignature = crypto
-      .createHmac('sha256', secret)
-      .update(dataToSign)
-      .digest('hex');
-
-    // Comparación segura
-    const isValid = receivedSignature === generatedSignature;
-
-    if (!isValid) {
-      console.error('⚠️ Verificación de firma fallida', {
-        receivedSignature,
-        generatedSignature,
-        timestamp,
-        dataToSignLength: dataToSign.length,
-      });
-    }
-
-    return isValid;
-  } catch (err) {
-    console.error('❌ Error verificando firma:', {
-      error: err.message,
-      stack: err.stack
-    });
-    return false;
+  console.log('Received signature header:', signatureHeader);
+  console.log('Raw body length:', rawBody?.length);
+  
+  // Parsear el header correctamente
+  const [tsPart, sigPart] = signatureHeader.split(',');
+  const timestamp = tsPart.split('=')[1];
+  const receivedSig = sigPart.split('=')[1];
+  
+  console.log('Timestamp:', timestamp);
+  console.log('Received signature:', receivedSig);
+  
+  // Verificar que el secret esté correctamente configurado
+  const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
+  if (!secret) {
+    throw new Error('Webhook secret not configured');
   }
+  
+  // Generar la firma esperada
+  const dataToSign = `${timestamp}.${rawBody.toString('utf8')}`;
+  const generatedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(dataToSign)
+    .digest('hex');
+  
+  console.log('Generated signature:', generatedSignature);
+  
+  // Comparación segura contra timing attacks
+  return crypto.timingSafeEqual(
+    Buffer.from(receivedSig, 'hex'),
+    Buffer.from(generatedSignature, 'hex')
+  );
 };
