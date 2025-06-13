@@ -27,7 +27,7 @@ export const verifyWebhookSignature = (rawBody, signatureHeader) => {
   // Parsear el header correctamente
   const [tsPart, sigPart] = signatureHeader.split(',');
   const timestamp = tsPart.split('=')[1];
-  const receivedSig = sigPart.split('=')[1];
+  const receivedSig = sigPart.split('=')[1].trim();
   
   console.log('Timestamp:', timestamp);
   console.log('Received signature:', receivedSig);
