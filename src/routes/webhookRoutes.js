@@ -5,17 +5,18 @@ const router = express.Router();
 
 router.post(
   '/webhook',
-  express.raw({ type: 'application/json' }),
+  express.raw({ type: 'application/json' }), // Esto hace que req.body sea un Buffer
   (req, res, next) => {
     try {
-      // Guarda el cuerpo crudo como string
-      req.rawBody = req.body.toString('utf8');
+      // Guarda el buffer tal cual, para usarlo en la verificación
+      req.rawBody = req.body;
 
-      // Intenta parsear el JSON para uso dentro del controlador
-      req.parsedBody = JSON.parse(req.rawBody);
+      // Intenta parsear el JSON para dejarlo en req.body
+      req.body = JSON.parse(req.rawBody.toString('utf8'));
+
       next();
     } catch (err) {
-      console.error('Error parsing rawBody:', err);
+      console.error('❌ Error parseando rawBody:', err.message);
       return res.status(400).json({ error: 'Invalid JSON body' });
     }
   },

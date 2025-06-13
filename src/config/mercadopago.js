@@ -19,38 +19,31 @@ export const configureMercadoPago = () => {
     }
   });
 };
+
+
 export const verifyWebhookSignature = (rawBody, signatureHeader) => {
   try {
-    if (!signatureHeader || !rawBody) {
-      console.error('❌ Faltan datos: signatureHeader o rawBody');
-      return false;
-    }
+    if (!signatureHeader || !rawBody) return false;
 
-    // Separar partes del header "ts=...,v1=..."
     const signatureParts = {};
     signatureHeader.split(',').forEach(part => {
       const [key, value] = part.split('=');
-      if (key && value) {
-        signatureParts[key.trim()] = value.trim();
-      }
+      if (key && value) signatureParts[key.trim()] = value.trim();
     });
 
     const timestamp = signatureParts.ts;
     const receivedSignature = signatureParts.v1;
 
     if (!timestamp || !receivedSignature) {
-      console.error('❌ Formato de firma inválido - falta ts o v1');
+      console.error('❌ Firma malformada o incompleta');
       return false;
     }
 
     const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
-    if (!secret) {
-      console.error('❌ Webhook secret no configurado');
-      return false;
-    }
+    if (!secret) throw new Error('Secret no definido');
 
-    const requestBody = rawBody.toString('utf8');
-    const dataToSign = `${timestamp}.${requestBody}`;
+    const bodyString = typeof rawBody === 'string' ? rawBody : JSON.stringify(rawBody);
+    const dataToSign = `${timestamp}.${bodyString}`;
 
     const generatedSignature = crypto
       .createHmac('sha256', secret)
@@ -63,7 +56,7 @@ export const verifyWebhookSignature = (rawBody, signatureHeader) => {
     );
 
     if (!isValid) {
-      console.warn('⚠️ Verificación de firma fallida', {
+      console.error('⚠️ Verificación de firma fallida', {
         receivedSignature,
         generatedSignature,
         timestamp,
@@ -72,8 +65,8 @@ export const verifyWebhookSignature = (rawBody, signatureHeader) => {
     }
 
     return isValid;
-  } catch (error) {
-    console.error('❌ Error al verificar la firma:', error);
+  } catch (err) {
+    console.error('❌ Error verificando firma:', err.message);
     return false;
   }
 };
