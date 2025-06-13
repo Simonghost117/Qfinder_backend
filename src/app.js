@@ -8,13 +8,14 @@ import chatRoutes from './routes/chatRoutes.js';
 import cookieParser from 'cookie-parser';
 import session from 'express-session';
 import { EventEmitter } from 'events';
+import webhookRoutes from './routes/webhookRoutes.js';
 startAllJobs();
 // Configuración de entorno
 dotenv.config();
 
 // Inicialización de la app
 const app = express();
-app.use('/api/webhook', webhookRoutes)
+app.use('/api/webhook', webhookRoutes);
 
 
 // Configuración de EventEmitter
@@ -68,7 +69,7 @@ import firebaseRoutes from './routes/firebase.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import colaboradorRoutes from './routes/colaborador.routes.js';
 // Después de inicializar tu aplicación
-import webhookRoutes from './routes/webhookRoutes.js';
+
 
 // Endpoint raíz informativo
 app.get('/', (req, res) => {
