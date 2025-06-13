@@ -4,7 +4,7 @@ import { handleWebhook } from '../controllers/paymentController.js';
 const router = express.Router();
 
 router.post(
-  '/webhook',
+  '/',
   // Middleware para preservar el cuerpo RAW
   express.raw({ type: 'application/json' }),
   async (req, res, next) => {
