@@ -26,12 +26,12 @@ export const verifyWebhookSignature = (rawBody, signatureHeader) => {
       return false;
     }
 
-    // Extraer timestamp y firma de forma más robusta
+    // Extraer timestamp y firma del formato de MercadoPago: "ts=123456,v1=abc123"
     const signatureParts = {};
     signatureHeader.split(',').forEach(part => {
       const [key, value] = part.split('=');
       if (key && value) {
-        signatureParts[key.trim()] = value.trim().replace(/^"|"$/g, '');
+        signatureParts[key.trim()] = value.trim();
       }
     });
 
@@ -50,10 +50,10 @@ export const verifyWebhookSignature = (rawBody, signatureHeader) => {
     }
 
     // Asegurar que el rawBody es un string
-    const requestBody = typeof rawBody === 'string' ? rawBody : rawBody.toString('utf8');
+    const requestBody = typeof rawBody === 'string' ? rawBody : JSON.stringify(rawBody);
     
-    // Crear payload - importante sin espacios adicionales
-    const dataToSign = `${timestamp}.${requestBody}`.trim();
+    // Crear payload exactamente como lo espera MercadoPago
+    const dataToSign = `${timestamp}.${requestBody}`;
 
     // Calcular firma
     const generatedSignature = crypto
