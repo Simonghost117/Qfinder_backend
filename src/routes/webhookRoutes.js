@@ -3,7 +3,12 @@ import { handleWebhook } from '../controllers/paymentController.js';
 
 const router = express.Router();
 
-app.post('/webhook', 
+import express from 'express';
+import { handleWebhook } from '../controllers/paymentController.js';
+
+
+
+router.post('/webhook', 
   express.raw({ type: 'application/json' }), // Recibir como Buffer
   (req, res, next) => {
       console.log('Headers:', req.headers);
@@ -20,3 +25,4 @@ console.log('Raw Body:', req.rawBody.toString());
 );
 
 export default router;
+
