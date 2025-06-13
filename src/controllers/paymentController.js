@@ -260,14 +260,22 @@ export const handleWebhook = async (req, res) => {
   try {
     console.log(`🔔 [${requestId}] Webhook recibido`);
     
-    // Usar el cuerpo ya parseado por el middleware
     const webhookData = req.body;
-    const rawBody = req.rawBody; // tipo Buffer, intacto
+    const rawBody = req.rawBody;
 
-    // Debug: Registrar los primeros 100 caracteres del cuerpo
-    console.log(`📦 [${requestId}] Body (first 100 chars):`, rawBody.substring(0, 100));
+    // 🛡️ Manejo seguro del log del cuerpo
+    let rawPreview = '';
+    if (Buffer.isBuffer(rawBody)) {
+      rawPreview = rawBody.toString('utf8').substring(0, 100);
+    } else if (typeof rawBody === 'string') {
+      rawPreview = rawBody.substring(0, 100);
+    } else {
+      rawPreview = JSON.stringify(webhookData).substring(0, 100);
+    }
 
-    // 1. Verificar firma primero (si está configurado)
+    console.log(`📦 [${requestId}] Body (first 100 chars):`, rawPreview);
+
+    // 1. Verificar firma si se requiere
     if (process.env.MERCADOPAGO_WEBHOOK_SECRET) {
       const signature = req.headers['x-signature'];
       if (!signature) {
@@ -275,7 +283,7 @@ export const handleWebhook = async (req, res) => {
         return safeRespond(403, 'Encabezado de firma faltante');
       }
 
-      const isValid = verifyWebhookSignature(req.rawBody, signature);
+      const isValid = verifyWebhookSignature(rawBody, signature);
       console.log(`🔍 [${requestId}] Resultado verificación firma:`, isValid);
 
       if (!isValid) {
@@ -283,7 +291,7 @@ export const handleWebhook = async (req, res) => {
       }
     }
 
-    // 2. Extraer datos del webhook
+    // 2. Extraer datos
     const topic = req.query.topic || webhookData.type || webhookData.topic;
     const id = req.query.id || webhookData.data?.id || webhookData.id;
 
@@ -297,7 +305,7 @@ export const handleWebhook = async (req, res) => {
 
     console.log(`📨 [${requestId}] Procesando webhook`, { topic, id });
 
-    // 3. Procesar según el tipo
+    // 3. Procesamiento
     try {
       switch (topic) {
         case 'payment':
@@ -336,6 +344,7 @@ export const handleWebhook = async (req, res) => {
     return safeRespond(500, 'Error interno del servidor');
   }
 };
+
 // Nuevas funciones auxiliares para manejar específicamente cada tipo
 async function handlePaymentWebhook(paymentId) {
   const payment = await getPayment(paymentId);
