@@ -9,7 +9,7 @@ import cookieParser from 'cookie-parser';
 import session from 'express-session';
 import { EventEmitter } from 'events';
 import webhookRoutes from './routes/webhookRoutes.js';
-startAllJobs();
+
 // Configuración de entorno
 dotenv.config();
 
@@ -72,7 +72,7 @@ import colaboradorRoutes from './routes/colaborador.routes.js';
 import { handleWebhook } from './controllers/paymentController.js';
 // Después de inicializar tu aplicación
 
-
+startAllJobs();
 // Endpoint raíz informativo
 app.get('/', (req, res) => {
   res.json({
