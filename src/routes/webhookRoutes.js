@@ -5,14 +5,17 @@ const router = express.Router();
 
 router.post(
   '/webhook',
-  express.raw({ type: '*/*' }), // Acepta cualquier Content-Type
+  express.raw({ type: 'application/json' }), // Especifica exactamente el tipo esperado
   (req, res, next) => {
     try {
-      // Preserva el cuerpo original como string y como objeto parseado
+      // Preserva el cuerpo EXACTAMENTE como viene
       req.rawBody = req.body.toString('utf8');
-      req.body = JSON.parse(req.rawBody); // Esto sobreescribe el Buffer con el objeto parseado
+      
+      // Intenta parsear para validar que es JSON válido
+      req.body = JSON.parse(req.rawBody);
       next();
     } catch (err) {
+      console.error('Error parsing JSON:', err);
       return res.status(400).json({ error: 'Invalid JSON body' });
     }
   },

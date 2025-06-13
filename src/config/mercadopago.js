@@ -29,14 +29,9 @@ export const verifyWebhookSignature = (rawBody, signatureHeader) => {
     }
 
     // Extraer componentes de la firma
-    const signatureParts = {};
-    signatureHeader.split(',').forEach(part => {
-      const [key, value] = part.split('=');
-      if (key && value) signatureParts[key.trim()] = value.trim();
-    });
-
-    const timestamp = signatureParts.ts;
-    const receivedSignature = signatureParts.v1;
+    const [tsPart, v1Part] = signatureHeader.split(',');
+    const timestamp = tsPart.split('=')[1];
+    const receivedSignature = v1Part.split('=')[1];
 
     if (!timestamp || !receivedSignature) {
       console.error('❌ Firma malformada - falta timestamp o firma v1');
@@ -49,33 +44,38 @@ export const verifyWebhookSignature = (rawBody, signatureHeader) => {
       throw new Error('MERCADOPAGO_WEBHOOK_SECRET no definido');
     }
 
-    // Prepara los datos para firmar (timestamp + cuerpo RAW)
+    // Prepara los datos para firmar (timestamp + cuerpo RAW EXACTO)
     const dataToSign = `${timestamp}.${rawBody}`;
 
     // Genera la firma esperada
     const generatedSignature = crypto
-      .createHmac('sha256', secret)
+      .createHmac('sha256', secret.trim()) // .trim() por si hay espacios accidentalmente
       .update(dataToSign)
       .digest('hex');
 
-    // Comparación segura contra ataques de timing
-    const isValid = crypto.timingSafeEqual(
-      Buffer.from(receivedSignature, 'hex'),
-      Buffer.from(generatedSignature, 'hex')
-    );
+    console.log('=== DEBUG FIRMA ===');
+    console.log('Secret:', `"${secret}"`);
+    console.log('Timestamp:', timestamp);
+    console.log('Datos a firmar (50 primeros chars):', dataToSign.substring(0, 50));
+    console.log('Firma recibida:', receivedSignature);
+    console.log('Firma generada:', generatedSignature);
+    console.log('===================');
+
+    // Comparación segura
+    const isValid = receivedSignature === generatedSignature;
 
     if (!isValid) {
       console.error('⚠️ Verificación de firma fallida', {
         receivedSignature,
         generatedSignature,
         timestamp,
-        dataToSign: dataToSign.length > 100 ? dataToSign.slice(0, 100) + '...' : dataToSign,
+        dataToSignLength: dataToSign.length,
       });
     }
 
     return isValid;
   } catch (err) {
-    console.error('❌ Error verificando firma:', err.message);
+    console.error('❌ Error verificando firma:', err);
     return false;
   }
 };
