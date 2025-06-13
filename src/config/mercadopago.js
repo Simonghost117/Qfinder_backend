@@ -2,7 +2,7 @@ import { MercadoPagoConfig } from 'mercadopago';
 import crypto from 'crypto';
 
 export const configureMercadoPago = () => {
-  const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
+  const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN?.trim();
   const isSandbox = process.env.NODE_ENV !== 'production';
   
   if (!accessToken) {
@@ -20,56 +20,63 @@ export const configureMercadoPago = () => {
   });
 };
 
-export const verifyWebhookSignature = (payload, signatureHeader) => {
+
+
+export const verifyWebhookSignature = (rawBody, receivedSignature) => {
+  const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
+
+  if (!secret) {
+    console.warn('⚠️ No se configuró MERCADOPAGO_WEBHOOK_SECRET. Se omite la validación de firma.');
+    return true; // ⚠️ Solo usar esto si confías en el origen (por ejemplo, en desarrollo)
+  }
+
+  if (!receivedSignature) {
+    console.error('❌ Encabezado de firma no proporcionado');
+    return false;
+  }
+
+  // Convertir el cuerpo recibido en buffer si no lo es
+  const payloadBuffer = Buffer.isBuffer(rawBody)
+    ? rawBody
+    : Buffer.from(rawBody);
+
+  // Generar firma HMAC usando el cuerpo y el secreto
+  const generatedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(payloadBuffer)
+    .digest('hex');
+
+  // Extraer el valor de v1 de la cabecera de firma
+  const parsedSignature = receivedSignature
+    .split(',')
+    .find(part => part.trim().startsWith('v1='))
+    ?.split('=')[1];
+
+  if (!parsedSignature) {
+    console.error('❌ No se encontró la firma v1 en la cabecera');
+    return false;
+  }
+
+  // Mostrar información para depuración
+  console.log('🔍 Verificación de firma:');
+  console.log('✉️ Cuerpo recibido:', payloadBuffer.toString('utf8'));
+  console.log('📨 Firma recibida (v1):', parsedSignature);
+  console.log('🛠 Firma generada:', generatedSignature);
+
   try {
-    if (!signatureHeader) {
-      console.error('❌ Header de firma no encontrado');
-      return false;
-    }
+    const isValid = crypto.timingSafeEqual(
+      Buffer.from(parsedSignature, 'hex'),
+      Buffer.from(generatedSignature, 'hex')
+    );
 
-    // Parsear el header de firma
-    const signatureParts = {};
-    signatureHeader.split(',').forEach(part => {
-      const [key, value] = part.split('=');
-      if (key && value) signatureParts[key.trim()] = value.trim();
-    });
-
-    const timestamp = signatureParts.ts;
-    const receivedSignature = signatureParts.v1;
-    
-    if (!timestamp || !receivedSignature) {
-      console.error('❌ Formato de firma inválido');
-      return false;
-    }
-
-    const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
-    if (!secret) {
-      console.error('❌ Secret no configurado');
-      return false;
-    }
-
-    // Crear la firma esperada
-    const dataToSign = `${timestamp}:${payload}`;
-    const generatedSignature = crypto
-      .createHmac('sha256', secret)
-      .update(dataToSign)
-      .digest('hex');
-
-    // Comparación exacta
-    const isValid = receivedSignature === generatedSignature;
-    
     if (!isValid) {
-      console.error('❌ Firma no válida', {
-        received: receivedSignature.substring(0, 32) + '...',
-        generated: generatedSignature.substring(0, 32) + '...',
-        timestamp,
-        payloadLength: payload.length
-      });
+      console.warn('❌ La firma no coincide');
     }
 
     return isValid;
   } catch (error) {
-    console.error('❌ Error validando firma:', error.message);
+    console.error('❌ Error al comparar firmas:', error.message);
     return false;
   }
 };
+

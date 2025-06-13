@@ -236,139 +236,150 @@ export const createCheckoutProPreference = async (req, res) => {
   }
 };
 
+
 export const handleWebhook = async (req, res) => {
   const requestId = req.headers['x-request-id'] || `webhook-${Date.now()}`;
   let responded = false;
-console.log('✅ handleWebhook ejecutado');
-console.log('🧾 Cuerpo:', req.body);
-console.log('📦 RawBody:', req.rawBody?.toString());
 
   const safeRespond = (status, message = null) => {
     if (!responded) {
       responded = true;
       if (message) {
-        res.status(status).json({ error: message, reference: requestId });
+        res.status(status).json({
+          success: false,
+          error: message,
+          reference: requestId
+        });
       } else {
         res.sendStatus(status);
       }
     } else {
-      console.warn(`⚠️ [${requestId}] Ya se envió una respuesta HTTP, ignorando respuesta duplicada`);
+      console.warn(`⚠️ [${requestId}] Ya se envió una respuesta HTTP`);
     }
   };
 
   try {
-    // Log inicial del webhook recibido
-    console.log(`🔔 [${requestId}] Webhook recibido`, {
-      method: req.method,
-      url: req.originalUrl,
-      headers: {
-        'content-type': req.headers['content-type'],
-        'content-length': req.headers['content-length'],
-        'x-signature': req.headers['x-signature'],
-      },
-      rawBodyLength: req.rawBody?.length || 0,
-    });
+    console.log(`🔔 [${requestId}] Webhook recibido`);
 
-    if (!req.rawBody || req.rawBody.length === 0) {
-      console.error(`❌ [${requestId}] Cuerpo de solicitud vacío`);
-      return safeRespond(400, 'Missing request body');
+    const webhookData = req.body;
+    const rawBody = req.rawBody;
+
+    // 🛡️ Manejo seguro del log del cuerpo
+    let rawPreview = '';
+    if (Buffer.isBuffer(rawBody)) {
+      rawPreview = rawBody.toString('utf8').substring(0, 100);
+    } else if (typeof rawBody === 'string') {
+      rawPreview = rawBody.substring(0, 100);
+    } else {
+      rawPreview = JSON.stringify(webhookData).substring(0, 100);
     }
 
-    // Responder rápido para evitar timeouts
-    res.sendStatus(200);
-    responded = true;
+    console.log(`📦 [${requestId}] Body (first 100 chars):`, rawPreview);
 
-    // 🔐 Verificar firma
+    // 1. Verificar firma si se requiere
     if (process.env.MERCADOPAGO_WEBHOOK_SECRET) {
       const signature = req.headers['x-signature'];
+
       if (!signature) {
         console.warn(`⚠️ [${requestId}] Faltan headers de firma`);
-        return;
+        return safeRespond(403, 'Encabezado de firma faltante');
       }
 
-      const requestBody = req.rawBody.toString('utf8');
-      const isValid = verifyWebhookSignature(requestBody, signature);
-
-      console.log(`🔍 [${requestId}] Firma verificada`, {
-        isValid,
-        hash: crypto.createHash('sha256').update(requestBody).digest('hex').slice(0, 16),
-        signatureShort: signature.slice(0, 16) + '...',
-      });
+      const isValid = verifyWebhookSignature(rawBody, signature);
+      console.log(`🔍 [${requestId}] Resultado verificación firma:`, isValid);
 
       if (!isValid) {
-        console.warn(`⚠️ [${requestId}] Firma inválida`);
-        return;
+        return safeRespond(403, 'Firma inválida');
       }
     }
 
-    // 📦 Parsear body del webhook
-    let webhookData;
-    try {
-      webhookData = req.body || JSON.parse(req.rawBody.toString('utf8'));
-    } catch (parseError) {
-      console.error(`❌ [${requestId}] Error parseando body:`, parseError.message);
-      return;
-    }
-
-    // 🔄 Identificar el tipo de evento
-    const topic = req.query.topic || webhookData.topic;
-    const id = req.query.id || webhookData.data?.id || extractId(webhookData.resource);
+    // 2. Extraer datos
+    const topic = req.query.topic || webhookData.type || webhookData.topic;
+    const id = req.query.id || webhookData.data?.id || webhookData.id;
 
     if (!topic || !id) {
-      console.warn(`⚠️ [${requestId}] Falta topic o ID`);
-      return;
+      console.warn(`⚠️ [${requestId}] Falta topic o ID`, {
+        query: req.query,
+        body: webhookData
+      });
+      return safeRespond(400, 'Falta topic o ID');
     }
 
     console.log(`📨 [${requestId}] Procesando webhook`, { topic, id });
 
-    // 💰 Manejar pago
-    if (topic === 'payment') {
-      try {
-        const payment = await getPayment(id);
-        console.log(`💰 [${requestId}] Estado del pago: ${payment.status}`);
-
-        switch (payment.status) {
-          case PAYMENT_STATUS.approved:
-          case PAYMENT_STATUS.authorized:
-            await processApprovedPayment(payment);
-            break;
-          case PAYMENT_STATUS.pending:
-          case PAYMENT_STATUS.in_process:
-            await processPendingPayment(payment);
-            break;
-          case PAYMENT_STATUS.rejected:
-          case PAYMENT_STATUS.cancelled:
-            await processRejectedPayment(payment);
-            break;
-          default:
-            console.warn(`⚠️ [${requestId}] Estado no manejado: ${payment.status}`);
-        }
-      } catch (paymentError) {
-        console.error(`❌ [${requestId}] Error procesando pago:`, paymentError.message);
-        return;
+    // 3. Procesamiento
+    try {
+      switch (topic) {
+        case 'payment':
+          await handlePaymentWebhook(id);
+          break;
+        case 'merchant_order':
+          await processMerchantOrder(webhookData.resource);
+          break;
+        case 'subscription':
+          await processSubscriptionUpdate(webhookData);
+          break;
+        case 'preapproval':
+          await handlePreapprovalWebhook(webhookData);
+          break;
+        default:
+          console.warn(`⚠️ [${requestId}] Webhook no manejado: ${topic}`);
+          return safeRespond(200, 'Tipo de webhook no manejado');
       }
+
+      console.log(`✅ [${requestId}] Webhook procesado con éxito`);
+      return safeRespond(200);
+    } catch (processingError) {
+      console.error(`❌ [${requestId}] Error al procesar webhook:`, {
+        error: processingError.message,
+        stack: processingError.stack
+      });
+      return safeRespond(500, 'Error procesando webhook');
     }
 
-    // 🛒 Manejar orden de compra
-    else if (topic === 'merchant_order') {
-      try {
-        await processMerchantOrder(webhookData.resource);
-      } catch (orderError) {
-        console.error(`❌ [${requestId}] Error procesando orden:`, orderError.message);
-        return;
-      }
-    }
-
-    // Final log
-    console.log(`✅ [${requestId}] Webhook procesado correctamente`);
-  } catch (error) {
-    console.error(`❌ [${requestId}] Error crítico en webhook:`, {
-      message: error.message,
-      stack: error.stack,
+  } catch (err) {
+    console.error(`❌ [${requestId}] Error inesperado:`, {
+      error: err.message,
+      stack: err.stack,
+      rawBody: req.rawBody?.toString('utf8')?.substring(0, 200)
     });
-    safeRespond(500, 'Internal server error');
+    return safeRespond(500, 'Error interno del servidor');
   }
 };
+
+
+
+
+// Nuevas funciones auxiliares para manejar específicamente cada tipo
+async function handlePaymentWebhook(paymentId) {
+  const payment = await getPayment(paymentId);
+  console.log(`💰 Estado del pago: ${payment.status}`);
+
+  switch (payment.status) {
+    case PAYMENT_STATUS.approved:
+    case PAYMENT_STATUS.authorized:
+      await processApprovedPayment(payment);
+      break;
+    case PAYMENT_STATUS.pending:
+    case PAYMENT_STATUS.in_process:
+      await processPendingPayment(payment);
+      break;
+    case PAYMENT_STATUS.rejected:
+    case PAYMENT_STATUS.cancelled:
+      await processRejectedPayment(payment);
+      break;
+    default:
+      console.warn(`⚠️ Estado no manejado: ${payment.status}`);
+      throw new Error(`Unhandled payment status: ${payment.status}`);
+  }
+}
+
+async function handlePreapprovalWebhook(preapprovalData) {
+  console.log(`🔄 Procesando preapproval: ${preapprovalData.id}`);
+  // Aquí puedes agregar lógica específica para preapprovals si es necesario
+  // Por ahora simplemente lo registramos
+  return Promise.resolve();
+}
 
 
 // Funciones de procesamiento mejoradas
