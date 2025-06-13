@@ -20,7 +20,6 @@ export const configureMercadoPago = () => {
   });
 };
 
-
 export const verifyWebhookSignature = (rawBody, receivedSignature) => {
   const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
   if (!secret) {
@@ -36,13 +35,24 @@ export const verifyWebhookSignature = (rawBody, receivedSignature) => {
     .update(payloadBuffer)
     .digest('hex');
 
+  // ✅ Extraer solo el valor de v1
+  const parsedSignature = receivedSignature
+    .split(',')
+    .find(part => part.startsWith('v1='))
+    ?.split('=')[1];
+
+  if (!parsedSignature) {
+    throw new Error('v1 signature not found in header');
+  }
+
   console.log('🔍 Verificación de firma:');
   console.log('✉️ Cuerpo recibido:', payloadBuffer.toString('utf8'));
-  console.log('📨 Firma recibida:', receivedSignature);
+  console.log('📨 Firma recibida:', parsedSignature);
   console.log('🛠 Firma generada:', generatedSignature);
 
   return crypto.timingSafeEqual(
-    Buffer.from(receivedSignature, 'hex'),
+    Buffer.from(parsedSignature, 'hex'),
     Buffer.from(generatedSignature, 'hex')
   );
 };
+
