@@ -6,7 +6,7 @@ import { register, listarPacientes, getPacienteById, actualizarPaciente, elimina
     obtenerRolPaciente
  } from '../controllers/pacienteController.js';
 import validateSchema from "../middlewares/validatoreSchema.js"
-import {PacienteSchema, ActPacienteSchema, ActPaciente2} from "../schema/pacienteSchema.js";
+import {PacienteSchema, ActPacienteSchema, ActPaciente2, PacienteSchema2 } from "../schema/pacienteSchema.js";
 import { verifyToken, verifyTokenWeb } from '../middlewares/verifyToken.js';
 import { checkEpisodioPermissions, validatePermissions } from '../middlewares/episodioPermissions.middleware.js';
 import { validateAdmin, validateRol } from '../middlewares/validateAdmin.js';
@@ -67,7 +67,7 @@ router.get('/listarPacientes2/:id_usuario',
 router.post('/registrarPaciente2',
     verifyTokenWeb,
     validateRol(['Administrador', 'Super']),
-    validateSchema(PacienteSchema),
+    validateSchema(PacienteSchema2),
     registerPaciente2
 );
 router.put('/actualizarPaciente2/:id_paciente', 
