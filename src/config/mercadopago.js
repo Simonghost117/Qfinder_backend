@@ -22,11 +22,11 @@ export const configureMercadoPago = () => {
 export const verifyWebhookSignature = (rawBody, signatureHeader) => {
   try {
     if (!signatureHeader || !rawBody) {
-      console.error('Missing signature header or raw body');
+      console.error('❌ Faltan datos: signatureHeader o rawBody');
       return false;
     }
 
-    // Extraer timestamp y firma del formato de MercadoPago: "ts=123456,v1=abc123"
+    // Separar partes del header "ts=...,v1=..."
     const signatureParts = {};
     signatureHeader.split(',').forEach(part => {
       const [key, value] = part.split('=');
@@ -39,47 +39,41 @@ export const verifyWebhookSignature = (rawBody, signatureHeader) => {
     const receivedSignature = signatureParts.v1;
 
     if (!timestamp || !receivedSignature) {
-      console.error('Invalid signature format - missing ts or v1');
+      console.error('❌ Formato de firma inválido - falta ts o v1');
       return false;
     }
 
     const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
     if (!secret) {
-      console.error('Webhook secret not configured');
+      console.error('❌ Webhook secret no configurado');
       return false;
     }
 
-    // Asegurar que el rawBody es un string
-    const requestBody = typeof rawBody === 'string' ? rawBody : JSON.stringify(rawBody);
-    
-    // Crear payload exactamente como lo espera MercadoPago
+    const requestBody = rawBody.toString('utf8');
     const dataToSign = `${timestamp}.${requestBody}`;
 
-    // Calcular firma
     const generatedSignature = crypto
       .createHmac('sha256', secret)
       .update(dataToSign)
       .digest('hex');
 
-    // Comparación segura
     const isValid = crypto.timingSafeEqual(
       Buffer.from(receivedSignature, 'hex'),
       Buffer.from(generatedSignature, 'hex')
     );
 
     if (!isValid) {
-      console.error('Signature verification failed', {
+      console.warn('⚠️ Verificación de firma fallida', {
         receivedSignature,
         generatedSignature,
         timestamp,
-        dataToSign: dataToSign.substring(0, 100) + '...',
-        secretPresent: !!secret
+        dataToSign: dataToSign.slice(0, 100) + '...',
       });
     }
 
     return isValid;
   } catch (error) {
-    console.error('Signature verification error:', error);
+    console.error('❌ Error al verificar la firma:', error);
     return false;
   }
 };
