@@ -1,8 +1,8 @@
 import express from 'express';
 import { handleWebhook } from '../controllers/paymentController.js';
-
+import crypto from 'crypto'; 
 const router = express.Router();
-const crypto = require('crypto');
+
 
 const verifyMercadoPagoSignature = (rawBody, signatureHeader, secret) => {
   // Extrae timestamp y firma del header
