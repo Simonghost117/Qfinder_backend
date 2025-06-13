@@ -1,6 +1,6 @@
 import express from 'express';
 import { handleWebhook } from '../controllers/paymentController.js';
-import { verifyWebhookSignature } from '..mercadopago.js';
+import { verifyWebhookSignature } from '../config/mercadopago.js';
 
 const router = express.Router();
 
