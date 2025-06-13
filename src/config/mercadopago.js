@@ -27,10 +27,10 @@ export const verifyWebhookSignature = (rawBody, signatureHeader) => {
       return false;
     }
 
-    // Extraer componentes de la firma
+    // Extraer componentes de la firma (nuevo formato de MercadoPago)
     const [tsPart, v1Part] = signatureHeader.split(',');
-    const timestamp = tsPart?.split('=')[1];
-    const receivedSignature = v1Part?.split('=')[1];
+    const timestamp = tsPart?.split('=')[1]?.trim();
+    const receivedSignature = v1Part?.split('=')[1]?.trim();
 
     if (!timestamp || !receivedSignature) {
       console.error('❌ Firma malformada - falta timestamp o firma v1');
@@ -52,11 +52,8 @@ export const verifyWebhookSignature = (rawBody, signatureHeader) => {
       .update(dataToSign)
       .digest('hex');
 
-    // Comparación segura contra ataques de timing
-    const isValid = crypto.timingSafeEqual(
-      Buffer.from(receivedSignature),
-      Buffer.from(generatedSignature)
-    );
+    // Comparación segura
+    const isValid = receivedSignature === generatedSignature;
 
     if (!isValid) {
       console.error('⚠️ Verificación de firma fallida', {

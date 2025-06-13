@@ -3,22 +3,34 @@ import { handleWebhook } from '../controllers/paymentController.js';
 
 const router = express.Router();
 
-
-router.post('/webhook', 
-  express.raw({ type: 'application/json' }), // Recibir como Buffer
-  (req, res, next) => {
-      console.log('Headers:', req.headers);
-console.log('Raw Body:', req.rawBody.toString());
-    req.rawBody = req.body; // Guardar cuerpo original
+router.post(
+  '/webhook',
+  // Middleware para preservar el cuerpo RAW
+  express.raw({ type: 'application/json' }),
+  async (req, res, next) => {
     try {
-      req.body = JSON.parse(req.rawBody.toString()); // Parsear a JSON
+      // Guardar el cuerpo original como Buffer
+      req.rawBody = req.body;
+      
+      // Parsear el JSON solo si hay contenido
+      if (req.rawBody && req.rawBody.length > 0) {
+        req.body = JSON.parse(req.rawBody.toString('utf8'));
+      } else {
+        req.body = {};
+      }
       next();
     } catch (err) {
-      return res.status(400).send('Invalid JSON');
+      console.error('Error al parsear JSON:', {
+        error: err.message,
+        body: req.rawBody?.toString('utf8')?.substring(0, 100)
+      });
+      return res.status(400).json({ 
+        success: false,
+        error: 'Cuerpo JSON inválido'
+      });
     }
   },
   handleWebhook
 );
 
 export default router;
-
