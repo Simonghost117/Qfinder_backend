@@ -9,12 +9,16 @@ import cookieParser from 'cookie-parser';
 import session from 'express-session';
 import { EventEmitter } from 'events';
 import webhookRoutes from './routes/webhookRoutes.js';
+import { Router } from 'express';
+import { handleWebhook } from './controllers/paymentController.js';
 startAllJobs();
 // Configuración de entorno
 dotenv.config();
 
 // Inicialización de la app
 const app = express();
+const webhookRawRouter = Router();
+webhookRawRouter.post('/', express.raw({ type: 'application/json' }), handleWebhook);
 app.use('/api/webhook', webhookRoutes);
 
 
