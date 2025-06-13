@@ -240,6 +240,9 @@ export const handleWebhook = async (req, res) => {
   const requestId = req.headers['x-request-id'] || `webhook-${Date.now()}`;
   let responded = false;
 
+  const rawBodyBuffer = req.body; // <-- es un Buffer porque usamos express.raw
+  const rawBody = rawBodyBuffer.toString('utf8');
+
   const safeRespond = (status, message = null) => {
     if (!responded) {
       responded = true;
@@ -248,30 +251,28 @@ export const handleWebhook = async (req, res) => {
       } else {
         res.sendStatus(status);
       }
+    } else {
+      console.warn(`⚠️ [${requestId}] Ya se envió una respuesta HTTP`);
     }
   };
 
   try {
     console.log(`🔔 [${requestId}] Webhook recibido`);
-    console.log('🧾 Body:', req.body);
-    console.log('📦 RawBody:', req.rawBody?.toString());
+    console.log('🧾 Body:', JSON.parse(rawBody));
+    console.log('📦 RawBody:', rawBody);
 
-    if (!req.rawBody || req.rawBody.length === 0) {
-      console.error(`❌ [${requestId}] rawBody vacío`);
-      return safeRespond(400, 'Missing request body');
-    }
-
-    const signature = req.headers['x-signature'];
+    // Verificación de firma
     if (process.env.MERCADOPAGO_WEBHOOK_SECRET) {
+      const signature = req.headers['x-signature'];
       if (!signature) {
-        console.warn(`⚠️ [${requestId}] Header de firma faltante`);
+        console.warn(`⚠️ [${requestId}] Faltan headers de firma`);
         return safeRespond(403, 'Missing signature header');
       }
 
-      const bodyString = req.rawBody.toString('utf8');
-      const isValid = verifyWebhookSignature(bodyString, signature);
+      const isValid = verifyWebhookSignature(rawBodyBuffer, signature);
 
-      console.log(`🔍 [${requestId}] Resultado verificación firma: ${isValid}`);
+      console.log(`🔍 [${requestId}] Resultado verificación firma:`, isValid);
+
       if (!isValid) {
         return safeRespond(403, 'Invalid signature');
       }
@@ -279,50 +280,59 @@ export const handleWebhook = async (req, res) => {
 
     let webhookData;
     try {
-      webhookData = req.body || JSON.parse(req.rawBody.toString('utf8'));
+      webhookData = JSON.parse(rawBody);
     } catch (err) {
-      console.error(`❌ [${requestId}] Error parseando JSON:`, err.message);
-      return safeRespond(400, 'Invalid JSON');
+      console.error(`❌ [${requestId}] JSON inválido:`, err.message);
+      return safeRespond(400, 'Invalid JSON body');
     }
 
-    const topic = req.query.topic || webhookData.topic || webhookData.type;
-    const id = req.query.id || webhookData.data?.id || webhookData.resource?.id;
+    const topic = req.query.topic || webhookData.type || webhookData.topic;
+    const id = req.query.id || webhookData.data?.id || webhookData.id;
 
     if (!topic || !id) {
       console.warn(`⚠️ [${requestId}] Falta topic o ID`);
       return safeRespond(400, 'Missing topic or ID');
     }
 
-    console.log(`📨 [${requestId}] Procesando evento ${topic} con ID ${id}`);
+    console.log(`📨 [${requestId}] Procesando webhook`, { topic, id });
 
+    // Procesamiento según el tipo
     try {
       switch (topic) {
         case 'payment':
           await handlePaymentWebhook(id);
           break;
+
         case 'merchant_order':
           await processMerchantOrder(webhookData.resource);
           break;
+
         case 'subscription':
+          await processSubscriptionUpdate(webhookData);
+          break;
+
         case 'preapproval':
           await handlePreapprovalWebhook(webhookData);
           break;
+
         default:
           console.warn(`⚠️ [${requestId}] Webhook no manejado: ${topic}`);
-          return safeRespond(200, 'Unhandled webhook topic');
+          return safeRespond(200, 'Webhook type not handled');
       }
 
-      console.log(`✅ [${requestId}] Webhook procesado exitosamente`);
-      safeRespond(200);
-    } catch (err) {
-      console.error(`❌ [${requestId}] Error manejando webhook:`, err.message);
-      safeRespond(500, 'Error processing webhook');
+      console.log(`✅ [${requestId}] Webhook procesado con éxito`);
+      return safeRespond(200);
+    } catch (processingError) {
+      console.error(`❌ [${requestId}] Error al procesar webhook:`, processingError.message);
+      return safeRespond(500, 'Error processing webhook');
     }
+
   } catch (err) {
-    console.error(`❌ [${requestId}] Error general:`, err);
-    safeRespond(500, 'Internal error');
+    console.error(`❌ [${requestId}] Error inesperado:`, err.message);
+    return safeRespond(500, 'Internal server error');
   }
 };
+
 
 // Nuevas funciones auxiliares para manejar específicamente cada tipo
 async function handlePaymentWebhook(paymentId) {
