@@ -44,7 +44,17 @@ export const verifyWebhookSignature = (rawBody, signatureHeader) => {
     .createHmac('sha256', secret)
     .update(dataToSign)
     .digest('hex');
-  
+
+  // Agrega estos logs de depuración aquí
+  if (receivedSig !== generatedSignature) {
+    console.log('🔍 Detalles de fallo de firma:');
+    console.log('✉️ rawBody:', rawBody.toString('utf8'));
+    console.log('🔑 Secreto:', secret);
+    console.log('🕓 Timestamp:', timestamp);
+    console.log('📨 Firma recibida:', receivedSig);
+    console.log('🛠 Firma generada:', generatedSignature);
+  }
+
   console.log('Generated signature:', generatedSignature);
   
   // Comparación segura contra timing attacks
