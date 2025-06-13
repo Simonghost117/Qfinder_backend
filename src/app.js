@@ -19,6 +19,8 @@ dotenv.config();
 const app = express();
 const webhookRawRouter = Router();
 webhookRawRouter.post('/', express.raw({ type: 'application/json' }), handleWebhook);
+app.use('/api/web', webhookRawRouter); // Este sí tiene el express.raw() correctamente aplicado
+
 app.use('/api/webhook', webhookRoutes);
 
 
