@@ -11,11 +11,24 @@ mercadopago.configure({
 });
 
 // Función para verificar firma webhook
-const verifySignature = (payload, signature) => {
-  const hash = crypto.createHmac('sha256', process.env.MERCADOPAGO_WEBHOOK_SECRET)
-                     .update(JSON.stringify(payload))
-                     .digest('hex');
-  return hash === signature;
+const verifySignature = (rawBody, signatureHeader) => {
+  if (!signatureHeader || !rawBody) return false;
+  
+  // Extraer timestamp y firma del header
+  const [tsPart, sigPart] = signatureHeader.split(',');
+  const timestamp = tsPart.split('=')[1];
+  const receivedSig = sigPart.split('=')[1];
+  
+  // Preparar datos para firmar
+  const dataToSign = `${timestamp}.${rawBody.toString('utf8')}`;
+  
+  // Generar firma esperada
+  const generatedSig = crypto
+    .createHmac('sha256', process.env.MERCADOPAGO_WEBHOOK_SECRET)
+    .update(dataToSign)
+    .digest('hex');
+  
+  return receivedSig === generatedSig;
 };
 
 export const createPlan = async (req, res) => {
