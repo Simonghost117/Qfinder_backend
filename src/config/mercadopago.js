@@ -23,11 +23,15 @@ export const configureMercadoPago = () => {
 
 
 export const verifyWebhookSignature = (rawBody, receivedSignature) => {
-  const secret = 'ca39d4db46bd8328f60bf0c98d6b4009ad0c19a0f2ee4156349aa16a219293aa';
+  const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET?.trim(); // o directamente hardcoded si estás probando
+
+  // ✅ LOGS CRÍTICOS AQUÍ
+  console.log('🧪 Secreto cargado (string):', JSON.stringify(secret));
+  console.log('📏 Longitud del secreto:', secret?.length);
 
   if (!secret) {
-    console.warn('⚠️ No se configuró MERCADOPAGO_WEBHOOK_SECRET. Se omite la validación de firma.');
-    return true; // ⚠️ Solo usar esto si confías en el origen (por ejemplo, en desarrollo)
+    console.warn('⚠️ No se configuró MERCADOPAGO_WEBHOOK_SECRET.');
+    return true;
   }
 
   if (!receivedSignature) {
@@ -35,18 +39,15 @@ export const verifyWebhookSignature = (rawBody, receivedSignature) => {
     return false;
   }
 
-  // Convertir el cuerpo recibido en buffer si no lo es
   const payloadBuffer = Buffer.isBuffer(rawBody)
     ? rawBody
     : Buffer.from(rawBody);
 
-  // Generar firma HMAC usando el cuerpo y el secreto
   const generatedSignature = crypto
     .createHmac('sha256', secret)
     .update(payloadBuffer)
     .digest('hex');
 
-  // Extraer el valor de v1 de la cabecera de firma
   const parsedSignature = receivedSignature
     .split(',')
     .find(part => part.trim().startsWith('v1='))
@@ -57,7 +58,6 @@ export const verifyWebhookSignature = (rawBody, receivedSignature) => {
     return false;
   }
 
-  // Mostrar información para depuración
   console.log('🔍 Verificación de firma:');
   console.log('✉️ Cuerpo recibido:', payloadBuffer.toString('utf8'));
   console.log('📨 Firma recibida (v1):', parsedSignature);
