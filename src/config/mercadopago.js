@@ -21,6 +21,7 @@ export const configureMercadoPago = () => {
 };
 
 
+
 export const verifyWebhookSignature = (rawBody, signatureHeader) => {
   try {
     if (!signatureHeader || !rawBody) return false;
@@ -42,7 +43,10 @@ export const verifyWebhookSignature = (rawBody, signatureHeader) => {
     const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
     if (!secret) throw new Error('Secret no definido');
 
-    const bodyString = typeof rawBody === 'string' ? rawBody : JSON.stringify(rawBody);
+    const bodyString = Buffer.isBuffer(rawBody)
+      ? rawBody.toString('utf8')
+      : rawBody;
+
     const dataToSign = `${timestamp}.${bodyString}`;
 
     const generatedSignature = crypto
