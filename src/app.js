@@ -15,7 +15,6 @@ dotenv.config();
 
 // Inicialización de la app
 const app = express();
-app.post('/webhook', express.raw({ type: 'application/json' }), handleWebhook);
 app.use('/api/webhook', webhookRoutes);
 
 
