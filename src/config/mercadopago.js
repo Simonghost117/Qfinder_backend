@@ -21,10 +21,14 @@ export const configureMercadoPago = () => {
 };
 
 
-export const verifyWebhookSignature = (rawBodyBuffer, signatureHeader) => {
+export const verifyWebhookSignature = (rawBody, signatureHeader) => {
   try {
-    if (!signatureHeader || !rawBodyBuffer) return false;
+    if (!signatureHeader || !rawBody) {
+      console.error('❌ Faltan parámetros para verificación');
+      return false;
+    }
 
+    // Extraer componentes de la firma
     const signatureParts = {};
     signatureHeader.split(',').forEach(part => {
       const [key, value] = part.split('=');
@@ -35,20 +39,26 @@ export const verifyWebhookSignature = (rawBodyBuffer, signatureHeader) => {
     const receivedSignature = signatureParts.v1;
 
     if (!timestamp || !receivedSignature) {
-      console.error('❌ Firma malformada o incompleta');
+      console.error('❌ Firma malformada - falta timestamp o firma v1');
       return false;
     }
 
     const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
-    if (!secret) throw new Error('Secret no definido');
+    if (!secret) {
+      console.error('❌ Secret no configurado en variables de entorno');
+      throw new Error('MERCADOPAGO_WEBHOOK_SECRET no definido');
+    }
 
-    const dataToSign = `${timestamp}.${rawBodyBuffer.toString('utf8')}`;
+    // Prepara los datos para firmar (timestamp + cuerpo RAW)
+    const dataToSign = `${timestamp}.${rawBody}`;
 
+    // Genera la firma esperada
     const generatedSignature = crypto
       .createHmac('sha256', secret)
       .update(dataToSign)
       .digest('hex');
 
+    // Comparación segura contra ataques de timing
     const isValid = crypto.timingSafeEqual(
       Buffer.from(receivedSignature, 'hex'),
       Buffer.from(generatedSignature, 'hex')
@@ -59,7 +69,7 @@ export const verifyWebhookSignature = (rawBodyBuffer, signatureHeader) => {
         receivedSignature,
         generatedSignature,
         timestamp,
-        dataToSign: dataToSign.slice(0, 100) + '...',
+        dataToSign: dataToSign.length > 100 ? dataToSign.slice(0, 100) + '...' : dataToSign,
       });
     }
 
