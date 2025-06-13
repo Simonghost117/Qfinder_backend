@@ -20,32 +20,34 @@ export const configureMercadoPago = () => {
   });
 };
 
+
 export const verifyWebhookSignature = (rawBody, signatureHeader) => {
   console.log('Received signature header:', signatureHeader);
   console.log('Raw body length:', rawBody?.length);
-  
-  // Parsear el header correctamente
+
   const [tsPart, sigPart] = signatureHeader.split(',');
   const timestamp = tsPart.split('=')[1];
   const receivedSig = sigPart.split('=')[1].trim();
-  
+
   console.log('Timestamp:', timestamp);
   console.log('Received signature:', receivedSig);
-  
-  // Verificar que el secret esté correctamente configurado
+
   const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
   if (!secret) {
     throw new Error('Webhook secret not configured');
   }
-  
-  // Generar la firma esperada
-  const dataToSign = `${timestamp}.${rawBody.toString('utf8')}`;
+
+  // 🔐 Firma precisa usando Buffer, sin .toString
+  const dataToSign = Buffer.concat([
+    Buffer.from(`${timestamp}.`), // timestamp + punto
+    Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(rawBody) // rawBody como buffer
+  ]);
+
   const generatedSignature = crypto
     .createHmac('sha256', secret)
     .update(dataToSign)
     .digest('hex');
 
-  // Agrega estos logs de depuración aquí
   if (receivedSig !== generatedSignature) {
     console.log('🔍 Detalles de fallo de firma:');
     console.log('✉️ rawBody:', rawBody.toString('utf8'));
@@ -56,8 +58,7 @@ export const verifyWebhookSignature = (rawBody, signatureHeader) => {
   }
 
   console.log('Generated signature:', generatedSignature);
-  
-  // Comparación segura contra timing attacks
+
   return crypto.timingSafeEqual(
     Buffer.from(receivedSig, 'hex'),
     Buffer.from(generatedSignature, 'hex')
