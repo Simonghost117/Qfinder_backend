@@ -22,61 +22,33 @@ export const configureMercadoPago = () => {
 
 
 
-export const verifyWebhookSignature = (rawBody, receivedSignature) => {
-  const secret = 'fdcd32e1d236e21283a9cabbab2c048f401b6e83624f05feb64a711b71f3b58a' // o directamente hardcoded si estás probando
+export const verifyWebhookSignature = (rawBody, signatureHeader) => {
+  const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET?.trim();
 
-  // ✅ LOGS CRÍTICOS AQUÍ
-  console.log('🧪 Secreto cargado (string):', JSON.stringify(secret));
-  console.log('📏 Longitud del secreto:', secret?.length);
+  if (!secret || !signatureHeader || !rawBody) return false;
 
-  if (!secret) {
-    console.warn('⚠️ No se configuró MERCADOPAGO_WEBHOOK_SECRET.');
-    return true;
-  }
+  const parts = signatureHeader.split(',');
+  const timestamp = parts.find(p => p.startsWith('ts='))?.split('=')[1];
+  const receivedSig = parts.find(p => p.startsWith('v1='))?.split('=')[1];
 
-  if (!receivedSignature) {
-    console.error('❌ Encabezado de firma no proporcionado');
-    return false;
-  }
+  if (!timestamp || !receivedSig) return false;
 
-  const payloadBuffer = Buffer.isBuffer(rawBody)
-    ? rawBody
-    : Buffer.from(rawBody);
-
-  const generatedSignature = crypto
+  const payloadToSign = `${timestamp}.${rawBody.toString('utf8')}`;
+  const expectedSig = crypto
     .createHmac('sha256', secret)
-    .update(payloadBuffer)
+    .update(payloadToSign)
     .digest('hex');
 
-  const parsedSignature = receivedSignature
-    .split(',')
-    .find(part => part.trim().startsWith('v1='))
-    ?.split('=')[1];
-
-  if (!parsedSignature) {
-    console.error('❌ No se encontró la firma v1 en la cabecera');
-    return false;
-  }
-
-  console.log('🔍 Verificación de firma:');
-  console.log('✉️ Cuerpo recibido:', payloadBuffer.toString('utf8'));
-  console.log('📨 Firma recibida (v1):', parsedSignature);
-  console.log('🛠 Firma generada:', generatedSignature);
+  console.log(`🧪 Firma esperada: ${expectedSig}`);
+  console.log(`📨 Firma recibida: ${receivedSig}`);
 
   try {
-    const isValid = crypto.timingSafeEqual(
-      Buffer.from(parsedSignature, 'hex'),
-      Buffer.from(generatedSignature, 'hex')
+    return crypto.timingSafeEqual(
+      Buffer.from(receivedSig, 'hex'),
+      Buffer.from(expectedSig, 'hex')
     );
-
-    if (!isValid) {
-      console.warn('❌ La firma no coincide');
-    }
-
-    return isValid;
-  } catch (error) {
-    console.error('❌ Error al comparar firmas:', error.message);
+  } catch (err) {
+    console.error('Error comparando firmas:', err.message);
     return false;
   }
 };
-
