@@ -16,7 +16,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 // 2. Validación de variables críticas
-const requiredEnvVars = ['NODE_ENV', 'DB_HOST', 'DB_USER', 'DB_PASSWORD'];
+const requiredEnvVars = ['NODE_ENV', 'DB_HOST', 'DB_USER', 'DB_PASSWORD','MERCADOPAGO_WEBHOOK_SECRET'];
 requiredEnvVars.forEach(varName => {
   if (!process.env[varName]) {
     console.error(`❌ Faltó la variable de entorno: ${varName}`);

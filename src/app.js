@@ -15,7 +15,8 @@ dotenv.config();
 
 // Inicialización de la app
 const app = express();
-app.use('/api/webhook', webhookRoutes);
+app.use('/api/webhook', express.raw({ type: 'application/json' }), webhookRoutes);
+
 
 
 // Configuración de EventEmitter

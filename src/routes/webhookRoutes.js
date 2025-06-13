@@ -3,8 +3,6 @@ import { handleWebhook } from '../controllers/paymentController.js';
 
 const router = express.Router();
 
-// ✅ Middleware RAW aplicado al router entero antes de cualquier ruta
-router.use(express.raw({ type: 'application/json' }));
 
 router.post('/', async (req, res, next) => {
   const requestId = req.headers['x-request-id'] || `webhook-${Date.now()}`;
