@@ -236,6 +236,8 @@ export const createCheckoutProPreference = async (req, res) => {
   }
 };
 
+import crypto from 'crypto';
+
 export const handleWebhook = async (req, res) => {
   const requestId = req.headers['x-request-id'] || `webhook-${Date.now()}`;
   let responded = false;
@@ -244,10 +246,10 @@ export const handleWebhook = async (req, res) => {
     if (!responded) {
       responded = true;
       if (message) {
-        res.status(status).json({ 
+        res.status(status).json({
           success: false,
-          error: message, 
-          reference: requestId 
+          error: message,
+          reference: requestId
         });
       } else {
         res.sendStatus(status);
@@ -259,7 +261,7 @@ export const handleWebhook = async (req, res) => {
 
   try {
     console.log(`🔔 [${requestId}] Webhook recibido`);
-    
+
     const webhookData = req.body;
     const rawBody = req.rawBody;
 
@@ -278,6 +280,7 @@ export const handleWebhook = async (req, res) => {
     // 1. Verificar firma si se requiere
     if (process.env.MERCADOPAGO_WEBHOOK_SECRET) {
       const signature = req.headers['x-signature'];
+
       if (!signature) {
         console.warn(`⚠️ [${requestId}] Faltan headers de firma`);
         return safeRespond(403, 'Encabezado de firma faltante');
@@ -344,6 +347,33 @@ export const handleWebhook = async (req, res) => {
     return safeRespond(500, 'Error interno del servidor');
   }
 };
+
+export const verifyWebhookSignature = (rawBody, receivedSignature) => {
+  const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
+  if (!secret) {
+    throw new Error('Webhook secret not configured');
+  }
+
+  const payloadBuffer = Buffer.isBuffer(rawBody)
+    ? rawBody
+    : Buffer.from(rawBody);
+
+  const generatedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(payloadBuffer)
+    .digest('hex');
+
+  console.log('🔍 Verificación de firma:');
+  console.log('✉️ Cuerpo recibido:', payloadBuffer.toString('utf8'));
+  console.log('📨 Firma recibida:', receivedSignature);
+  console.log('🛠 Firma generada:', generatedSignature);
+
+  return crypto.timingSafeEqual(
+    Buffer.from(receivedSignature, 'hex'),
+    Buffer.from(generatedSignature, 'hex')
+  );
+};
+
 
 // Nuevas funciones auxiliares para manejar específicamente cada tipo
 async function handlePaymentWebhook(paymentId) {
