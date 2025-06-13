@@ -5,14 +5,11 @@ const router = express.Router();
 
 router.post(
   '/webhook',
-  express.raw({ type: 'application/json' }), // Especifica exactamente el tipo esperado
+  express.raw({ type: 'application/json' }),
   (req, res, next) => {
     try {
-      // Preserva el cuerpo EXACTAMENTE como viene
-      req.rawBody = req.body.toString('utf8');
-      
-      // Intenta parsear para validar que es JSON válido
-      req.body = JSON.parse(req.rawBody);
+      req.rawBody = req.body; // <-- conservar el buffer aquí
+      req.body = JSON.parse(req.rawBody.toString('utf8'));
       next();
     } catch (err) {
       console.error('Error parsing JSON:', err);
@@ -21,6 +18,7 @@ router.post(
   },
   handleWebhook
 );
+
 
 
 export default router;
