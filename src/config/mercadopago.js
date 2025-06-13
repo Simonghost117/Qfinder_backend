@@ -23,6 +23,10 @@ export const configureMercadoPago = () => {
 
 export const verifyWebhookSignature = (rawBody, signatureHeader) => {
   try {
+        console.log('=== VERIFICACIÓN DEL SECRET ===');
+    console.log('Longitud del secret:', process.env.MERCADOPAGO_WEBHOOK_SECRET?.length);
+    console.log('Secret exacto:', `"${process.env.MERCADOPAGO_WEBHOOK_SECRET}"`);
+    console.log('==============================');
     if (!signatureHeader || !rawBody) {
       console.error('❌ Faltan parámetros para verificación');
       return false;

@@ -236,6 +236,9 @@ export const createCheckoutProPreference = async (req, res) => {
   }
 };
 export const handleWebhook = async (req, res) => {
+    console.log('=== SECRET DEBUG ===');
+  console.log('Longitud:', process.env.MERCADOPAGO_WEBHOOK_SECRET?.length);
+  console.log('Contenido:', `"${process.env.MERCADOPAGO_WEBHOOK_SECRET}"`);
   const requestId = req.headers['x-request-id'] || `webhook-${Date.now()}`;
   let responded = false;
 

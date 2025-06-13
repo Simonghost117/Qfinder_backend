@@ -3,20 +3,24 @@ import { handleWebhook } from '../controllers/paymentController.js';
 
 const router = express.Router();
 
-router.post(
-  '/webhook',
-  express.raw({ type: 'application/json' }), // Especifica exactamente el tipo esperado
-  (req, res, next) => {
+router.post('/webhook', 
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
     try {
-      // Preserva el cuerpo EXACTAMENTE como viene
-      req.rawBody = req.body.toString('utf8');
+      const rawBody = req.body.toString('utf8');
+      const signature = req.headers['x-signature'];
+      const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
       
-      // Intenta parsear para validar que es JSON válido
-      req.body = JSON.parse(req.rawBody);
-      next();
-    } catch (err) {
-      console.error('Error parsing JSON:', err);
-      return res.status(400).json({ error: 'Invalid JSON body' });
+      if (!verifyMercadoPagoSignature(rawBody, signature, secret)) {
+        return res.status(403).json({ error: 'Firma inválida' });
+      }
+      
+      // Procesar webhook válido...
+      res.status(200).end();
+      
+    } catch (error) {
+      console.error('Error en webhook:', error);
+      res.status(500).end();
     }
   },
   handleWebhook
