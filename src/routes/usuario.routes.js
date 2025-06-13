@@ -71,6 +71,11 @@ router.get('/listarUsuarios',
     paginationMiddleware(10),
     listarUsuarios
 );
+router.get('/listar',
+    verifyTokenWeb,
+    validateRol(['Administrador', 'Super']),
+    listarUsers
+)
 router.get('/listarAdmin',
     verifyTokenWeb,
     validateRol(['Administrador', 'Super']),
