@@ -1,0 +1,48 @@
+2025-06-14 11:55:37 [32minfo[39m: Starting invalid FCM tokens cleanup...
+2025-06-14 11:55:37 [31merror[39m: SequelizeHostNotFoundError: getaddrinfo ENOTFOUND aws-0-us-east-2.pooler.supabase.com
+    at Client._connectionCallback (C:\Users\ASUS\OneDrive\Escritorio\QfindeR\final\back\Qfinder_backend\node_modules\sequelize\lib\dialects\postgres\connection-manager.js:136:24)
+    at Client._handleErrorWhileConnecting (C:\Users\ASUS\OneDrive\Escritorio\QfindeR\final\back\Qfinder_backend\node_modules\pg\lib\client.js:336:19)
+    at Client._handleErrorEvent (C:\Users\ASUS\OneDrive\Escritorio\QfindeR\final\back\Qfinder_backend\node_modules\pg\lib\client.js:346:19)
+    at Connection.emit (node:events:507:28)
+    at Socket.reportStreamError (C:\Users\ASUS\OneDrive\Escritorio\QfindeR\final\back\Qfinder_backend\node_modules\pg\lib\connection.js:57:12)
+    at Socket.emit (node:events:507:28)
+    at emitErrorNT (node:internal/streams/destroy:170:8)
+    at emitErrorCloseNT (node:internal/streams/destroy:129:3)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+2025-06-14 14:06:12 [32minfo[39m: Setting up chat listeners...
+2025-06-14 14:06:12 [32minfo[39m: Medication notification scheduler started
+2025-06-14 14:06:12 [32minfo[39m: Setting up chat listeners...
+2025-06-14 14:06:14 [32minfo[39m: Setting up listener for community: 1
+2025-06-14 14:06:14 [32minfo[39m: Setting up listener for community: 1
+2025-06-14 14:06:14 [32minfo[39m: Setting up listener for community: 3
+2025-06-14 14:06:14 [32minfo[39m: Setting up listener for community: 3
+2025-06-14 14:06:14 [32minfo[39m: Setting up listener for community: 4
+2025-06-14 14:06:14 [32minfo[39m: Setting up listener for community: 4
+2025-06-14 14:06:14 [32minfo[39m: Setting up listener for community: 9
+2025-06-14 14:06:14 [32minfo[39m: Setting up listener for community: 9
+2025-06-14 14:06:14 [32minfo[39m: Setting up listener for community: 13
+2025-06-14 14:06:14 [32minfo[39m: New message in community 13 from user 4
+2025-06-14 14:06:14 [32minfo[39m: Setting up listener for community: 13
+2025-06-14 14:06:14 [32minfo[39m: New message in community 13 from user 4
+2025-06-14 14:06:14 [32minfo[39m: Setting up listener for community: 15
+2025-06-14 14:06:14 [32minfo[39m: Setting up listener for community: 15
+2025-06-14 14:06:14 [32minfo[39m: Setting up listener for community: 1
+2025-06-14 14:06:14 [32minfo[39m: Setting up listener for community: 3
+2025-06-14 14:06:14 [32minfo[39m: Setting up listener for community: 4
+2025-06-14 14:06:14 [32minfo[39m: Setting up listener for community: 9
+2025-06-14 14:06:14 [32minfo[39m: Setting up listener for community: 13
+2025-06-14 14:06:14 [32minfo[39m: New message in community 13 from user 4
+2025-06-14 14:06:14 [32minfo[39m: Setting up listener for community: 15
+2025-06-14 14:06:14 [32minfo[39m: Chat listeners setup complete
+2025-06-14 14:06:14 [32minfo[39m: Setting up listener for community: 1
+2025-06-14 14:06:14 [32minfo[39m: Setting up listener for community: 3
+2025-06-14 14:06:14 [32minfo[39m: Setting up listener for community: 4
+2025-06-14 14:06:14 [32minfo[39m: Setting up listener for community: 9
+2025-06-14 14:06:14 [32minfo[39m: Setting up listener for community: 13
+2025-06-14 14:06:14 [32minfo[39m: New message in community 13 from user 4
+2025-06-14 14:06:14 [32minfo[39m: Setting up listener for community: 15
+2025-06-14 14:06:14 [32minfo[39m: Chat listeners setup complete
+2025-06-14 14:06:15 [33mwarn[39m: Community 13 not found in database
+2025-06-14 14:06:15 [33mwarn[39m: Community 13 not found in database
+2025-06-14 14:06:15 [33mwarn[39m: Community 13 not found in database
+2025-06-14 14:06:15 [33mwarn[39m: Community 13 not found in database

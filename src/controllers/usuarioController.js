@@ -794,3 +794,27 @@ export const registerUsuariosSuper = async (req, res) => {
     });
   }
 }
+
+export const contarUsuarios = async (req, res) => {
+  try {
+    const totalUsuarios = await Usuario.count({
+      where: {
+        tipo_usuario: 'Usuario'
+      }
+    });
+    
+    const totalAdministradores = await Usuario.count({
+      where: {
+        tipo_usuario: 'Administrador'
+      }
+    });
+
+    res.status(200).json({
+      totalUsuarios,
+      totalAdministradores
+    });
+  } catch (error) {
+    console.error('Error al contar los usuarios:', error);
+    res.status(500).json({ message: 'Error al contar los usuarios', error });
+  }
+}
