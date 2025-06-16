@@ -1,0 +1,20 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 30
+    },
+    "auditLog": "D:\\juan\\Qfinder_backend\\logs\\.44e6715e7406e03e3d59afb6d678c557a6bf7cd3-audit.json",
+    "files": [
+        {
+            "date": 1749819653258,
+            "name": "D:\\juan\\Qfinder_backend\\logs\\error-2025-06-13.log",
+            "hash": "d4ca9c2e18541d72bdb8c004c4d292874666306a3abb46272a7a3c17d2a3440f"
+        },
+        {
+            "date": 1750076362727,
+            "name": "D:\\juan\\Qfinder_backend\\logs\\error-2025-06-16.log",
+            "hash": "f38258a9ba28edd3619283ade83e73b06ee32696b6916883b6742e787eca721f"
+        }
+    ],
+    "hashType": "sha256"
+}
