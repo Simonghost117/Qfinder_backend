@@ -571,3 +571,27 @@ export const listarPacientes2 = async (req, res) => {
     });
   }
 };
+
+export const cantidadPacientes = async (req, res) => {
+  try {
+    const totalPacientes = await Paciente.count();
+    
+    if(!totalPacientes){
+      res.status(404).json({
+        success: false,
+        message: 'No se encontraron pacientes registrados'
+      })
+    }
+    res.status(200).json({
+      success: true,
+      totalPacientes
+    });
+  } catch (error) {
+    console.error("Error al contar pacientes:", error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al contar pacientes',
+      error: process.env.NODE_ENV === 'development' ? error.message : null
+    });
+  }
+}

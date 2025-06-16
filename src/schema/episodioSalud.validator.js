@@ -6,7 +6,7 @@ export const episodioSchema = z.object({
   fecha_hora_fin: z.coerce.date().optional().nullable(),
   titulo: z.string().min(3).max(200),
   // severidad: z.enum(['baja', 'media', 'alta']).optional(), 
-  descripcion: z.string().min(10).max(500),
+  descripcion: z.string().min(3).max(500),
   intervenciones: z.string().optional()
 }).refine(data => {
   if (data.fecha_hora_inicio && data.fecha_hora_fin) {
