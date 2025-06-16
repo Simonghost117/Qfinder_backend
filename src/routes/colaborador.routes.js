@@ -12,7 +12,7 @@ router.get('/buscar/:correo', verifyToken, buscarUsuarioPorCorreo);
 
 router.post('/agregar', verifyToken, validatePermissions(['responsable']), validarSchema(validarAgregarColaborador), agregarColaborador);
 
-//listar todos los colaboradores de un usuarios
+//listar todos los colaboradores de un usuario
 
 router.get('/mis-pacientes', verifyToken, listarColaboradoresDeMisPacientes);
 
