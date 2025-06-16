@@ -2,7 +2,7 @@ import express from 'express';
 import { login, logout, register, 
     listarUsers, actualizarUser, eliminarUser,
     verifyUser, perfilUser, listarUsuarios, listarAdmin, eliminarUsuario, buscarUserNombre, registerUsuario, 
-    actualizarUsuario, actualizarAdmin, eliminarAdmin } from '../controllers/usuarioController.js';
+    actualizarUsuario, actualizarAdmin, eliminarAdmin, contarUsuarios } from '../controllers/usuarioController.js';
 import validateSchema from '../middlewares/validatoreSchema.js';
 import { loginSchema, registerSchema, updateSchema, cambiarContrasenaSchema, usuarioAdmiAct } from '../schema/usuarioSchema.js';
 import { verifyToken, verifyTokenWeb } from '../middlewares/verifyToken.js';
@@ -95,7 +95,7 @@ router.delete('/eliminarUsuario/:id_usuario',
     validateRol(['Administrador', 'Super']),
     eliminarUsuario
 ); 
-router.get('/buscarUsuario',
+router.post('/buscarUsuario',
     verifyTokenWeb,
     validateRol(['Administrador', 'Super']),
     buscarUserNombre
@@ -129,6 +129,12 @@ router.delete('/eliminarPerfilAdmin',
     verifyTokenWeb,
     validateRol(['Super']),
     eliminarAdmin
+);
+
+router.get('/contarUsuarios',
+    verifyTokenWeb,
+    validateRol(['Administrador', 'Super']),
+    contarUsuarios
 );
 
 //listar todos los usuarios

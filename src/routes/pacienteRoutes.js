@@ -3,7 +3,8 @@ import { register, listarPacientes, getPacienteById, actualizarPaciente, elimina
     registerPaciente2,
     actualizarPaciente2,
     listarPacientes2,
-    obtenerRolPaciente
+    obtenerRolPaciente, 
+    cantidadPacientes
  } from '../controllers/pacienteController.js';
 import validateSchema from "../middlewares/validatoreSchema.js"
 import {PacienteSchema, ActPacienteSchema, ActPaciente2, PacienteSchema2 } from "../schema/pacienteSchema.js";
@@ -81,5 +82,10 @@ router.delete('/eliminarPaciente2/:id_paciente',
     validateRol(['Administrador', 'Super']), 
     eliminarPaciente
 );
+router.get('/cantidadPacientes',
+    verifyTokenWeb,
+    validateRol(['Administrador', 'Super']),
+    cantidadPacientes
+)
 
 export default router;
