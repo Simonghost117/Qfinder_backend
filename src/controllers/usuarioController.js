@@ -3,7 +3,7 @@ import { createAccessToken } from '../libs/jwt.js';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 import { imgBase64, manejarImagenes } from '../utils/imgBase64.js';
-import { models } from '../models/index.js';
+import { models, sequelize } from '../models/index.js';
 const { Usuario, Subscription } = models;
 
 dotenv.config();
@@ -351,7 +351,7 @@ export const perfilUser = async (req, res) => {
 }
 import { Op, col } from 'sequelize';
 import { PaginationService } from '../utils/paginationUtils.js';
-import sequelize from '../config/db.js';
+// import sequelize from '../config/db.js';
 
 export const listarUsuarios = async (req, res) => {
   try { 
@@ -490,71 +490,257 @@ export const listarAdmin = async (req, res) => {
     res.status(500).json({ message: "Erro interno del servidor al listar los administradores"})
   }
 }
+import {processApprovedPayment} from '../controllers/paymentController.js';
+// Importaciones necesarias al inicio del archivo
+
+
+// export const actualizarUsuario = async (req, res) => {
+//   try {
+//     const { id_usuario } = req.params;
+//     const { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, imagen_usuario, tipo_usuario, tipo_suscripcion, estado_suscripcion } = req.body;
+//     const existe = await Usuario.findOne({
+//   where: {
+//     [Op.and]: [
+//       {
+//         [Op.or]: [
+//           { correo_usuario: correo_usuario },
+//           { identificacion_usuario: identificacion_usuario }
+//         ]
+//       },
+//       { id_usuario: { [Op.ne]: id_usuario } } // Excluir al usuario actual de la búsqueda
+//     ]
+//   },
+// });
+
+// if (existe) {
+//   // Verificar cuál campo está duplicado
+//   if (existe.correo_usuario === correo_usuario) {
+//     return res.status(400).json({ message: "El correo ya está registrado por otro usuario" });
+//   }
+//   if (existe.identificacion_usuario === identificacion_usuario) {
+//     return res.status(400).json({ message: "La identificación ya está registrada por otro usuario" });
+//   }
+// }
+//     const usuario = await Usuario.findOne({
+//       where: {
+//         id_usuario: id_usuario
+//       }, attributes: [ 'tipo_usuario' ], 
+//        include: [{
+//         model: Subscription,
+//         as: 'subscription', // Asegúrate de que coincida con tu asociación
+//         required: false // LEFT JOIN (incluye usuarios sin suscripción)
+//   }]
+//     })
+//     if (!usuario) {
+//       return res.status(404).json({ message: "Usuario no encontrado" });
+//     }
+//     console.log("Tipo de usuario en BD:", usuario.tipo_usuario);
+
+//     let rolAsignado = {tipo_usuario: tipo_usuario}; 
+
+//     const user = req.user;
+//     if (user.tipo_usuario == 'Administrador') {
+//        rolAsignado = {tipo_usuario : 'Usuario'};
+//       if (usuario.tipo_usuario !== 'Usuario') {
+//         return res.status(403).json({ message: "No tienes permiso para actualizar este usuario, rol denegado" });
+//       }
+//     } 
+//     // Manejo de imagen
+//         let nueva_imagen;
+//         try {
+//           nueva_imagen = await manejarImagenes(imagen_usuario, usuario.imagen_usuario);
+//         } catch (error) {
+//           return res.status(400).json({ 
+//             success: false,
+//             message: error.message 
+//           });
+//         }
+//     const dataToUpdate = { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, tipo_usuario: rolAsignado.tipo_usuario || tipo_usuario,
+//       imagen_usuario: nueva_imagen };
+//     await Usuario.update(dataToUpdate, {
+//       where: { id_usuario: id_usuario },
+//     });
+
+
+//     if (usuario.subscription && (tipo_suscripcion || estado_suscripcion)) {
+//       await Subscription.update(
+//         {
+//           tipo_suscripcion: tipo_suscripcion || usuario.subscription.tipo_suscripcion,
+//           estado_suscripcion: estado_suscripcion || usuario.subscription.estado_suscripcion
+//         },
+//         { where: { id_usuario: id_usuario } }
+//       );
+//     }
+//     if (estado_suscripcion === "active" || usuario.subscription.estado_suscripcion === "active") {
+//     await Usuario.update(
+//       { membresia: tipo_suscripcion || usuario.subscription.tipo_suscripcion },
+//       { where: { id_usuario } }
+//     );
+// }
+
+//     res.status(200).json({ 
+//       success: true,
+//       message: 'Usuario actualizado correctamente' + 
+//         (usuario.subscription ? ' (con suscripción actualizada)' : '') 
+//     });
+
+//    }catch(error) {
+//     console.error('Error al actualizar el usuario', error);
+//     res.status(500).json({ message: "Error en el servidor al actualizar el usuario" });
+//   }
+// }
+
 
 export const actualizarUsuario = async (req, res) => {
+  let transaction;
+
   try {
+    transaction = await sequelize.transaction();
+
     const { id_usuario } = req.params;
-    const { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, imagen_usuario, tipo_usuario, tipo_suscripcion, estado_suscripcion } = req.body;
-    const usuario = await Usuario.findOne({
+    const {
+      nombre_usuario,
+      apellido_usuario,
+      identificacion_usuario,
+      direccion_usuario,
+      telefono_usuario,
+      correo_usuario,
+      imagen_usuario,
+      tipo_usuario,
+      tipo_suscripcion,
+      estado_suscripcion
+    } = req.body;
+
+    // Verificar duplicados
+    const existe = await models.Usuario.findOne({
       where: {
-        id_usuario: id_usuario
-      }, attributes: [ 'tipo_usuario' ], 
-       include: [{
-        model: Subscription,
-        as: 'subscription', // Asegúrate de que coincida con tu asociación
-        required: false // LEFT JOIN (incluye usuarios sin suscripción)
-  }]
-    })
+        [Op.and]: [
+          {
+            [Op.or]: [
+              { correo_usuario },
+              { identificacion_usuario }
+            ]
+          },
+          { id_usuario: { [Op.ne]: id_usuario } }
+        ]
+      },
+      transaction
+    });
+
+    if (existe) {
+      await transaction.rollback();
+      const conflictField = existe.correo_usuario === correo_usuario
+        ? 'El correo ya está registrado por otro usuario'
+        : 'La identificación ya está registrada por otro usuario';
+      return res.status(400).json({ message: conflictField });
+    }
+
+    // Obtener usuario con suscripción
+    const usuario = await models.Usuario.findOne({
+      where: { id_usuario },
+      attributes: ['tipo_usuario', 'imagen_usuario'],
+      include: [{ model: models.Subscription, as: 'subscription', required: false }],
+      transaction
+    });
+
     if (!usuario) {
-      return res.status(404).json({ message: "Usuario no encontrado" });
+      await transaction.rollback();
+      return res.status(404).json({ message: 'Usuario no encontrado' });
     }
-    console.log("Tipo de usuario en BD:", usuario.tipo_usuario);
 
-    let rolAsignado = {tipo_usuario: tipo_usuario}; 
-
+    // Validación de roles
     const user = req.user;
-    if (user.tipo_usuario == 'Administrador') {
-       rolAsignado = {tipo_usuario : 'Usuario'};
+    let rolFinal = tipo_usuario;
+
+    if (user.tipo_usuario === 'Administrador') {
       if (usuario.tipo_usuario !== 'Usuario') {
-        return res.status(403).json({ message: "No tienes permiso para actualizar este usuario, rol denegado" });
+        await transaction.rollback();
+        return res.status(403).json({ message: 'No tienes permiso para actualizar este usuario' });
       }
-    } 
-    // Manejo de imagen
-        let nueva_imagen;
-        try {
-          nueva_imagen = await manejarImagenes(imagen_usuario, usuario.imagen_usuario);
-        } catch (error) {
-          return res.status(400).json({ 
-            success: false,
-            message: error.message 
-          });
-        }
-    const dataToUpdate = { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, tipo_usuario: rolAsignado.tipo_usuario || tipo_usuario,
-      imagen_usuario: nueva_imagen };
-    await Usuario.update(dataToUpdate, {
-      where: { id_usuario: id_usuario },
-    });
-
-
-    if (usuario.subscription && (tipo_suscripcion || estado_suscripcion)) {
-      await Subscription.update(
-        {
-          tipo_suscripcion: tipo_suscripcion || usuario.subscription.tipo_suscripcion,
-          estado_suscripcion: estado_suscripcion || usuario.subscription.estado_suscripcion
-        },
-        { where: { id_usuario: id_usuario } }
-      );
+      rolFinal = 'Usuario';
     }
-    res.status(200).json({ 
-      success: true,
-      message: 'Usuario actualizado correctamente' + 
-        (usuario.subscription ? ' (con suscripción actualizada)' : '') 
+
+    // Manejo de imagen
+    let nueva_imagen;
+    try {
+      nueva_imagen = await manejarImagenes(imagen_usuario, usuario.imagen_usuario);
+    } catch (error) {
+      await transaction.rollback();
+      return res.status(400).json({ message: error.message });
+    }
+
+    // Actualizar datos del usuario
+    await models.Usuario.update({
+      nombre_usuario,
+      apellido_usuario,
+      identificacion_usuario,
+      direccion_usuario,
+      telefono_usuario,
+      correo_usuario,
+      tipo_usuario: rolFinal,
+      imagen_usuario: nueva_imagen
+    }, {
+      where: { id_usuario },
+      transaction
     });
-  } catch(error) {
-    console.error('Error al actualizar el usuario', error);
-    res.status(500).json({ message: "Error en el servidor al actualizar el usuario" });
+
+    // Procesar suscripción si ya existe
+    const existingSubscription = await models.Subscription.findOne({
+      where: { id_usuario },
+      transaction
+    });
+
+    if (existingSubscription) {
+      if (estado_suscripcion === 'active') {
+        if (!tipo_suscripcion) {
+          await transaction.rollback();
+          return res.status(400).json({ message: 'Se requiere tipo_suscripcion para activar' });
+        }
+
+        const mockPayment = {
+          external_reference: `USER_${id_usuario}_PLAN_${tipo_suscripcion}`,
+          id: `manual-${Date.now()}`,
+          status: 'approved',
+          date_approved: new Date().toISOString(),
+          payment_method_id: 'manual'
+        };
+
+        await processApprovedPayment(mockPayment, { models, transaction });
+      } else if (tipo_suscripcion || estado_suscripcion) {
+        await models.Subscription.update({
+          tipo_suscripcion: tipo_suscripcion || usuario.subscription?.tipo_suscripcion,
+          estado_suscripcion: estado_suscripcion || usuario.subscription?.estado_suscripcion
+        }, {
+          where: { id_usuario },
+          transaction
+        });
+      }
+    } else {
+      console.log(`El usuario ${id_usuario} no tiene suscripción previa. No se procesará.`);
+    }
+
+    await transaction.commit();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Usuario actualizado correctamente' +
+        (estado_suscripcion === 'active' ? ' (suscripción activada)' : '')
+    });
+
+  } catch (error) {
+    if (transaction) await transaction.rollback();
+    console.error('Error al actualizar usuario:', {
+      error: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
+    return res.status(500).json({
+      message: 'Error al actualizar el usuario',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
-}
+};
+
 
 export const eliminarUsuario = async (req, res) => {
   try {

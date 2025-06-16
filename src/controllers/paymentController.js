@@ -381,11 +381,23 @@ async function handlePreapprovalWebhook(preapprovalData) {
   return Promise.resolve();
 }
 
-
 // Funciones de procesamiento mejoradas
-async function processApprovedPayment(payment) {
-  const transaction = await models.sequelize.transaction();
+export async function processApprovedPayment(payment, options = {}) {
+  const { 
+    models = require('../models'), // Importa modelos si no se proporcionan
+    transaction: externalTransaction = null 
+  } = options;
+
+  let shouldCommit = false;
+  let transaction = externalTransaction;
+
   try {
+    // Crear nueva transacción si no se proporcionó una
+    if (!transaction) {
+      transaction = await sequelize.transaction();
+      shouldCommit = true;
+    }
+
     const { external_reference, id } = payment;
     
     if (!external_reference) {
@@ -395,14 +407,20 @@ async function processApprovedPayment(payment) {
     const { userId, planType } = parseExternalReference(external_reference);
 
     // Verificar si el pago ya fue procesado
-    const existingPayment = await Subscription.findOne({
+    let existingPayment = await Subscription.findOne({
       where: { mercado_pago_id: id },
       transaction
     });
+    if (!existingPayment) {
+  existingPayment = await Subscription.findOne({
+    where: { id_usuario: userId },
+    transaction
+  });
+}
 
     if (existingPayment && existingPayment.estado_suscripcion === SUBSCRIPTION_STATUS.active) {
       console.log(`El pago ${id} ya fue procesado anteriormente.`);
-      await transaction.commit();
+      if (shouldCommit) await transaction.commit();
       return;
     }
 
@@ -465,14 +483,15 @@ async function processApprovedPayment(payment) {
       { where: { id_usuario: userId }, transaction }
     );
 
-    await transaction.commit();
+    if (shouldCommit) {
+      await transaction.commit();
+    }
     console.log(`✅ Suscripción ${subscription.estado_suscripcion} para usuario ${userId} - ID: ${subscription.id}`);
 
-    // Aquí podrías enviar una notificación al usuario
-    // await sendPaymentConfirmation(user, payment, subscription);
-
   } catch (error) {
-    await transaction.rollback();
+    if (shouldCommit && transaction) {
+      await transaction.rollback();
+    }
     console.error('❌ Error en processApprovedPayment:', {
       paymentId: payment?.id,
       externalReference: payment?.external_reference,
@@ -483,7 +502,6 @@ async function processApprovedPayment(payment) {
       },
       timestamp: new Date().toISOString()
     });
-    
     throw error;
   }
 }

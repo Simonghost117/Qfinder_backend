@@ -95,7 +95,7 @@ router.delete('/eliminarUsuario/:id_usuario',
     validateRol(['Administrador', 'Super']),
     eliminarUsuario
 ); 
-router.get('/buscarUsuario',
+router.post('/buscarUsuario',
     verifyTokenWeb,
     validateRol(['Administrador', 'Super']),
     buscarUserNombre
