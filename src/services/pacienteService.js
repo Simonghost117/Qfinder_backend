@@ -1,5 +1,5 @@
 import { models } from "../models/index.js";
-const { Paciente, Familiar } = models;
+const { Paciente, Familiar, Usuario } = models;
 
 
 export const createPaciente = async ({
@@ -13,7 +13,7 @@ export const createPaciente = async ({
   nivel_autonomia
 }) => {
   try {
-    const usuario = await models.Usuario.findByPk(id_usuario);
+    const usuario = await Usuario.findByPk(id_usuario);
     if (!usuario) {
       throw new Error("Usuario no encontrado.");
     }
