@@ -13,25 +13,34 @@ export const createPaciente = async ({
   nivel_autonomia
 }) => {
   try {
-    const usuario = await Usuario.findByPk(id_usuario);
+    const usuario = await models.Usuario.findByPk(id_usuario, {
+      include: [{
+        model: models.Subscription,
+        as: 'subscription',
+        where: { estado_suscripcion: 'active' },
+        required: false
+      }]
+    });
+
     if (!usuario) {
       throw new Error("Usuario no encontrado.");
     }
-    // Verificar límite de pacientes
-    const totalPacientes = await Paciente.count({ where: { id_usuario } });
 
-    if (usuario.membresia == 'free'){
-      if (totalPacientes >= 2) {
-        throw new Error("Un usuario free solo puede registrar hasta 2 pacientes.");
+    const totalPacientes = await models.Paciente.count({ where: { id_usuario } });
+
+    // Determinar límite de pacientes
+    let limitePacientes = 2; // Por defecto para plan 'free'
+
+    if (usuario.subscription) {
+      const { limite_pacientes } = usuario.subscription;
+
+      if (typeof limite_pacientes === 'number') {
+        limitePacientes = limite_pacientes;
       }
-    } else if (id_usuario.membresia == 'plus'){
-      if (totalPacientes >= 5) {
-        throw new Error("Un usuario plus solo puede registrar hasta 5 pacientes.");
-      }
-    } else if (id_usuario.membresia == 'pro'){
-      if (totalPacientes >= 10) {
-        throw new Error("Un usuario pro solo puede registrar hasta 10 pacientes.");
-      }
+    }
+
+    if (totalPacientes >= limitePacientes) {
+      throw new Error(`Has alcanzado el límite de ${limitePacientes} pacientes permitido por tu plan.`);
     }
 
     // Crear el paciente
