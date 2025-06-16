@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { buscarUsuarioPorCorreo, agregarColaborador, eliminarColaborador } from '../controllers/colaborador.controller.js';
+import { buscarUsuarioPorCorreo, agregarColaborador, listarColaboradoresDeMisPacientes, eliminarColaborador } from '../controllers/colaborador.controller.js';
 import { validarAgregarColaborador } from '../schema/colaborador.schema.js';
 import validarSchema from '../middlewares/validateColaborador.js';
 import { verifyToken } from '../middlewares/verifyToken.js';
@@ -12,6 +12,10 @@ router.get('/buscar/:correo', verifyToken, buscarUsuarioPorCorreo);
 
 router.post('/agregar', verifyToken, validatePermissions(['responsable']), validarSchema(validarAgregarColaborador), agregarColaborador);
 
-router.delete('/eliminar', verifyToken, eliminarColaborador);
+//listar todos los colaboradores de un usuario
+router.get('/mis-pacientes', verifyToken, listarColaboradoresDeMisPacientes);
+
+
+router.delete('/eliminar', verifyToken, validatePermissions(['responsable']), eliminarColaborador);
 
 export default router;
