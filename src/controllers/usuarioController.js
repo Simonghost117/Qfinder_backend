@@ -771,6 +771,7 @@ export const eliminarUsuario = async (req, res) => {
 
 export const buscarUserNombre = async (req, res) => {
   try {
+    console.log(req.body)
     const { nombre_usuario } = req.body;
     const usuarios = await buscarNombre(nombre_usuario);
     if (usuarios.length === 0 || !usuarios) {

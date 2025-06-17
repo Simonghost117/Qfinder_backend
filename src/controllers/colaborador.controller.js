@@ -1,6 +1,7 @@
 import Colaborador from '../models/colaborador.model.js';
 import Usuario from '../models/usuario.model.js';
 import Paciente from '../models/paciente.model.js';
+import { Op } from 'sequelize';
 
 export const buscarUsuarioPorCorreo = async (req, res) => {
   const { correo } = req.params;
@@ -86,3 +87,73 @@ export const eliminarColaborador = async (req, res) => {
     return res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
+
+export const listarColaboradoresDeMisPacientes = async (req, res) => {
+  const { id_usuario } = req.user;
+  const { page = 1, limit = 10, search = '' } = req.query;
+
+  try {
+    const pacientes = await Paciente.findAll({
+      where: { id_usuario },
+      attributes: ['id_paciente', 'nombre']
+    });
+
+    if (!pacientes.length) {
+      return res.status(404).json({ error: 'No se encontraron pacientes para este usuario.' });
+    }
+
+    const idPacientes = pacientes.map(p => p.id_paciente);
+    const offset = (page - 1) * limit;
+
+    const whereUsuario = search
+      ? {
+          [Op.or]: [
+            { nombre_usuario: { [Op.iLike]: `%${search}%` } },
+            { apellido_usuario: { [Op.iLike]: `%${search}%` } }
+          ]
+        }
+      : {};
+
+    const { rows: colaboradores, count: totalGlobal } = await Colaborador.findAndCountAll({
+      where: { id_paciente: { [Op.in]: idPacientes } },
+      include: [
+        {
+          model: Usuario,
+          attributes: ['id_usuario', 'nombre_usuario', 'apellido_usuario', 'correo_usuario' , 'imagen_usuario'],
+          where: whereUsuario
+        },
+        {
+          model: Paciente,
+          attributes: ['id_paciente', 'nombre']
+        }
+      ],
+      offset: parseInt(offset),
+      limit: parseInt(limit)
+    });
+
+    const resultado = colaboradores.map(c => ({
+      id_usuario: c.Usuario.id_usuario,
+      nombre: c.Usuario.nombre_usuario,
+      apellido: c.Usuario.apellido_usuario,
+      correo: c.Usuario.correo_usuario,
+      imagen_usuario: c.Usuario.imagen_usuario,
+      id_paciente: c.Paciente.id_paciente,
+      paciente: c.Paciente.nombre
+    }));
+
+    return res.status(200).json({
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total: resultado.length,
+      totalGlobal,
+      colaboradores: resultado
+    });
+  } catch (error) {
+    console.error('Error al listar colaboradores:', error.message);
+    return res.status(500).json({
+      error: 'Error interno del servidor',
+      message: error.message
+    });
+  }
+};
+
