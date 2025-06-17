@@ -70,6 +70,7 @@ import firebaseRoutes from './routes/firebase.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 import colaboradorRoutes from './routes/colaborador.routes.js';
 import { handleWebhook } from './controllers/paymentController.js';
+import  estadisticas  from './routes/estadisticas.router.js';
 // Después de inicializar tu aplicación
 
 startAllJobs();
@@ -118,6 +119,7 @@ app.use('/api/firebase', authRoutes);
 app.use('/api/firebase', firebaseRoutes); //🟢 episodios salud
 app.use('/api/payments', paymentRoutes);
 app.use('/api/colaboradores', colaboradorRoutes);
+app.use('/api/estadisticas', estadisticas)
 // app.use('/api/medicos', medicoRoutes); // Validaciones - CRUD (YA NO SE NECESITA pero conservado)
 // app.use('/api/reportes', routerReport); // No se va a usar (comentado pero conservado)
 // app.use('/api/panel', panelRoutes);

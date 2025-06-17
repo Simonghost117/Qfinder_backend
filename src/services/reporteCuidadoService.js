@@ -35,7 +35,7 @@ export const obtenerReporteCuidadoPersonal = async (idPaciente) => {
       [fn('COUNT', '*'), 'cantidad']
     ],
     group: ['semana', 'nivel_asistencia'],
-    order: [['semana', 'ASC']]
+    order: [['semana', 'DESC']]
   });
 
   const evolucionMensual = {};
@@ -64,7 +64,7 @@ export const detectarAumentoAsistencia = async (idPaciente) => {
       [fn('COUNT', '*'), 'cantidad']
     ],
     group: ['nivel_asistencia', 'semana'],
-    order: [['semana', 'ASC']]
+    order: [['semana', 'DESC']]
   });
 
   const conteo = { semana1: {}, semana2: {} };

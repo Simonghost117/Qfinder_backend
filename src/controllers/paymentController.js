@@ -930,3 +930,32 @@ export const verifyPayment = async (req, res) => {
     });
   }
 };
+
+
+export const cantSuscripciones = async (req, res) => {
+  try {
+    const suscripcionUnica = await Subscription.findAll({
+      attributes: ['id_usuario'],
+      group: ['id_usuario']
+    });
+    const totalSuscripciones = suscripcionUnica.length
+  if(!totalSuscripciones || suscripcionUnica.length === 0){
+    res.status(404).json({
+      success: false,
+      message: 'No hay colaboradores registrados'
+    })
+  }
+  res.status(200).json({
+      success: true,
+      totalSuscripciones
+    });
+
+  } catch (error) {
+    console.error("Error al contar los colaboradores:", error);
+    res.status(500).json({
+      success: false,
+      message: 'Error al contar los colaboradores',
+      error: process.env.NODE_ENV === 'development' ? error.message : null
+    });
+  }
+}

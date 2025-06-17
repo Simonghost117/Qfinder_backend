@@ -34,7 +34,7 @@ export const episodioSchema = z.object({
 // });
 
 export const filtroSchema = z.object({
-  ordenFecha: z.enum(['asc', 'desc']).optional(),
+  ordenFecha: z.enum(['DESC', 'desc']).optional(),
   severidad: z.enum(['baja', 'media', 'alta']).optional(),
   tipo: z.string().optional(),
   estado: z.string().optional(),
