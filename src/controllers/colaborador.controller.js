@@ -1,7 +1,6 @@
-import Colaborador from '../models/colaborador.model.js';
-import Usuario from '../models/usuario.model.js';
-import Paciente from '../models/paciente.model.js';
-import { Op } from 'sequelize';
+import { models } from '../models/index.js';
+const { Subscription, Colaborador, Usuario, Paciente } = models;
+
 
 export const buscarUsuarioPorCorreo = async (req, res) => {
   const { correo } = req.params;
@@ -31,22 +30,21 @@ export const buscarUsuarioPorCorreo = async (req, res) => {
 };
 
 export const agregarColaborador = async (req, res) => {
-  const { id_usuario, id_paciente } = req.body;
+  const { id_usuario, id_paciente } = req.body; 
+  const idSolicitante = req.user.id_usuario; 
 
   try {
-
     const usuario = await Usuario.findByPk(id_usuario);
     if (!usuario) {
       return res.status(404).json({ error: 'Usuario colaborador no encontrado' });
     }
 
-  
     const paciente = await Paciente.findByPk(id_paciente);
     if (!paciente) {
       return res.status(404).json({ error: 'Paciente no encontrado' });
     }
 
-  
+    // Verificar si ya es colaborador del paciente
     const yaExiste = await Colaborador.findOne({
       where: { id_usuario, id_paciente }
     });
@@ -55,15 +53,68 @@ export const agregarColaborador = async (req, res) => {
       return res.status(400).json({ error: 'Este usuario ya es colaborador de este paciente.' });
     }
 
-  
+    // Obtener al solicitante con su suscripción
+    const solicitante = await Usuario.findByPk(idSolicitante, {
+      include: [{
+        model: Subscription,
+        as: 'subscription',
+        where: { estado_suscripcion: 'active' },
+        required: false
+      }]
+    });
+
+    if (!solicitante) {
+      return res.status(404).json({ error: 'Usuario solicitante no encontrado' });
+    }
+
+    // Obtener el límite de cuidadores según la suscripción
+    let limiteColaboradores = 2; // default para free
+    if (solicitante.subscription && typeof solicitante.subscription.limite_cuidadores === 'number') {
+      limiteColaboradores = solicitante.subscription.limite_cuidadores;
+    }
+
+    // Obtener todos los pacientes del usuario solicitante
+    const pacientesDelUsuario = await Paciente.findAll({
+      where: { id_usuario: idSolicitante },
+      attributes: ['id_paciente']
+    });
+
+    const idsPacientes = pacientesDelUsuario.map(p => p.id_paciente);
+
+    // Contar todos los colaboradores asociados a esos pacientes
+    const totalColaboradores = await Colaborador.count({
+      where: {
+        id_paciente: idsPacientes
+      }
+    });
+
+    if (totalColaboradores >= limiteColaboradores) {
+      return res.status(400).json({
+        error: `Has alcanzado el límite de ${limiteColaboradores} colaboradores permitidos por tu plan.`
+      });
+    }
+
+    // Crear el colaborador
     const nuevoColaborador = await Colaborador.create({ id_usuario, id_paciente });
 
-    return res.status(201).json({ message: 'Colaborador agregado exitosamente', colaborador: nuevoColaborador });
+    // const io = req.app.get('io');
+    //   io.emit('nuevo_colaborador', {
+    //     id_usuario,
+    //     id_paciente,
+    //     timestamp: new Date().toISOString()
+    //   });
+
+    return res.status(201).json({
+      message: 'Colaborador agregado exitosamente',
+      colaborador: nuevoColaborador
+    });
+
   } catch (error) {
     console.error('Error al agregar colaborador:', error);
     return res.status(500).json({ error: 'Error interno del servidor' });
   }
 };
+
 
 export const eliminarColaborador = async (req, res) => {
   const { id_usuario, id_paciente } = req.body;

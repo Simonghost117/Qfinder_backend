@@ -4,9 +4,11 @@ import {
   successRedirect,
   failureRedirect,
   pendingRedirect,
-  verifyPayment
+  verifyPayment,
+  cantSuscripciones
 } from '../controllers/paymentController.js';
-import { verifyToken } from '../middlewares/verifyToken.js';
+import { verifyToken, verifyTokenWeb } from '../middlewares/verifyToken.js';
+import { validateRol } from '../middlewares/validateAdmin.js';
 
 const router = express.Router();
 
@@ -18,5 +20,12 @@ router.get('/verify-payment/:paymentId', verifyToken, verifyPayment);
 router.get('/success-redirect', successRedirect);
 router.get('/failure-redirect', failureRedirect);
 router.get('/pending-redirect', pendingRedirect);
+
+//ADMINISTRADOR
+router.get('/cantSusripciones',
+  verifyTokenWeb,
+  validateRol(['Super', 'Administrador']),
+  cantSuscripciones
+)
 
 export default router;

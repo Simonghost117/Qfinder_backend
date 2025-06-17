@@ -170,7 +170,7 @@ export const clearPendingRegistration = (correo_usuario) => {
 //                 ]
 //             },
 //             attributes: ["id_usuario", "nombre_usuario", "apellido_usuario", "correo_usuario"],
-//             order: [["nombre_usuario", "ASC"]] // ✅ Ordenar alfabéticamente
+//             order: [["nombre_usuario", "DESC"]] // ✅ Ordenar alfabéticamente
 //         });
 
 //         if (!usuario || usuario.length === 0) {
@@ -194,7 +194,7 @@ export const buscarNombre = async (nombre) => {
                 ]
             },
             attributes: ["id_usuario", "nombre_usuario", "apellido_usuario", "correo_usuario", "identificacion_usuario"],
-            order: [["nombre_usuario", "ASC"]]
+            order: [["nombre_usuario", "DESC"]]
         });
 
         if (!usuarios || usuarios.length === 0) {
