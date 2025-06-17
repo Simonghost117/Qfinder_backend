@@ -90,7 +90,7 @@ export const actualiza = async (id_red, nombre_red, descripcion_red, nueva_image
 //                     [Op.iLike]: `%${nombre_red}%` // `ILIKE` funciona mejor en PostgreSQL sin `LOWER`
 //                 }
 //             },
-//             order: [["nombre_red", "ASC"]] // Ordena resultados alfabéticamente
+//             order: [["nombre_red", "DESC"]] // Ordena resultados alfabéticamente
 //         });
 
 //         return red;

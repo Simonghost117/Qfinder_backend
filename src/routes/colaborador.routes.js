@@ -2,8 +2,9 @@ import { Router } from 'express';
 import { buscarUsuarioPorCorreo, agregarColaborador, listarColaboradoresDeMisPacientes, eliminarColaborador } from '../controllers/colaborador.controller.js';
 import { validarAgregarColaborador } from '../schema/colaborador.schema.js';
 import validarSchema from '../middlewares/validateColaborador.js';
-import { verifyToken } from '../middlewares/verifyToken.js';
+import { verifyToken, verifyTokenWeb } from '../middlewares/verifyToken.js';
 import { validatePermissions } from '../middlewares/episodioPermissions.middleware.js';
+import { validateRol } from '../middlewares/validateAdmin.js';
 
 
 const router = Router();
@@ -18,5 +19,13 @@ router.get('/mis-pacientes', verifyToken, listarColaboradoresDeMisPacientes);
 
 
 router.post('/eliminar', verifyToken, validatePermissions(['responsable']), eliminarColaborador);
+
+//ADMINISTRADOR
+
+router.get('/cantColaboradores',
+    verifyTokenWeb,
+    validateRol(['Super', 'Administrador']),
+    cantColaboradores
+)
 
 export default router;
