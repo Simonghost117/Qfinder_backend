@@ -919,3 +919,40 @@
 2025-06-16 11:11:16 [33mwarn[39m: Community 13 not found in database
 2025-06-16 11:11:16 [33mwarn[39m: Community 13 not found in database
 >>>>>>> origin/hanz
+2025-06-16 20:22:00 [32minfo[39m: Setting up chat listeners...
+2025-06-16 20:22:00 [32minfo[39m: Medication notification scheduler started
+2025-06-16 20:22:00 [32minfo[39m: Setting up chat listeners...
+2025-06-16 20:22:01 [32minfo[39m: Setting up listener for community: 1
+2025-06-16 20:22:01 [32minfo[39m: Setting up listener for community: 1
+2025-06-16 20:22:01 [32minfo[39m: Setting up listener for community: 3
+2025-06-16 20:22:01 [32minfo[39m: Setting up listener for community: 3
+2025-06-16 20:22:01 [32minfo[39m: Setting up listener for community: 4
+2025-06-16 20:22:01 [32minfo[39m: Setting up listener for community: 4
+2025-06-16 20:22:01 [32minfo[39m: Setting up listener for community: 9
+2025-06-16 20:22:01 [32minfo[39m: Setting up listener for community: 9
+2025-06-16 20:22:01 [32minfo[39m: Setting up listener for community: 13
+2025-06-16 20:22:01 [32minfo[39m: New message in community 13 from user 4
+2025-06-16 20:22:01 [32minfo[39m: Setting up listener for community: 13
+2025-06-16 20:22:01 [32minfo[39m: New message in community 13 from user 4
+2025-06-16 20:22:01 [32minfo[39m: Setting up listener for community: 15
+2025-06-16 20:22:01 [32minfo[39m: Setting up listener for community: 15
+2025-06-16 20:22:01 [32minfo[39m: Setting up listener for community: 1
+2025-06-16 20:22:01 [32minfo[39m: Setting up listener for community: 3
+2025-06-16 20:22:01 [32minfo[39m: Setting up listener for community: 4
+2025-06-16 20:22:01 [32minfo[39m: Setting up listener for community: 9
+2025-06-16 20:22:01 [32minfo[39m: Setting up listener for community: 13
+2025-06-16 20:22:01 [32minfo[39m: New message in community 13 from user 4
+2025-06-16 20:22:01 [32minfo[39m: Setting up listener for community: 15
+2025-06-16 20:22:01 [32minfo[39m: Chat listeners setup complete
+2025-06-16 20:22:01 [32minfo[39m: Setting up listener for community: 1
+2025-06-16 20:22:01 [32minfo[39m: Setting up listener for community: 3
+2025-06-16 20:22:01 [32minfo[39m: Setting up listener for community: 4
+2025-06-16 20:22:01 [32minfo[39m: Setting up listener for community: 9
+2025-06-16 20:22:01 [32minfo[39m: Setting up listener for community: 13
+2025-06-16 20:22:01 [32minfo[39m: New message in community 13 from user 4
+2025-06-16 20:22:01 [32minfo[39m: Setting up listener for community: 15
+2025-06-16 20:22:01 [32minfo[39m: Chat listeners setup complete
+2025-06-16 20:22:03 [33mwarn[39m: Community 13 not found in database
+2025-06-16 20:22:03 [33mwarn[39m: Community 13 not found in database
+2025-06-16 20:22:03 [33mwarn[39m: Community 13 not found in database
+2025-06-16 20:22:03 [33mwarn[39m: Community 13 not found in database
