@@ -1,13 +1,6 @@
-<<<<<<< HEAD
-import Colaborador from '../models/colaborador.model.js';
-import Usuario from '../models/usuario.model.js';
-import Paciente from '../models/paciente.model.js';
-import { Op } from 'sequelize';
-=======
 import { models } from '../models/index.js';
 const { Subscription, Colaborador, Usuario, Paciente } = models;
 
->>>>>>> origin/Alison
 
 export const buscarUsuarioPorCorreo = async (req, res) => {
   const { correo } = req.params;
