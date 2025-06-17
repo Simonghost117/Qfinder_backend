@@ -16,6 +16,6 @@ router.post('/agregar', verifyToken, validatePermissions(['responsable']), valid
 router.get('/mis-pacientes', verifyToken, listarColaboradoresDeMisPacientes);
 
 
-router.delete('/eliminar', verifyToken, validatePermissions(['responsable']), eliminarColaborador);
+router.post('/eliminar', verifyToken, validatePermissions(['responsable']), eliminarColaborador);
 
 export default router;
