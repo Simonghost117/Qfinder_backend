@@ -119,7 +119,7 @@ export const listarColaboradoresDeMisPacientes = async (req, res) => {
       include: [
         {
           model: Usuario,
-          attributes: ['id_usuario', 'nombre_usuario', 'apellido_usuario', 'correo_usuario'],
+          attributes: ['id_usuario', 'nombre_usuario', 'apellido_usuario', 'correo_usuario' , 'imagen_usuario'],
           where: whereUsuario
         },
         {
@@ -136,6 +136,7 @@ export const listarColaboradoresDeMisPacientes = async (req, res) => {
       nombre: c.Usuario.nombre_usuario,
       apellido: c.Usuario.apellido_usuario,
       correo: c.Usuario.correo_usuario,
+      imagen_usuario: c.Usuario.imagen_usuario,
       id_paciente: c.Paciente.id_paciente,
       paciente: c.Paciente.nombre
     }));
