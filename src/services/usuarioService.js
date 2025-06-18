@@ -1,10 +1,12 @@
-import Usuario from "../models/usuario.model.js";
 import bcrypt from 'bcrypt';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 dotenv.config();
 import { Op, or } from 'sequelize';
+
+import { models } from '../models/index.js';
+const { Usuario, Subscription } = models;
 
 // Configuración del transporter para emails
 const transporter = nodemailer.createTransport({
@@ -183,27 +185,47 @@ export const clearPendingRegistration = (correo_usuario) => {
 //         throw new Error(`Error al buscar usuario: ${error.message}`);
 //     }
 //   }
+
+
 export const buscarNombre = async (nombre) => {
-    try {
-        const usuarios = await Usuario.findAll({
-            where: {
-                [Op.or]: [
-                    { nombre_usuario: { [Op.iLike]: `%${nombre}%` } },
-                    { apellido_usuario: { [Op.iLike]: `%${nombre}%` } },
-                    { identificacion_usuario: { [Op.iLike]: `%${nombre}%` } },
-                ]
-            },
-            attributes: ["id_usuario", "nombre_usuario", "apellido_usuario", "correo_usuario", "identificacion_usuario"],
-            order: [["nombre_usuario", "DESC"]]
-        });
+  try {
+    const usuarios = await Usuario.findAll({
+      where: {
+        [Op.or]: [
+          { nombre_usuario: { [Op.iLike]: `%${nombre}%` } },
+          { apellido_usuario: { [Op.iLike]: `%${nombre}%` } },
+          { identificacion_usuario: { [Op.iLike]: `%${nombre}%` } },
+        ],
+      },
+      attributes: [
+        'id_usuario',
+        'nombre_usuario',
+        'apellido_usuario',
+        'correo_usuario',
+        'identificacion_usuario',
+        'direccion_usuario',
+        'telefono_usuario',
+        'estado_usuario',
+        'imagen_usuario',
+      ],
+      include: [
+        {
+          model: Subscription,
+          as: 'subscription',
+          attributes: ['tipo_suscripcion', 'estado_suscripcion'],
+          required: false, // trae el usuario aunque no tenga suscripción
+        },
+      ],
+      order: [['nombre_usuario', 'DESC']],
+    });
 
-        if (!usuarios || usuarios.length === 0) {
-            return { message: "No se encontraron usuarios con ese nombre/apellido." };
-        }
-
-        return usuarios;
-    } catch (error) {
-        console.error("Error al buscar usuario:", error);
-        throw new Error(`Error en la búsqueda: ${error.message}`);
+    if (!usuarios || usuarios.length === 0) {
+      return { message: 'No se encontraron usuarios con ese nombre/apellido.' };
     }
+
+    return usuarios;
+  } catch (error) {
+    console.error('Error al buscar usuario:', error);
+    throw new Error(`Error en la búsqueda: ${error.message}`);
+  }
 };

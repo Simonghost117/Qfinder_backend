@@ -1,5 +1,5 @@
 import express from 'express';
-import { verifyToken } from '../middlewares/verifyToken.js';
+import { verifyToken, verifyTokenWeb } from '../middlewares/verifyToken.js';
 import { 
     listarMembresiaRed,
     redesPertenecientes,
@@ -8,9 +8,12 @@ import {
     asignarAdmin, 
     eliminarMiembro,
     verificarMembresia,
-    obtenerRedYEstadoUnion
+    obtenerRedYEstadoUnion,
+    listarMembresiaRedW
  } from '../controllers/usuarioRedControllers.js';
 import { esAdministradorRed } from '../middlewares/validacionesRed.js';
+import { validateRol } from '../middlewares/validateAdmin.js';
+import { paginationMiddleware } from '../middlewares/pagination.js';
 
 const router = express.Router();
 //🟢
@@ -50,5 +53,17 @@ router.delete('/eliminarMiembro/:id_red/:id_miembro',
     esAdministradorRed,
     eliminarMiembro
 )
+//ADMINISTRADOR
 
+router.get('/listarMembresiaW/:id_red',
+    verifyTokenWeb,
+    validateRol(['Administrador', 'Super']),
+    paginationMiddleware(10),
+    listarMembresiaRedW
+)
+router.delete('/eliminarMiembroW/:id_red/:id_miembro',
+    verifyTokenWeb,
+    validateRol(['Administrador', 'Super']),
+    eliminarMiembro
+)
 export default router;
