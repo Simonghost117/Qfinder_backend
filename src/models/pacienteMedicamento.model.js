@@ -30,8 +30,8 @@ const PacienteMedicamento = sequelize.define('PacienteMedicamento', {
     allowNull: false
   },
   hora_inicio: {
-    type: DataTypes.STRING,
-    allowNull: false
+  type: DataTypes.TIME,
+  allowNull: false
   },
   fecha_fin: {
     type: DataTypes.DATE,

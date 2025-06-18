@@ -1,5 +1,7 @@
 import { models } from '../models/index.js';
 const { Subscription, Colaborador, Usuario, Paciente } = models;
+import { Op } from 'sequelize';
+
 
 
 export const buscarUsuarioPorCorreo = async (req, res) => {
