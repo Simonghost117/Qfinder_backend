@@ -56,7 +56,8 @@ export const listarMembresia = async (id_red) => {
                     as: "usuario",
                     attributes: ["id_usuario", "nombre_usuario", "apellido_usuario"]
                 }
-            ]
+            ],
+            order: [['fecha_union', 'DESC']]
         });
 
         if (!membresia || membresia.length === 0) {

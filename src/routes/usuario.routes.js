@@ -2,7 +2,8 @@ import express from 'express';
 import { login, logout, register, 
     listarUsers, actualizarUser, eliminarUser,
     verifyUser, perfilUser, listarUsuarios, listarAdmin, eliminarUsuario, buscarUserNombre, registerUsuario, 
-    actualizarUsuario, actualizarAdmin, eliminarAdmin, contarUsuarios } from '../controllers/usuarioController.js';
+    actualizarUsuario, actualizarAdmin, eliminarAdmin, contarUsuarios, 
+    listarUsuariosFiltrados} from '../controllers/usuarioController.js';
 import validateSchema from '../middlewares/validatoreSchema.js';
 import { loginSchema, registerSchema, updateSchema, cambiarContrasenaSchema, usuarioAdmiAct } from '../schema/usuarioSchema.js';
 import { verifyToken, verifyTokenWeb } from '../middlewares/verifyToken.js';
@@ -136,6 +137,14 @@ router.get('/contarUsuarios',
     validateRol(['Administrador', 'Super']),
     contarUsuarios
 );
+
+router.get('/filtrar',
+  verifyTokenWeb,
+  validateRol(['Administrador', 'Super']),
+  paginationMiddleware(10),
+  listarUsuariosFiltrados
+);
+
 
 //listar todos los usuarios
 //listar todos los pacientes

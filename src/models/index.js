@@ -64,7 +64,7 @@ Red.belongsToMany(Usuario, { through: UsuarioRed, foreignKey: 'id_red', as: 'mie
 UsuarioRed.belongsTo(Usuario, { foreignKey: "id_usuario", as: "usuario" });
 UsuarioRed.belongsTo(Red, { foreignKey: "id_red", as: "red" });
 
-Red.hasMany(UsuarioRed, { foreignKey: "id_red" });
+Red.hasMany(UsuarioRed, { foreignKey: "id_red", as: 'membresias' });
 UsuarioRed.belongsTo(Red, { foreignKey: "id_red" });
 
 Paciente.hasMany(PacienteMedicamento, { foreignKey: 'id_paciente' });

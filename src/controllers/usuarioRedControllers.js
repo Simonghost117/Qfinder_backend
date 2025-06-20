@@ -3,6 +3,7 @@ import UsuarioRed from '../models/UsuarioRed.js';
 import Usuario from '../models/usuario.model.js';
 import Red from '../models/Red.js';
 import { buscarRed, unirmeRed, listarRedesPorUsuario, listarMembresia } from "../services/usuarioRedService.js";
+import { PaginationService } from '../utils/paginationUtils.js';
 
 // Función optimizada para verificar membresía
 export const verificarMembresia = async (req, res) => {
@@ -237,6 +238,58 @@ export const listarMembresiaRed = async (req, res) => {
         });
     }
 };
+
+export const listarMembresiaRedW = async (req, res) => {
+  try {
+    const { id_red } = req.params;
+    if (!id_red) {
+      return res.status(400).json({ error: "Id_red requerida" });
+    }
+
+    const red = await buscarRed(id_red);
+    if (!red) {
+      return res.status(404).json({ error: "Red no encontrada" });
+    }
+    console.log('Paginación recibida:', req.pagination);
+
+
+    const result = await PaginationService.paginate(UsuarioRed, {
+      where: { id_red },
+      include: [
+        {
+          model: Usuario,
+          as: "usuario",
+          attributes: ["id_usuario", "nombre_usuario", "apellido_usuario", "correo_usuario"]
+        }
+      ],
+      order: [["fecha_union", "DESC"]],
+      req,
+      transformData: (membresias) => membresias.map(m => ({
+        id_usuario_red: m.id_usuario_red,
+        id_usuario: m.id_usuario,
+        id_red: m.id_red,
+        rol: m.rol,
+        fecha_union: m.fecha_union,
+        usuario: m.usuario ? {
+          id_usuario: m.usuario.id_usuario,
+          nombre_usuario: m.usuario.nombre_usuario,
+          apellido_usuario: m.usuario.apellido_usuario,
+          correo_usuario: m.usuario.correo_usuario
+        } : null
+      }))
+    });
+
+    return res.status(200).json(result);
+
+  } catch (error) {
+    console.error("Error al listar la membresía", error);
+    return res.status(500).json({
+      error: "Error interno al listar la membresía",
+      details: error.message
+    });
+  }
+};
+
 
 export const abandonarRed = async (req, res) => {
     try {

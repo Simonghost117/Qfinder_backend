@@ -1,5 +1,5 @@
 import { models, sequelize } from "../models/index.js";
-const { Usuario, Paciente, Subscription, Medicamento, Red } = models; 
+const { Usuario, Paciente, Subscription, Medicamento, Red, UsuarioRed } = models;
 
 export const estadisticas = async (req, res) => {
   try {
@@ -11,7 +11,40 @@ export const estadisticas = async (req, res) => {
       where: { tipo_usuario: 'Administrador' }
     });
 
+    const estadoUsuario = await Usuario.findAll({
+      attributes: [
+        'tipo_usuario',
+        'estado_usuario',
+        [sequelize.fn('COUNT', sequelize.col('id_usuario')), 'total']
+      ],
+      where: {
+        estado_usuario: ['Activo', 'Inactivo']
+      },
+      group: ['tipo_usuario', 'estado_usuario'],
+      raw: true
+    });
+    const resumenUsuario = {};
+
+    estadoUsuario.forEach(({ tipo_usuario, estado_usuario, total }) => {
+      if (!resumenUsuario[tipo_usuario]) {
+        resumenUsuario[tipo_usuario] = {};
+      }
+      resumenUsuario[tipo_usuario][estado_usuario] = parseInt(total);
+    });
+
     const totalPacientes = await Paciente.count();
+
+     const pacientesAutonomia = await Paciente.findAll({
+      attributes: [
+        ['nivel_autonomia', 'nivel_autonomia'],
+        [sequelize.fn('COUNT', sequelize.col('id_paciente')), 'total']
+      ],
+      where: {
+        nivel_autonomia: ['alta', 'media', 'baja']
+      },
+      group: ['nivel_autonomia'],
+      raw: true
+    })
 
     const suscripcionUnica = await Subscription.findAll({
       attributes: ['id_usuario'],
@@ -21,50 +54,73 @@ export const estadisticas = async (req, res) => {
     const totalSuscripciones = suscripcionUnica.length;
 
     const resumenEstadosRaw = await Subscription.findAll({
+      attributes: [
+        'tipo_suscripcion',
+        'estado_suscripcion',
+        [sequelize.fn('COUNT', sequelize.col('id_usuario')), 'total']
+      ],
+      where: {
+        tipo_suscripcion: ['plus', 'pro']
+      },
+      group: ['tipo_suscripcion', 'estado_suscripcion'],
+      raw: true
+    });
+    const resumenEstados = {};
+
+    resumenEstadosRaw.forEach(({ tipo_suscripcion, estado_suscripcion, total }) => {
+      if (!resumenEstados[tipo_suscripcion]) {
+        resumenEstados[tipo_suscripcion] = {};
+      }
+      resumenEstados[tipo_suscripcion][estado_suscripcion] = parseInt(total);
+    });
+
+    const totalMedicamentos = await Medicamento.count();
+   
+
+    const medicamentoTipos = await Medicamento.findAll({
+      attributes: [
+        ['tipo', 'tipo'],
+        [sequelize.fn('COUNT', sequelize.col('id_medicamento')), 'total']
+      ],
+      where: {
+        tipo: ['psiquiatrico', 'neurologico', 'general', 'otro']
+      },
+      group: ['tipo'],
+      raw: true
+    })
+
+     const totalRedes = await Red.count();
+
+     const redesConMasMembresias = await Red.findAll({
   attributes: [
-    'tipo_suscripcion',
-    'estado_suscripcion',
-    [sequelize.fn('COUNT', sequelize.col('id_usuario')), 'total']
+    ['nombre_red', 'nombre'],
+    [sequelize.fn('COUNT', sequelize.col('membresias.id_usuario_red')), 'total']
+
   ],
-  where: {
-    tipo_suscripcion: ['plus', 'pro']
-  },
-  group: ['tipo_suscripcion', 'estado_suscripcion'],
+  include: [{
+    model: UsuarioRed,
+    as: 'membresias',
+    attributes: [],
+  }],
+  group: ['red.id_red', 'red.nombre_red'],
+  order: [[sequelize.literal('total'), 'DESC']],
   raw: true
 });
-const resumenEstados = {};
 
-resumenEstadosRaw.forEach(({ tipo_suscripcion, estado_suscripcion, total }) => {
-  if (!resumenEstados[tipo_suscripcion]) {
-    resumenEstados[tipo_suscripcion] = {};
-  }
-  resumenEstados[tipo_suscripcion][estado_suscripcion] = parseInt(total);
-});
-
-
-    // const resumenEstados = await Subscription.findAll({
-    //   attributes: [
-    //     ['estado_suscripcion', 'estado'],
-    //     [sequelize.fn('COUNT', sequelize.col('id_usuario')), 'total']
-    //   ],
-    //   where: {
-    //     tipo_suscripcion: ['plus', 'pro']
-    //   },
-    //   group: ['estado_suscripcion'],
-    //   raw: true
-    // });
-
-    const totalMeicamentos = await Medicamento.count();
-    const totalRedes = await Red.count();
 
     res.status(200).json({
       totalUsuarios,
       totalAdministradores,
-      totalPacientes, 
-      totalMeicamentos,
+      resumenUsuario,
+      totalPacientes,
+      pacientesAutonomia,
       totalRedes,
+      redesConMasMembresias,
       totalSuscripciones,
-      resumenEstados
+      resumenEstados,
+      totalMedicamentos,
+      medicamentoTipos,
+      
     });
 
   } catch (error) {

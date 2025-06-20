@@ -1013,3 +1013,58 @@ export const contarUsuarios = async (req, res) => {
     res.status(500).json({ message: 'Error al contar los usuarios', error });
   }
 }
+
+export const listarUsuariosFiltrados = async (req, res) => {
+  try {
+    const { estado, estadoSuscripcion, tipoSuscripcion } = req.query;
+
+    const whereUsuario = { tipo_usuario: 'Usuario' };
+    const whereSubscription = {};
+
+    if (estado) {
+      whereUsuario.estado_usuario = estado;
+    }
+
+    if (estadoSuscripcion) {
+      whereSubscription.estado_suscripcion = estadoSuscripcion;
+    }
+
+    if (tipoSuscripcion) {
+      whereSubscription.tipo_suscripcion = tipoSuscripcion;
+    }
+
+    const result = await PaginationService.paginate(Usuario, {
+      where: whereUsuario,
+      include: [
+        {
+          model: Subscription,
+          as: 'subscription',
+          required: Object.keys(whereSubscription).length > 0, // LEFT JOIN si no hay filtro
+          where: Object.keys(whereSubscription).length > 0 ? whereSubscription : undefined,
+          attributes: ['tipo_suscripcion', 'estado_suscripcion', 'fecha_inicio', 'fecha_renovacion']
+        }
+      ],
+      order: [['id_usuario', 'DESC']],
+      req,
+      transformData: (usuarios) => usuarios.map(usuario => ({
+        id_usuario: usuario.id_usuario,
+        nombre_usuario: usuario.nombre_usuario,
+        apellido_usuario: usuario.apellido_usuario,
+        correo_usuario: usuario.correo_usuario,
+        estado_usuario: usuario.estado_usuario,
+        tipo_usuario: usuario.tipo_usuario,
+        suscripcion: usuario.subscription ? {
+          tipo: usuario.subscription.tipo_suscripcion,
+          estado: usuario.subscription.estado_suscripcion,
+          fecha_inicio: usuario.subscription.fecha_inicio,
+          fecha_renovacion: usuario.subscription.fecha_renovacion
+        } : null
+      }))
+    });
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error al filtrar usuarios:", error);
+    res.status(500).json({ error: "Error al filtrar usuarios", details: error.message });
+  }
+};
