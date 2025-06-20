@@ -67,7 +67,7 @@ export const ActPacienteSchema = z.object({
     message: "La orientación sexual debe ser obligatoria"
   }),
   diagnostico_principal: z.string()
-    .min(10, {
+    .min(3, {
       message: "El Diagnostico Principal debe tener almenos 10 carácteres"
     })
     .max(100, {
