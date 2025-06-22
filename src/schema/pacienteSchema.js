@@ -17,9 +17,9 @@ export const PacienteSchema = z.object({
       message: "El apellido del paciente no puede exceder los 100 carácteres"
     }),
   identificacion: z.string()
-    .min(5, {
-      message: "La identificación del paciente debe tener al menos 5 carácteres"
-    }),
+  .regex(/^[1-9]\d{7,10}$/, {
+    message: "La identificación debe tener entre 8 y 11 dígitos numéricos y no puede comenzar con cero",
+  }),
   fecha_nacimiento: z.string()
     .transform((str) => new Date(str))
     .refine((date) => {
@@ -93,9 +93,9 @@ export const ActPaciente2 = z.object({
       message: "El apellido del paciente no puede exceder los 100 carácteres"
     }),
   identificacion: z.string()
-    .min(5, {
-      message: "La identificación del paciente debe tener al menos 5 carácteres"
-    }),
+  .regex(/^[1-9]\d{7,10}$/, {
+    message: "La identificación debe tener entre 8 y 11 dígitos numéricos y no puede comenzar con cero",
+  }),
   fecha_nacimiento: z.string()
     .transform((str) => new Date(str))
     .refine((date) => {
@@ -142,9 +142,9 @@ export const PacienteSchema2 = z.object({
       message: "El apellido del paciente no puede exceder los 100 carácteres"
     }),
   identificacion: z.string()
-    .min(5, {
-      message: "La identificación del paciente debe tener al menos 5 carácteres"
-    }),
+  .regex(/^[1-9]\d{7,10}$/, {
+    message: "La identificación debe tener entre 8 y 11 dígitos numéricos y no puede comenzar con cero",
+  }),
   fecha_nacimiento: z.string()
     .transform((str) => new Date(str))
     .refine((date) => {
