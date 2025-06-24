@@ -135,19 +135,19 @@ export const buscarNombre = async (nombre, pagination, req) => {
 
     const data = rows.map(paciente => ({
       id_paciente: paciente.id_paciente,
-      nombre_paciente: paciente.nombre,
-      apellido_paciente: paciente.apellido,
-      identificacion_paciente: paciente.identificacion,
-      fecha_nacimiento: paciente.fecha_nacimiento,
-      sexo: paciente.sexo,
-      diagnostico_principal: paciente.diagnostico_principal,
-      imagen_paciente: paciente.imagen_paciente,
-      usuario: paciente.usuario ? {
-        nombre_usuario: paciente.usuario.nombre_usuario,
-        apellido_usuario: paciente.usuario.apellido_usuario,
-        correo_usuario: paciente.usuario.correo_usuario
-      } : null
-    }));
+        nombre: paciente.nombre,
+        apellido: paciente.apellido,
+        identificacion: paciente.identificacion,
+        fecha_nacimiento: paciente.fecha_nacimiento,
+        sexo: paciente.sexo,
+        diagnostico_principal: paciente.diagnostico_principal,
+        nivel_autonomia: paciente.nivel_autonomia,
+        imagen_paciente: paciente.imagen_paciente,
+        usuario: {
+          nombre: paciente.usuario?.nombre_usuario,
+          apellido: paciente.usuario?.apellido_usuario,
+          email: paciente.usuario?.correo_usuario
+  }}));
 
 
     const totalPages = Math.ceil(count / pageSize);
