@@ -8,14 +8,14 @@ export const registerSchema = z.object({
         .min(1, { message: "El apellido es obligatorio" })
         .max(255, { message: "El apellido no puede exceder los 255 caracteres" }),
     identificacion_usuario: z.string()
-        .min(1, { message: "La identificación es obligatoria" })
-        .max(25, { message: "La identificación no puede exceder los 25 caracteres" }),
+  .regex(/^[1-9]\d{7,10}$/, {
+    message: "La identificación debe tener entre 8 y 11 dígitos numéricos y no puede comenzar con cero",
+  }),
     direccion_usuario: z.string()
         .min(1, { message: "La dirección es obligatoria" })
         .max(255, { message: "La dirección no puede exceder los 255 caracteres" }),
     telefono_usuario: z.string()
-        .min(1, { message: "El teléfono es obligatorio" })
-        .max(50, { message: "El teléfono no puede exceder los 50 caracteres" }),
+    .regex(/^\d{10}$/, { message: "El teléfono debe tener exactamente 10 dígitos" }),
     correo_usuario: z.string()
         .email({ message: "El correo electrónico debe tener un formato válido" }),
     contrasena_usuario: z.string()
@@ -44,10 +44,9 @@ export const updateSchema = z.object({
         .min(1, { message: "La dirección es obligatoria" })
         .max(255, { message: "La dirección no puede exceder los 255 caracteres" }),
     telefono_usuario: z.string()
-        .min(1, { message: "El teléfono es obligatorio" })
-        .max(50, { message: "El teléfono no puede exceder los 50 caracteres" }),
-    // correo_usuario: z.string()
-    //     .email({ message: "El correo electrónico debe tener un formato válido" }),
+    .regex(/^\d{10}$/, { message: "El teléfono debe tener exactamente 10 dígitos" }),
+    correo_usuario: z.string()
+        .email({ message: "El correo electrónico debe tener un formato válido" }),
     imagen_usuario: z.string().url({ message: "La imagen debe ser una URL válida" }).optional(),
 });
 export const cambiarContrasenaSchema = z.object({
@@ -64,14 +63,14 @@ export const usuarioAdmiAct = z.object({
         .min(1, { message: "El apellido es obligatorio" })
         .max(255, { message: "El apellido no puede exceder los 255 caracteres" }),
     identificacion_usuario: z.string()
-        .min(1, { message: "La identificación es obligatoria" })
-        .max(25, { message: "La identificación no puede exceder los 25 caracteres" }),
+  .regex(/^[1-9]\d{7,10}$/, {
+    message: "La identificación debe tener entre 8 y 11 dígitos numéricos y no puede comenzar con cero",
+  }),
     direccion_usuario: z.string()
         .min(1, { message: "La dirección es obligatoria" })
         .max(255, { message: "La dirección no puede exceder los 255 caracteres" }),
     telefono_usuario: z.string()
-        .min(1, { message: "El teléfono es obligatorio" })
-        .max(50, { message: "El teléfono no puede exceder los 50 caracteres" }),
+    .regex(/^\d{10}$/, { message: "El teléfono debe tener exactamente 10 dígitos" }),
     correo_usuario: z.string()
         .email({ message: "El correo electrónico debe tener un formato válido" }),
     tipo_usuario: z.enum(['Usuario', 'Medico', 'Administrador', 'Super']).optional(),
