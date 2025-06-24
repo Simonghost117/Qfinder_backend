@@ -6,7 +6,8 @@ import {
     actualizarRed,
     eliminarRed,
     redNombre,
-    obtenerIdRedPorNombre
+    obtenerIdRedPorNombre,
+    buscarRed
  } from '../controllers/redes.controller.js';
 import { verifyToken, verifyTokenWeb } from '../middlewares/verifyToken.js';
 import validateSchema from '../middlewares/validatoreSchema.js';
@@ -16,6 +17,8 @@ import { validateAdmin, validateRol } from '../middlewares/validateAdmin.js';
 import { 
     // requirePlusOrPro, 
     verifyAccess } from '../middlewares/permissionsSuscription.js';
+
+import { paginationMiddleware } from '../middlewares/pagination.js';
 
 const router = express.Router();
 // En redes.routes.js
@@ -81,4 +84,10 @@ router.delete('/eliminarRedW/:id_red',
     validateRol(['Administrador', 'Super']),
     eliminarRed
 )
+router.post('/buscarRed',
+    verifyTokenWeb,
+    validateRol(['Administrador', 'Super']),
+    paginationMiddleware(10),
+    buscarRed
+);
 export default router;

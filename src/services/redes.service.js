@@ -130,3 +130,62 @@ export const buscarRedPorNombre = async (nombre_red) => {
         throw error;
     }
 };
+
+
+
+export const buscarNombre = async (nombre, pagination, req) => {
+  try {
+    const { page, pageSize, offset } = pagination;
+
+    const { count, rows } = await Red.findAndCountAll({
+      where: {
+        [Op.or]: [
+          { nombre_red: { [Op.iLike]: `%${nombre}%` } },
+          { descripcion_red: { [Op.iLike]: `%${nombre}%` } },
+        ],
+      },
+      attributes: [
+        'id_red',
+        'nombre_red',
+        'descripcion_red'
+      ],
+      order: [['id_red', 'DESC']],
+      limit: pageSize,
+      offset,
+      distinct: true
+    });
+
+    const data = rows.map(red => ({
+      id_red: red.id_red,
+      nombre_red: red.nombre,
+      descripcion_red: red.descripcion_red,
+    }));
+
+
+    const totalPages = Math.ceil(count / pageSize);
+    const baseUrl = `${req.protocol}://${req.get('host')}${req.originalUrl.split('?')[0]}`;
+
+    return {
+      data,
+      meta: {
+        pagination: {
+          totalItems: count,
+          itemCount: rows.length,
+          itemsPerPage: pageSize,
+          totalPages,
+          currentPage: page
+        },
+        links: {
+          first: `${baseUrl}?page=1&pageSize=${pageSize}`,
+          last: `${baseUrl}?page=${totalPages}&pageSize=${pageSize}`,
+          prev: page > 1 ? `${baseUrl}?page=${page - 1}&pageSize=${pageSize}` : null,
+          next: page < totalPages ? `${baseUrl}?page=${page + 1}&pageSize=${pageSize}` : null
+        }
+      }
+    };
+  } catch (error) {
+    console.error('Error al buscar usuario:', error);
+    throw new Error(`Error en la búsqueda: ${error.message}`);
+  }
+};
+
