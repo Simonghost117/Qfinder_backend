@@ -5,7 +5,8 @@ import {
   listarMedicamentosId,
   actualizarMedicamento,
   eliminarMedicamento, 
-  listarMedicamentos2
+  listarMedicamentos2,
+  buscarMedicamento
 } from '../controllers/medicamento.controller.js';
 import { verifyToken, verifyTokenWeb } from '../middlewares/verifyToken.js';
 import validateSchema from '../middlewares/validatoreSchema.js';
@@ -50,6 +51,12 @@ router.delete('/eliminar/:id',
   verifyToken, 
   validateRol(['Administrador', 'Super']),
   eliminarMedicamento
+);
+router.post('/buscarMedicamento',
+    verifyTokenWeb,
+    validateRol(['Administrador', 'Super']),
+    paginationMiddleware(10),
+    buscarMedicamento
 );
 
 export default router;

@@ -1,4 +1,6 @@
-import { createPaciente, getPacientesByUsuario } from "../services/pacienteService.js";
+import { createPaciente, getPacientesByUsuario,
+  buscarNombre
+ } from "../services/pacienteService.js";
 import { models } from "../models/index.js";
 const { Paciente, Familiar, CodigoQR, Colaborador } = models;
 import { generarQRPaciente } from "../controllers/codigoQrController.js";
@@ -595,3 +597,24 @@ export const cantidadPacientes = async (req, res) => {
     });
   }
 }
+
+export const buscarPaciNombre = async (req, res) => {
+  try {
+    const { nombre } = req.body;
+
+    if (!req.pagination) {
+      return res.status(400).json({ message: "Falta middleware de paginación." });
+    }
+
+    const usuarios = await buscarNombre(nombre, req.pagination, req);
+
+    if (!usuarios.data || usuarios.data.length === 0) {
+      return res.status(404).json({ message: "No se encontraron usuarios con ese nombre" });
+    }
+
+    res.status(200).json(usuarios);
+  } catch (error) {
+    console.error('Error al buscar el usuario por nombre', error);
+    res.status(500).json({ message: "Error interno al buscar el usuario por nombre" });
+  }
+};

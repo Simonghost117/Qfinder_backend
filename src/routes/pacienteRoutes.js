@@ -4,7 +4,8 @@ import { register, listarPacientes, getPacienteById, actualizarPaciente, elimina
     actualizarPaciente2,
     listarPacientes2,
     obtenerRolPaciente, 
-    cantidadPacientes
+    cantidadPacientes,
+    buscarPaciNombre
  } from '../controllers/pacienteController.js';
 import validateSchema from "../middlewares/validatoreSchema.js"
 import {PacienteSchema, ActPacienteSchema, ActPaciente2, PacienteSchema2 } from "../schema/pacienteSchema.js";
@@ -87,5 +88,10 @@ router.get('/cantidadPacientes',
     validateRol(['Administrador', 'Super']),
     cantidadPacientes
 )
-
+router.post('/buscarPaciente',
+    verifyTokenWeb,
+    validateRol(['Administrador', 'Super']),
+    paginationMiddleware(10),
+    buscarPaciNombre
+);
 export default router;

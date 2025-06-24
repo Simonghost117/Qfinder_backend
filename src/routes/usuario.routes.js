@@ -99,6 +99,7 @@ router.delete('/eliminarUsuario/:id_usuario',
 router.post('/buscarUsuario',
     verifyTokenWeb,
     validateRol(['Administrador', 'Super']),
+    paginationMiddleware(10),
     buscarUserNombre
 );
 router.post('/registrarUsuario',

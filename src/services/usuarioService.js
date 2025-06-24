@@ -186,10 +186,11 @@ export const clearPendingRegistration = (correo_usuario) => {
 //     }
 //   }
 
-
-export const buscarNombre = async (nombre) => {
+export const buscarNombre = async (nombre, pagination, req) => {
   try {
-    const usuarios = await Usuario.findAll({
+    const { page, pageSize, offset } = pagination;
+
+    const { count, rows } = await Usuario.findAndCountAll({
       where: {
         [Op.or]: [
           { nombre_usuario: { [Op.iLike]: `%${nombre}%` } },
@@ -212,20 +213,69 @@ export const buscarNombre = async (nombre) => {
         {
           model: Subscription,
           as: 'subscription',
-          attributes: ['tipo_suscripcion', 'estado_suscripcion'],
-          required: false, // trae el usuario aunque no tenga suscripción
+          attributes: [
+            'tipo_suscripcion',
+            'estado_suscripcion',
+            'fecha_inicio',
+            'fecha_renovacion',
+            'fecha_cancelacion',
+            'limite_pacientes',
+            'limite_cuidadores'
+          ],
+          required: false,
         },
       ],
-      order: [['nombre_usuario', 'DESC']],
+      order: [['id_usuario', 'DESC']],
+      limit: pageSize,
+      offset,
+      distinct: true
     });
 
-    if (!usuarios || usuarios.length === 0) {
-      return { message: 'No se encontraron usuarios con ese nombre/apellido.' };
-    }
+    const data = rows.map(usuario => ({
+      id_usuario: usuario.id_usuario,
+      nombre_usuario: usuario.nombre_usuario,
+      apellido_usuario: usuario.apellido_usuario,
+      correo_usuario: usuario.correo_usuario,
+      identificacion_usuario: usuario.identificacion_usuario,
+      direccion_usuario: usuario.direccion_usuario,
+      telefono_usuario: usuario.telefono_usuario,
+      estado_usuario: usuario.estado_usuario,
+      imagen_usuario: usuario.imagen_usuario,
+      suscripcion: usuario.subscription ? {
+        tipo: usuario.subscription.tipo_suscripcion,
+        estado: usuario.subscription.estado_suscripcion,
+        fecha_inicio: usuario.subscription.fecha_inicio,
+        fecha_renovacion: usuario.subscription.fecha_renovacion,
+        fecha_cancelacion: usuario.subscription.fecha_cancelacion,
+        limite_pacientes: usuario.subscription.limite_pacientes,
+        limite_cuidadores: usuario.subscription.limite_cuidadores
+      } : null
+    }));
 
-    return usuarios;
+    const totalPages = Math.ceil(count / pageSize);
+    const baseUrl = `${req.protocol}://${req.get('host')}${req.originalUrl.split('?')[0]}`;
+
+    return {
+      data,
+      meta: {
+        pagination: {
+          totalItems: count,
+          itemCount: rows.length,
+          itemsPerPage: pageSize,
+          totalPages,
+          currentPage: page
+        },
+        links: {
+          first: `${baseUrl}?page=1&pageSize=${pageSize}`,
+          last: `${baseUrl}?page=${totalPages}&pageSize=${pageSize}`,
+          prev: page > 1 ? `${baseUrl}?page=${page - 1}&pageSize=${pageSize}` : null,
+          next: page < totalPages ? `${baseUrl}?page=${page + 1}&pageSize=${pageSize}` : null
+        }
+      }
+    };
   } catch (error) {
     console.error('Error al buscar usuario:', error);
     throw new Error(`Error en la búsqueda: ${error.message}`);
   }
 };
+

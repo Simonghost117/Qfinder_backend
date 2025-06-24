@@ -1,6 +1,7 @@
 import Medicamento from '../models/medicamento.model.js';
 import { Op } from 'sequelize';
 import {PaginationService} from '../utils/paginationUtils.js';
+import { buscarNombre } from '../services/medicamentoService.js';
 
 export const crearMedicamento = async (req, res) => {
   try {
@@ -171,5 +172,26 @@ export const listarMedicamentos2 = async (req, res) => {
   
   } catch (error) {
     res.status(500).json({ message: 'Error al listar medicamentos', error: error.message });
+  }
+};
+
+export const buscarMedicamento = async (req, res) => {
+  try {
+    const { nombre } = req.body;
+
+    if (!req.pagination) {
+      return res.status(400).json({ message: "Falta middleware de paginación." });
+    }
+
+    const usuarios = await buscarNombre(nombre, req.pagination, req);
+
+    if (!usuarios.data || usuarios.data.length === 0) {
+      return res.status(404).json({ message: "No se encontraron usuarios con ese nombre" });
+    }
+
+    res.status(200).json(usuarios);
+  } catch (error) {
+    console.error('Error al buscar el usuario por nombre', error);
+    res.status(500).json({ message: "Error interno al buscar el usuario por nombre" });
   }
 };
