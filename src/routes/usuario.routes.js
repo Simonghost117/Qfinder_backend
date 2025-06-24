@@ -4,6 +4,7 @@ import { login, logout, register,
     verifyUser, perfilUser, listarUsuarios, listarAdmin, eliminarUsuario, buscarUserNombre, registerUsuario, 
     actualizarUsuario, actualizarAdmin, eliminarAdmin, contarUsuarios, 
     listarUsuariosFiltrados} from '../controllers/usuarioController.js';
+import { resendVerificationCode } from '../services/usuarioService.js';
 import validateSchema from '../middlewares/validatoreSchema.js';
 import { loginSchema, registerSchema, updateSchema, cambiarContrasenaSchema, usuarioAdmiAct } from '../schema/usuarioSchema.js';
 import { verifyToken, verifyTokenWeb } from '../middlewares/verifyToken.js';
@@ -12,6 +13,10 @@ import { validateAdmin, validateRol } from '../middlewares/validateAdmin.js';
 import {paginationMiddleware} from '../middlewares/pagination.js';
 
 const router = express.Router();
+
+router.post('/resend-code', resendVerificationCode);
+
+
 //🟢
 router.post('/register',
     validateSchema(registerSchema),
