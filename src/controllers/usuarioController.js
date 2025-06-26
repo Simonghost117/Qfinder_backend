@@ -267,7 +267,9 @@ export const listarUsers = async (req, res) => {
 
 export const actualizarUser = async (req, res) => {
   try {
-    const { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario, correo_usuario, imagen_usuario } = req.body;
+    const { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario, 
+      // correo_usuario, 
+      imagen_usuario } = req.body;
 
     const { id } = req.usuario;
     console.log("Contenido de req.usuario:", req.usuario);
@@ -290,7 +292,9 @@ export const actualizarUser = async (req, res) => {
             message: error.message 
           });
         }
-    const dataToUpdate = { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario, correo_usuario, imagen_usuario: nueva_imagen };
+    const dataToUpdate = { nombre_usuario, apellido_usuario, direccion_usuario, telefono_usuario,
+      //  correo_usuario, 
+       imagen_usuario: nueva_imagen };
 
     await Usuario.update(dataToUpdate, {
       where: { id_usuario: id },
@@ -1066,3 +1070,26 @@ export const listarUsuariosFiltrados = async (req, res) => {
     res.status(500).json({ error: "Error al filtrar usuarios", details: error.message });
   }
 };
+
+
+export const traerMembresia = async (req, res) => {
+  try {
+    const { id_usuario } = req.user;
+
+    const usuario = await Usuario.findByPk(id_usuario, {
+      attributes: ['membresia'],
+      
+    });
+
+    if (!usuario) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
+
+    res.status(200).json({
+      membresia: usuario.membresia,
+    });
+  } catch (error) {
+    console.error('Error al obtener la membresía:', error);
+    res.status(500).json({ message: 'Error al obtener la membresía', error });
+  }
+}

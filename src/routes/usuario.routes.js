@@ -3,7 +3,9 @@ import { login, logout, register,
     listarUsers, actualizarUser, eliminarUser,
     verifyUser, perfilUser, listarUsuarios, listarAdmin, eliminarUsuario, buscarUserNombre, registerUsuario, 
     actualizarUsuario, actualizarAdmin, eliminarAdmin, contarUsuarios, 
-    listarUsuariosFiltrados} from '../controllers/usuarioController.js';
+    listarUsuariosFiltrados,
+    traerMembresia
+} from '../controllers/usuarioController.js';
 import { resendVerificationCode } from '../services/usuarioService.js';
 import validateSchema from '../middlewares/validatoreSchema.js';
 import { loginSchema, registerSchema, updateSchema, cambiarContrasenaSchema, usuarioAdmiAct } from '../schema/usuarioSchema.js';
@@ -68,6 +70,9 @@ router.get('/perfil',
     verifyToken,
     perfilUser
 )
+router.get('/membresia',
+    verifyToken,
+    traerMembresia)
 
 //ADMINISTRADOR
 

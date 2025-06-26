@@ -45,8 +45,8 @@ export const updateSchema = z.object({
         .max(255, { message: "La dirección no puede exceder los 255 caracteres" }),
     telefono_usuario: z.string()
     .regex(/^\d{10}$/, { message: "El teléfono debe tener exactamente 10 dígitos" }),
-    correo_usuario: z.string()
-        .email({ message: "El correo electrónico debe tener un formato válido" }),
+    // correo_usuario: z.string()
+    //     .email({ message: "El correo electrónico debe tener un formato válido" }),
     imagen_usuario: z.string().url({ message: "La imagen debe ser una URL válida" }).optional(),
 });
 export const cambiarContrasenaSchema = z.object({
