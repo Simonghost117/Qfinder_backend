@@ -28,12 +28,12 @@ export const register = async (req, res) => {
     // 1. Validar duplicados en BD (solo el correo)
     const existe = await Usuario.findOne({ where: { correo_usuario } });
     if (existe) {
-      return res.status(400).json({ error: 'El correo ya está registrado' });
+      return res.status(409).json({ error: 'El correo ya está registrado' });
     }
 
     const idExiste = await Usuario.findOne({ where: { identificacion_usuario: userData.identificacion_usuario } });
     if (idExiste) {
-      return res.status(400).json({ error: 'El número de identificación ya está registrado' });
+      return res.status(409).json({ error: 'El número de identificación ya está registrado' });
     }
 
     // if (userData.tipo_usuario === 'Medico') {

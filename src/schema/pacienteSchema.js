@@ -21,12 +21,15 @@ export const PacienteSchema = z.object({
     message: "La identificación debe tener entre 8 y 11 dígitos numéricos y no puede comenzar con cero",
   }),
   fecha_nacimiento: z.string()
-    .transform((str) => new Date(str))
-    .refine((date) => {
-      return date.getTime() <= new Date().getTime();
-    }, {
-      message: "La fecha no puede estar en el futuro.",
-    }),
+  .transform((str) => new Date(str))
+  .refine((date) => {
+    const now = new Date().getTime();
+    const minDate = new Date();
+    minDate.setFullYear(minDate.getFullYear() - 150);
+    return date.getTime() >= minDate.getTime() && date.getTime() <= now;
+  }, {
+    message: "La fecha debe estar entre hace 150 años y el día de hoy.",
+  }),
   sexo: z.enum(['masculino', 'femenino', 'otro', 'prefiero_no_decir'], {
     message: "La orientación sexual debe ser obligatoria"
   }),
