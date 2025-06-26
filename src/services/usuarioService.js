@@ -279,3 +279,41 @@ export const buscarNombre = async (nombre, pagination, req) => {
   }
 };
 
+
+export const resendVerificationCode = async (req, res) => {
+  try {
+    const { correo_usuario } = req.body;
+
+    // Obtener los datos actuales del usuario desde tempStorage
+    const storedData = tempStorage.get(correo_usuario);
+    if (!storedData) {
+      return res.status(400).json({ error: 'No hay registro pendiente para este correo' });
+    }
+
+    // Reemplazar solo el código y expiración
+    const nuevoCodigo = crypto.randomInt(10000, 99999).toString();
+    const nuevaExpiracion = new Date(Date.now() + 15 * 60 * 1000);
+
+    tempStorage.set(correo_usuario, {
+      ...storedData,
+      codigo: nuevoCodigo,
+      expiracion: nuevaExpiracion,
+      timestamp: Date.now()
+    });
+
+    // Enviar nuevo correo
+    await sendVerificationEmail(correo_usuario, nuevoCodigo);
+
+    return res.status(200).json({ 
+      message: 'Se ha reenviado el código. Revisa tu correo.', 
+      correo: correo_usuario 
+    });
+
+  } catch (error) {
+    console.error('Error al reenviar código:', error);
+    res.status(500).json({
+      error: 'Error interno al reenviar el código',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
