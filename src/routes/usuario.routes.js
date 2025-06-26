@@ -156,7 +156,19 @@ router.get('/filtrar',
   listarUsuariosFiltrados
 );
 
-
+router.post('/recuperarW', 
+    recuperarContrasena
+);
+//🟢
+router.post('/verificar-codigoW', 
+    verificarCodigo
+);
+//🟢
+router.post('/cambiar-passwordW', 
+    verifyTokenWeb,
+    validateSchema(cambiarContrasenaSchema),
+    cambiarContrasena
+);
 //listar todos los usuarios
 //listar todos los pacientes
 //actualizar informacion usuarios/pacientes
