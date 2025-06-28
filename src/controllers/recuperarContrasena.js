@@ -140,7 +140,7 @@ export const verificarCodigo = async (req, res) => {
     // Enviar el token en la cabecera Authorization
       res.setHeader("Authorization", `Bearer ${token}`);
 
-    res.status(200).json({ mensaje: 'Código verificado correctamente.' });
+    res.status(200).json({ mensaje: 'Código verificado correctamente.', token });
   } catch (error) {
     console.error('Error al verificar código:', error);
     res.status(500).json({ mensaje: 'Error al verificar el código.' });
