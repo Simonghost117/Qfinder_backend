@@ -21,44 +21,55 @@ export const configureMercadoPago = () => {
 };
 
 export const verifyWebhookSignature = (rawBody, signatureHeader) => {
-  // 1. Validación básica
-  const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET?.trim();
-  if (!secret) throw new Error('Webhook secret no configurado');
-  if (!signatureHeader) throw new Error('Header de firma faltante');
-
-  // 2. Parsear la firma
-  const [tsPart, v1Part] = signatureHeader.split(',');
-  const timestamp = tsPart?.split('=')[1]?.trim();
-  const receivedSig = v1Part?.split('=')[1]?.trim();
-  if (!timestamp || !receivedSig) throw new Error('Formato de firma inválido');
-
-  // 3. Versiones alternativas del payload (según implementaciones de MP)
-  const bodyString = rawBody.toString('utf8');
-  
-  // Versión 1: timestamp.body (documentación oficial)
-  const payload1 = `${timestamp}.${bodyString}`;
-  
-  // Versión 2: timestampbody (sin punto)
-  const payload2 = timestamp + bodyString;
-  
-  // Versión 3: body solo (alternativa reportada)
-  const payload3 = bodyString;
-
-  // 4. Generar todas las posibles firmas
-  const signatures = [
-    crypto.createHmac('sha256', secret).update(payload1, 'utf8').digest('hex'),
-    crypto.createHmac('sha256', secret).update(payload2, 'utf8').digest('hex'),
-    crypto.createHmac('sha256', secret).update(payload3, 'utf8').digest('hex')
-  ];
-
-  // 5. Comparación exhaustiva
   try {
+    // Validación básica
+    if (!process.env.MERCADOPAGO_WEBHOOK_SECRET) {
+      throw new Error('Webhook secret no configurado');
+    }
+    
+    const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET.trim();
+    
+    if (!signatureHeader) {
+      throw new Error('Header de firma faltante');
+    }
+
+    // Extraer componentes de la firma
+    const signatureParts = signatureHeader.split(',');
+    const signatureData = {};
+    signatureParts.forEach(part => {
+      const [key, value] = part.split('=');
+      signatureData[key.trim()] = value.trim();
+    });
+
+    const timestamp = signatureData.ts;
+    const receivedSig = signatureData.v1;
+
+    if (!timestamp || !receivedSig) {
+      throw new Error('Formato de firma inválido');
+    }
+
+    // Versiones alternativas del payload
+    const bodyString = rawBody.toString('utf8');
+    const payloadVariants = [
+      `${timestamp}.${bodyString}`,  // Documentación oficial
+      timestamp + bodyString,        // Alternativa sin punto
+      bodyString                     // Solo body
+    ];
+
+    // Generar firmas para todas las variantes
+    const signatures = payloadVariants.map(payload =>
+      crypto.createHmac('sha256', secret)
+        .update(payload, 'utf8')
+        .digest('hex')
+    );
+
+    // Comparación segura
     const receivedBuffer = Buffer.from(receivedSig, 'hex');
-    return signatures.some(sig => 
+    return signatures.some(sig =>
       crypto.timingSafeEqual(receivedBuffer, Buffer.from(sig, 'hex'))
     );
-  } catch (e) {
-    console.error('Error en comparación:', e);
+  } catch (error) {
+    console.error('Error en verifyWebhookSignature:', error);
     return false;
   }
 };
