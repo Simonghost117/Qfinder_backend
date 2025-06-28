@@ -21,44 +21,65 @@ export const configureMercadoPago = () => {
 };
 
 export const verifyWebhookSignature = (rawBody, signatureHeader) => {
-  // Validación de parámetros
-  const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET?.trim();
-  if (!secret) throw new Error('Secret no configurado');
-  if (!signatureHeader) throw new Error('Firma faltante');
+  // 1. Validación básica
+  if (!process.env.MERCADOPAGO_WEBHOOK_SECRET) {
+    throw new Error('Secreto no configurado');
+  }
+  
+  const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET.trim();
+  
+  if (!signatureHeader) {
+    throw new Error('Firma faltante');
+  }
 
-  // Extraer componentes
-  const [tsPart, v1Part] = signatureHeader.split(',');
-  const timestamp = tsPart?.split('=')[1]?.trim();
-  const receivedSig = v1Part?.split('=')[1]?.trim();
-  if (!timestamp || !receivedSig) throw new Error('Formato inválido');
-
-  // Versión 1: Payload estándar (para comparación)
-  const payloadStandard = `${timestamp}.${rawBody.toString('utf8')}`;
-  const expectedSigStandard = crypto
-    .createHmac('sha256', secret)
-    .update(payloadStandard)
-    .digest('hex');
-
-  // Versión 2: Payload sin puntos (alternativa MP)
-  const payloadNoDots = timestamp + rawBody.toString('utf8');
-  const expectedSigNoDots = crypto
-    .createHmac('sha256', secret)
-    .update(payloadNoDots)
-    .digest('hex');
-
-  // Debug
-  console.log('🔍 Comparación de firmas:', {
-    received: receivedSig,
-    standard: expectedSigStandard,
-    noDots: expectedSigNoDots
+  // 2. Extraer componentes de la firma
+  const signatureParts = signatureHeader.split(',');
+  const signatureData = {};
+  signatureParts.forEach(part => {
+    const [key, value] = part.split('=');
+    signatureData[key.trim()] = value.trim();
   });
 
-  // Comparación con ambas versiones
-  return crypto.timingSafeEqual(
+  const timestamp = signatureData.ts;
+  const receivedSig = signatureData.v1;
+
+  if (!timestamp || !receivedSig) {
+    throw new Error('Formato de firma inválido');
+  }
+
+  // 3. Versión CORRECTA del payload (según implementación real de MP)
+  const bodyString = rawBody.toString('utf8');
+  const payload = `${timestamp}.${bodyString}`;
+
+  // 4. Generar firma EXACTA como Mercado Pago
+  const expectedSig = crypto
+    .createHmac('sha256', secret)
+    .update(payload, 'utf8') // Codificación explícita
+    .digest('hex');
+
+  // 5. Comparación segura
+  try {
+    // Primero comparar directamente
+    if (crypto.timingSafeEqual(
       Buffer.from(receivedSig, 'hex'),
-      Buffer.from(expectedSigStandard, 'hex')
-    ) || crypto.timingSafeEqual(
+      Buffer.from(expectedSig, 'hex')
+    )) {
+      return true;
+    }
+
+    // Si falla, probar versión alternativa (por si MP cambia el formato)
+    const altPayload = timestamp + bodyString;
+    const altSig = crypto
+      .createHmac('sha256', secret)
+      .update(altPayload, 'utf8')
+      .digest('hex');
+
+    return crypto.timingSafeEqual(
       Buffer.from(receivedSig, 'hex'),
-      Buffer.from(expectedSigNoDots, 'hex')
+      Buffer.from(altSig, 'hex')
     );
+  } catch (e) {
+    console.error('Error en comparación:', e);
+    return false;
+  }
 };
