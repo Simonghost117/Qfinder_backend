@@ -18,7 +18,7 @@ const app = express();
 // En tu app.js
 // Esto debe ser lo PRIMERO en tu cadena de middlewares
 // Esto debe estar ANTES de cualquier otro middleware
-app.use('/api/webhook', webhookRouter);
+app.use('/api/webhook', webhookRoutes);
 
 // Configuración de EventEmitter
 EventEmitter.defaultMaxListeners = 15;
