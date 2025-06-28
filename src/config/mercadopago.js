@@ -24,29 +24,35 @@ export const configureMercadoPago = () => {
 
 export const verifyWebhookSignature = (rawBody, signatureHeader) => {
   const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET?.trim();
-  console.log('🔑 Secret key:', secret ? '****' : 'NO CONFIGURADA');
+  
+  if (!secret) {
+    console.error('❌ MERCADOPAGO_WEBHOOK_SECRET no está configurada');
+    return false;
+  }
 
-  if (!secret || !signatureHeader || !rawBody) {
-    console.error('❌ Faltan parámetros para verificación');
+  if (!signatureHeader || !rawBody) {
+    console.error('❌ Faltan signatureHeader o rawBody');
     return false;
   }
 
   try {
-    const parts = signatureHeader.split(',');
-    const tsPart = parts.find(p => p.startsWith('ts='));
-    const v1Part = parts.find(p => p.startsWith('v1='));
-    
-    if (!tsPart || !v1Part) {
+    // Extrae timestamp y firma
+    const [tsPart, v1Part] = signatureHeader.split(',');
+    const timestamp = tsPart?.split('=')[1];
+    const receivedSig = v1Part?.split('=')[1];
+
+    if (!timestamp || !receivedSig) {
       console.error('❌ Formato de firma inválido');
       return false;
     }
 
-    const timestamp = tsPart.split('=')[1];
-    const receivedSig = v1Part.split('=')[1];
-    const payloadToSign = `${timestamp}.${rawBody}`; // rawBody ya es string
+    // Prepara el payload - IMPORTANTE: sin modificar el rawBody
+    const payloadToSign = `${timestamp}.${rawBody}`;
+    
+    console.log('🔑 Secret:', secret.substring(0, 2) + '...' + secret.slice(-2));
+    console.log('📝 Payload:', payloadToSign.substring(0, 50) + '...');
 
-    console.log('📝 Payload to sign:', payloadToSign.substring(0, 100) + '...');
-
+    // Genera firma esperada
     const expectedSig = crypto
       .createHmac('sha256', secret)
       .update(payloadToSign)
@@ -55,6 +61,7 @@ export const verifyWebhookSignature = (rawBody, signatureHeader) => {
     console.log(`🔐 Firma esperada: ${expectedSig}`);
     console.log(`📩 Firma recibida: ${receivedSig}`);
 
+    // Comparación segura
     return crypto.timingSafeEqual(
       Buffer.from(receivedSig, 'hex'),
       Buffer.from(expectedSig, 'hex')
