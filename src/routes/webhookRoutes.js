@@ -7,7 +7,15 @@ const router = express.Router();
 router.post('/', async (req, res, next) => {
   const requestId = req.headers['x-request-id'] || `webhook-${Date.now()}`;
   const signature = req.headers['x-signature'];
+    const rawBody = req.rawBody;
 
+      console.log('📨 Body recibido:', rawBody.substring(0, 200) + '...');
+  console.log('🔏 Firma recibida:', signature);
+
+  if (!verifyWebhookSignature(rawBody, signature)) {
+    console.error('❌ Firma inválida - Rechazando webhook');
+    return res.status(403).json({ error: 'Invalid signature' });
+  }
   try {
     console.log(`🔵 [${requestId}] Iniciando procesamiento de webhook`);
     console.log(`🔵 [${requestId}] Headers recibidos:`, {

@@ -24,31 +24,43 @@ export const configureMercadoPago = () => {
 
 export const verifyWebhookSignature = (rawBody, signatureHeader) => {
   const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET?.trim();
+  console.log('🔑 Secret key:', secret ? '****' : 'NO CONFIGURADA');
 
-  if (!secret || !signatureHeader || !rawBody) return false;
-
-  const parts = signatureHeader.split(',');
-  const timestamp = parts.find(p => p.startsWith('ts='))?.split('=')[1];
-  const receivedSig = parts.find(p => p.startsWith('v1='))?.split('=')[1];
-
-  if (!timestamp || !receivedSig) return false;
-
-  const payloadToSign = `${timestamp}.${rawBody.toString('utf8')}`;
-  const expectedSig = crypto
-    .createHmac('sha256', secret)
-    .update(payloadToSign)
-    .digest('hex');
-
-  console.log(`🧪 Firma esperada: ${expectedSig}`);
-  console.log(`📨 Firma recibida: ${receivedSig}`);
+  if (!secret || !signatureHeader || !rawBody) {
+    console.error('❌ Faltan parámetros para verificación');
+    return false;
+  }
 
   try {
+    const parts = signatureHeader.split(',');
+    const tsPart = parts.find(p => p.startsWith('ts='));
+    const v1Part = parts.find(p => p.startsWith('v1='));
+    
+    if (!tsPart || !v1Part) {
+      console.error('❌ Formato de firma inválido');
+      return false;
+    }
+
+    const timestamp = tsPart.split('=')[1];
+    const receivedSig = v1Part.split('=')[1];
+    const payloadToSign = `${timestamp}.${rawBody}`; // rawBody ya es string
+
+    console.log('📝 Payload to sign:', payloadToSign.substring(0, 100) + '...');
+
+    const expectedSig = crypto
+      .createHmac('sha256', secret)
+      .update(payloadToSign)
+      .digest('hex');
+
+    console.log(`🔐 Firma esperada: ${expectedSig}`);
+    console.log(`📩 Firma recibida: ${receivedSig}`);
+
     return crypto.timingSafeEqual(
       Buffer.from(receivedSig, 'hex'),
       Buffer.from(expectedSig, 'hex')
     );
   } catch (err) {
-    console.error('Error comparando firmas:', err.message);
+    console.error('💥 Error en verificación:', err);
     return false;
   }
 };

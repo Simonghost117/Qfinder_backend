@@ -15,9 +15,14 @@ dotenv.config();
 
 // Inicialización de la app
 const app = express();
-app.use('/api/webhook', express.raw({ type: 'application/json' }), webhookRoutes);
-
-
+app.use('/api/webhook', 
+  express.raw({ type: 'application/json' }), // IMPORTANTE: Sin bodyParser antes
+  (req, res, next) => {
+    req.rawBody = req.body.toString('utf8'); // Guarda el body como string
+    next();
+  },
+  webhookRoutes
+);
 
 // Configuración de EventEmitter
 EventEmitter.defaultMaxListeners = 15;
