@@ -28,10 +28,6 @@ export const verifyWebhookSignature = (rawBody, signatureHeader) => {
   
   const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET.trim();
   
-  // Debug: Verificar clave secreta
-  console.log('🔑 Secret (hex):', Buffer.from(secret).toString('hex'));
-  console.log('🔑 Secret length:', secret.length);
-
   if (!signatureHeader) {
     throw new Error('Encabezado de firma faltante');
   }
@@ -46,25 +42,14 @@ export const verifyWebhookSignature = (rawBody, signatureHeader) => {
   }
 
   // 3. Preparación del payload (CRÍTICO)
-  const bodyString = rawBody.toString('utf8');
-  const payload = `${timestamp}.${bodyString}`;
-  
-  // Debug: Verificar payload
-  console.log('📝 Body exacto:', JSON.stringify(bodyString));
-  console.log('📝 Body length:', bodyString.length);
-  console.log('📝 Payload completo:', payload);
+  const payload = `${timestamp}.${rawBody.toString('utf8')}`;
 
-  // 4. Generación de firma
+  // 4. Generación de firma - VERSIÓN CORREGIDA
   const expectedSig = crypto
     .createHmac('sha256', secret)
-    .update(payload)
-    .digest('hex');
-
-  // Debug: Comparación
-  console.log('🔍 Firma recibida:', receivedSig);
-  console.log('🔍 Firma esperada:', expectedSig);
-  console.log('🔍 Longitud recibida:', receivedSig.length);
-  console.log('🔍 Longitud esperada:', expectedSig.length);
+    .update(payload, 'utf8')  // Especificar explícitamente la codificación
+    .digest('hex')
+    .toLowerCase();  // Mercado Pago usa lowercase
 
   // 5. Comparación segura
   try {
@@ -72,10 +57,9 @@ export const verifyWebhookSignature = (rawBody, signatureHeader) => {
       Buffer.from(receivedSig, 'hex'),
       Buffer.from(expectedSig, 'hex')
     );
-    console.log('🔍 Resultado comparación:', result);
     return result;
   } catch (e) {
-    console.error('❌ Error en comparación:', e.message);
+    console.error('Error en comparación:', e);
     return false;
   }
 };
