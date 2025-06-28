@@ -15,8 +15,13 @@ dotenv.config();
 
 // Inicialización de la app
 const app = express();
+// En tu app.js
 app.use('/api/webhook', 
-  express.raw({ type: 'application/json' }), 
+  express.raw({ type: 'application/json' }), // ★ Primero y más importante
+  (req, res, next) => {
+    req.rawBody = req.body; // Guarda el Buffer original
+    next();
+  },
   webhookRoutes
 );
 
