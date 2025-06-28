@@ -14,7 +14,21 @@ import webhookRoutes from './routes/webhookRoutes.js';
 dotenv.config();
 
 // Inicialización de la app
-app.use('/api/webhook', webhookRoutes);
+app.use('/api/webhook', 
+  express.raw({ type: 'application/json' }),  // Mantén esto primero
+  (req, res, next) => {
+    try {
+      // Convierte el Buffer a string y guarda ambas versiones
+      req.rawBodyString = req.body.toString('utf8');
+      req.rawBodyBuffer = req.body; // Guarda el Buffer original también
+      next();
+    } catch (error) {
+      console.error('Error procesando raw body:', error);
+      res.status(500).send('Error procesando la solicitud');
+    }
+  },
+  webhookRoutes
+);
 
 // Configuración de EventEmitter
 EventEmitter.defaultMaxListeners = 15;
