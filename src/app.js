@@ -15,10 +15,12 @@ dotenv.config();
 
 // Inicialización de la app
 const app = express();
+// Esto debe ser lo PRIMERO en tu cadena de middlewares
 app.use('/api/webhook', 
-  express.raw({ type: 'application/json' }), // IMPORTANTE: Sin bodyParser antes
+  express.raw({ type: 'application/json' }), // ★ No usar bodyParser antes
   (req, res, next) => {
-    req.rawBody = req.body.toString('utf8'); // Guarda el body como string
+    // Guardar el body como Buffer original
+    req.rawBody = req.body; 
     next();
   },
   webhookRoutes

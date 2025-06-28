@@ -21,53 +21,36 @@ export const configureMercadoPago = () => {
 };
 
 
-
 export const verifyWebhookSignature = (rawBody, signatureHeader) => {
-  const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET?.trim();
+  const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
   
-  if (!secret) {
-    console.error('❌ MERCADOPAGO_WEBHOOK_SECRET no está configurada');
-    return false;
+  // Validaciones básicas
+  if (!secret) throw new Error('Secret no configurada');
+  if (!signatureHeader) throw new Error('Firma no recibida');
+  if (!rawBody) throw new Error('Body vacío');
+
+  // Extracción de componentes
+  const [tsPart, v1Part] = signatureHeader.split(',');
+  const timestamp = tsPart?.split('=')[1];
+  const receivedSig = v1Part?.split('=')[1];
+
+  if (!timestamp || !receivedSig) {
+    throw new Error('Formato de firma inválido');
   }
 
-  if (!signatureHeader || !rawBody) {
-    console.error('❌ Faltan signatureHeader o rawBody');
-    return false;
-  }
+  // ★★★★ Punto crítico ★★★★
+  // Usa el body exactamente como viene, sin convertirlo a JSON
+  const payload = `${timestamp}.${rawBody}`;
+  
+  // Generación de firma
+  const expectedSig = crypto
+    .createHmac('sha256', secret)
+    .update(payload)
+    .digest('hex');
 
-  try {
-    // Extrae timestamp y firma
-    const [tsPart, v1Part] = signatureHeader.split(',');
-    const timestamp = tsPart?.split('=')[1];
-    const receivedSig = v1Part?.split('=')[1];
-
-    if (!timestamp || !receivedSig) {
-      console.error('❌ Formato de firma inválido');
-      return false;
-    }
-
-    // Prepara el payload - IMPORTANTE: sin modificar el rawBody
-    const payloadToSign = `${timestamp}.${rawBody}`;
-    
-    console.log('🔑 Secret:', secret.substring(0, 2) + '...' + secret.slice(-2));
-    console.log('📝 Payload:', payloadToSign.substring(0, 50) + '...');
-
-    // Genera firma esperada
-    const expectedSig = crypto
-      .createHmac('sha256', secret)
-      .update(payloadToSign)
-      .digest('hex');
-
-    console.log(`🔐 Firma esperada: ${expectedSig}`);
-    console.log(`📩 Firma recibida: ${receivedSig}`);
-
-    // Comparación segura
-    return crypto.timingSafeEqual(
-      Buffer.from(receivedSig, 'hex'),
-      Buffer.from(expectedSig, 'hex')
-    );
-  } catch (err) {
-    console.error('💥 Error en verificación:', err);
-    return false;
-  }
+  // Comparación segura
+  return crypto.timingSafeEqual(
+    Buffer.from(receivedSig, 'hex'),
+    Buffer.from(expectedSig, 'hex')
+  );
 };
