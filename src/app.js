@@ -14,17 +14,7 @@ import webhookRoutes from './routes/webhookRoutes.js';
 dotenv.config();
 
 // Inicialización de la app
-const app = express();
-// Esto debe ser lo PRIMERO en tu cadena de middlewares
-app.use('/api/webhook', 
-  express.raw({ type: 'application/json' }), // ★ No usar bodyParser antes
-  (req, res, next) => {
-    // Guardar el body como Buffer original
-    req.rawBody = req.body; 
-    next();
-  },
-  webhookRoutes
-);
+app.use('/api/webhook', webhookRoutes);
 
 // Configuración de EventEmitter
 EventEmitter.defaultMaxListeners = 15;
