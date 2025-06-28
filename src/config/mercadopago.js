@@ -21,45 +21,44 @@ export const configureMercadoPago = () => {
 };
 
 export const verifyWebhookSignature = (rawBody, signatureHeader) => {
-  // 1. Validación de parámetros
-  if (!process.env.MERCADOPAGO_WEBHOOK_SECRET) {
-    throw new Error('MERCADOPAGO_WEBHOOK_SECRET no configurada');
-  }
-  
-  const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET.trim();
-  
-  if (!signatureHeader) {
-    throw new Error('Encabezado de firma faltante');
-  }
+  // Validación de parámetros
+  const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET?.trim();
+  if (!secret) throw new Error('Secret no configurado');
+  if (!signatureHeader) throw new Error('Firma faltante');
 
-  // 2. Extracción de componentes
+  // Extraer componentes
   const [tsPart, v1Part] = signatureHeader.split(',');
   const timestamp = tsPart?.split('=')[1]?.trim();
   const receivedSig = v1Part?.split('=')[1]?.trim();
+  if (!timestamp || !receivedSig) throw new Error('Formato inválido');
 
-  if (!timestamp || !receivedSig) {
-    throw new Error('Formato de firma inválido');
-  }
-
-  // 3. Preparación del payload (CRÍTICO)
-  const payload = `${timestamp}.${rawBody.toString('utf8')}`;
-
-  // 4. Generación de firma - VERSIÓN CORREGIDA
-  const expectedSig = crypto
+  // Versión 1: Payload estándar (para comparación)
+  const payloadStandard = `${timestamp}.${rawBody.toString('utf8')}`;
+  const expectedSigStandard = crypto
     .createHmac('sha256', secret)
-    .update(payload, 'utf8')  // Especificar explícitamente la codificación
-    .digest('hex')
-    .toLowerCase();  // Mercado Pago usa lowercase
+    .update(payloadStandard)
+    .digest('hex');
 
-  // 5. Comparación segura
-  try {
-    const result = crypto.timingSafeEqual(
+  // Versión 2: Payload sin puntos (alternativa MP)
+  const payloadNoDots = timestamp + rawBody.toString('utf8');
+  const expectedSigNoDots = crypto
+    .createHmac('sha256', secret)
+    .update(payloadNoDots)
+    .digest('hex');
+
+  // Debug
+  console.log('🔍 Comparación de firmas:', {
+    received: receivedSig,
+    standard: expectedSigStandard,
+    noDots: expectedSigNoDots
+  });
+
+  // Comparación con ambas versiones
+  return crypto.timingSafeEqual(
       Buffer.from(receivedSig, 'hex'),
-      Buffer.from(expectedSig, 'hex')
+      Buffer.from(expectedSigStandard, 'hex')
+    ) || crypto.timingSafeEqual(
+      Buffer.from(receivedSig, 'hex'),
+      Buffer.from(expectedSigNoDots, 'hex')
     );
-    return result;
-  } catch (e) {
-    console.error('Error en comparación:', e);
-    return false;
-  }
 };
