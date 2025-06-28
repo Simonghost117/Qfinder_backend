@@ -18,14 +18,16 @@ const app = express();
 // En tu app.js
 // Esto debe ser lo PRIMERO en tu cadena de middlewares
 // Esto debe estar ANTES de cualquier otro middleware
+// app.js (o donde configures middlewares)
 app.use('/api/webhook', 
-  express.raw({ 
-    type: 'application/json',
-    verify: (req, res, buf, encoding) => {
-      req.rawBody = buf; // Preserva el buffer original
-      req.rawBodyString = buf.toString(encoding || 'utf8');
+  express.raw({ type: 'application/json' }),
+  (req, res, next) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('📦 Body completo (development):', req.body.toString());
     }
-  }),
+    req.rawBody = req.body;
+    next();
+  },
   webhookRoutes
 );
 // Configuración de EventEmitter
