@@ -6,9 +6,17 @@ const router = express.Router();
 
 router.post('/', 
   // Middleware para procesar el body como raw buffer
-  express.raw({ type: 'application/json' }),
+  express.raw({ 
+    type: 'application/json',
+    verify: (req, res, buf, encoding) => {
+      // Guardar el buffer original
+      req.rawBody = buf;
+      // También guardar como string para logging
+      req.rawBodyString = buf.toString(encoding || 'utf8');
+    }
+  }),
   
-  // Middleware para manejar el body y la verificación
+  // Middleware de verificación
   async (req, res, next) => {
     const requestId = req.headers['x-request-id'] || `webhook-${Date.now()}`;
     const signature = req.headers['x-signature'];
@@ -21,9 +29,9 @@ router.post('/',
         'x-request-id': requestId
       });
 
-      // Verificar que el body es un Buffer
-      if (!Buffer.isBuffer(req.body)) {
-        console.error(`❌ [${requestId}] Error: req.body no es Buffer`);
+      // Verificar que tenemos el body raw
+      if (!req.rawBody || !Buffer.isBuffer(req.rawBody)) {
+        console.error(`❌ [${requestId}] Error: req.rawBody no es Buffer`);
         return res.status(400).json({ 
           success: false, 
           error: 'Invalid content type', 
@@ -31,14 +39,24 @@ router.post('/',
         });
       }
 
-      // Guardar el body original como Buffer y como string
-      req.rawBody = req.body;
-      const rawBodyString = req.body.toString('utf8');
-      
-      console.log(`📦 [${requestId}] Body RAW recibido:`, rawBodyString.substring(0, 200) + (rawBodyString.length > 200 ? '...' : ''));
+      console.log(`📦 [${requestId}] Body RAW recibido (${req.rawBody.length} bytes):`, 
+        req.rawBodyString.substring(0, 100) + (req.rawBodyString.length > 100 ? '...' : ''));
 
-      // Verificación de firma con el Buffer original
-      if (!verifyWebhookSignature(req.rawBody, signature)) {
+      // Verificar que tenemos la firma
+      if (!signature) {
+        console.error(`❌ [${requestId}] Faltan headers de firma`);
+        return res.status(403).json({ 
+          success: false, 
+          error: 'Missing signature header', 
+          reference: requestId 
+        });
+      }
+
+      // Verificación de firma
+      const isValid = verifyWebhookSignature(req.rawBody, signature);
+      console.log(`🔍 [${requestId}] Resultado verificación firma:`, isValid);
+
+      if (!isValid) {
         console.error(`❌ [${requestId}] Firma inválida`);
         return res.status(403).json({ 
           success: false, 
@@ -51,8 +69,8 @@ router.post('/',
 
       // Parsear el body a JSON
       try {
-        req.body = JSON.parse(rawBodyString);
-        console.log(`✅ [${requestId}] JSON parseado correctamente`);
+        req.body = JSON.parse(req.rawBodyString);
+        next();
       } catch (parseError) {
         console.error(`❌ [${requestId}] Error parseando JSON:`, parseError);
         return res.status(400).json({ 
@@ -61,8 +79,6 @@ router.post('/',
           reference: requestId 
         });
       }
-
-      next();
     } catch (err) {
       console.error(`❌ [${requestId}] Error en webhook:`, {
         error: err.message,

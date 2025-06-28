@@ -32,28 +32,42 @@ export const verifyWebhookSignature = (rawBody, signatureHeader) => {
     throw new Error('Encabezado de firma faltante');
   }
 
-  // 2. Extracción de componentes
-  const [tsPart, v1Part] = signatureHeader.split(',');
-  const timestamp = tsPart?.split('=')[1]?.trim();
-  const receivedSig = v1Part?.split('=')[1]?.trim();
+  // 2. Extracción de componentes (formato: "ts=123456789,v1=abcdef123456")
+  const parts = signatureHeader.split(',');
+  const signatureParts = {};
+  
+  parts.forEach(part => {
+    const [key, value] = part.split('=');
+    signatureParts[key.trim()] = value.trim();
+  });
+
+  const timestamp = signatureParts.ts;
+  const receivedSig = signatureParts.v1;
 
   if (!timestamp || !receivedSig) {
-    throw new Error('Formato de firma inválido');
+    throw new Error('Formato de firma inválido. Se esperaba "ts=timestamp,v1=signature"');
   }
 
-  // 3. Preparación del payload (PUNTO CRÍTICO)
+  // 3. Preparación del payload (CRÍTICO: usar el rawBody exacto)
   const payload = `${timestamp}.${rawBody.toString('utf8')}`;
 
-  // 4. Generación de firma
+  // 4. Generación de firma esperada
   const expectedSig = crypto
     .createHmac('sha256', secret)
     .update(payload)
     .digest('hex');
+console.log('🔑 Secret:', secret);
+console.log('📝 Payload:', `${timestamp}.${rawBody.toString('utf8')}`);
+console.log('🔍 Firma recibida:', receivedSig);
+console.log('🔍 Firma esperada:', expectedSig);
+  // 5. Comparación segura contra timing attacks
+  const receivedSigBuffer = Buffer.from(receivedSig, 'hex');
+  const expectedSigBuffer = Buffer.from(expectedSig, 'hex');
+  
+  if (receivedSigBuffer.length !== expectedSigBuffer.length) {
+    return false;
+  }
 
-  // 5. Comparación segura
-  return crypto.timingSafeEqual(
-    Buffer.from(receivedSig, 'hex'),
-    Buffer.from(expectedSig, 'hex')
-  );
+  return crypto.timingSafeEqual(receivedSigBuffer, expectedSigBuffer);
 };
   
