@@ -1,64 +1,147 @@
 import express from 'express';
+import crypto from 'crypto';
 import { handleWebhook } from '../controllers/paymentController.js';
-import { verifyWebhookSignature } from '../config/mercadopago.js';
+import { Queue } from 'bull'; // Opcional: para procesamiento en cola
 
 const router = express.Router();
 
-// Middleware para capturar el body exacto como Buffer
-router.use((req, res, next) => {
-  let data = [];
-  req.on('data', chunk => {
-    data.push(chunk);
-  });
-  req.on('end', () => {
-    req.rawBody = Buffer.concat(data);
-    next();
-  });
+// Configuración de cola de procesamiento (opcional)
+const webhookQueue = new Queue('mercado_pago_webhooks', {
+  redis: {
+    host: process.env.REDIS_HOST || '127.0.0.1',
+    port: process.env.REDIS_PORT || 6379
+  }
 });
 
-router.post('/', 
-  async (req, res, next) => {
-    const requestId = req.headers['x-request-id'] || `webhook-${Date.now()}`;
-    
-    try {
-      // Mostrar el body en hexadecimal para depuración
-      console.log(`📦 [${requestId}] Body recibido (${req.rawBody.length} bytes):`, 
-        req.rawBody.toString('hex').substring(0, 100));
+// Middleware para capturar el body exacto como Buffer
+router.use(express.raw({
+  type: 'application/json',
+  limit: '10mb',
+  verify: (req, res, buf, encoding) => {
+    req.rawBody = buf; // Almacenamos el buffer exacto
+  }
+}));
 
-      // Verificar firma con el Buffer exacto recibido
-      const isValid = verifyWebhookSignature(
-        req.rawBody, 
-        req.headers['x-signature']
-      );
-      
-      if (!isValid) {
-        console.error(`❌ [${requestId}] Firma inválida`);
-        return res.status(403).json({ 
-          error: 'Invalid signature',
-          requestId,
-          details: process.env.NODE_ENV === 'development' ? {
-            receivedSignature: req.headers['x-signature'],
-            bodyHash: crypto.createHash('sha256').update(req.rawBody).digest('hex')
-          } : undefined
-        });
-      }
+/**
+ * Valida la firma del webhook
+ */
+const verifySignature = (rawBody, signatureHeader) => {
+  if (!process.env.MERCADOPAGO_WEBHOOK_SECRET) {
+    console.error('Webhook secret no configurado');
+    return false;
+  }
 
-      // Solo después de validar, parsear el JSON
-      req.body = JSON.parse(req.rawBody.toString('utf8'));
-      next();
-    } catch (error) {
-      console.error(`❌ [${requestId}] Error en webhook:`, {
-        error: error.message,
-        headers: req.headers,
-        bodyHex: req.rawBody?.toString('hex')?.substring(0, 100)
-      });
-      return res.status(400).json({ 
-        error: 'Invalid request',
-        requestId
-      });
+  if (!signatureHeader) {
+    console.error('Falta header de firma');
+    return false;
+  }
+
+  try {
+    const [tsPart, v1Part] = signatureHeader.split(',');
+    const timestamp = tsPart?.split('=')[1]?.trim();
+    const receivedSig = v1Part?.split('=')[1]?.trim();
+
+    if (!timestamp || !receivedSig) {
+      console.error('Formato de firma inválido');
+      return false;
     }
-  },
-  handleWebhook
-);
+
+    const payload = `${timestamp}.${rawBody.toString('utf8')}`;
+    const expectedSig = crypto
+      .createHmac('sha256', process.env.MERCADOPAGO_WEBHOOK_SECRET.trim())
+      .update(payload)
+      .digest('hex');
+
+    return crypto.timingSafeEqual(
+      Buffer.from(receivedSig, 'hex'),
+      Buffer.from(expectedSig, 'hex')
+    );
+  } catch (error) {
+    console.error('Error verificando firma:', error);
+    return false;
+  }
+};
+
+/**
+ * Procesamiento asíncrono del webhook
+ */
+const processWebhookAsync = async (rawBody, headers, requestId) => {
+  try {
+    console.log(`⌛ [${requestId}] Iniciando procesamiento...`);
+    
+    // 1. Validar firma
+    if (!verifySignature(rawBody, headers['x-signature'])) {
+      throw new Error('Firma inválida');
+    }
+
+    // 2. Parsear el body
+    const data = JSON.parse(rawBody.toString('utf8'));
+    
+    // 3. Registrar el webhook
+    console.log(`📝 [${requestId}] Webhook recibido:`, {
+      type: data.type || data.action,
+      id: data.id || data.data?.id,
+      date: data.date_created
+    });
+
+    // 4. Manejar el evento según su tipo
+    await handleWebhook(data, requestId);
+
+    console.log(`✅ [${requestId}] Procesamiento completado`);
+  } catch (error) {
+    console.error(`❌ [${requestId}] Error en procesamiento:`, error.message);
+    // Aquí puedes agregar reintentos o notificaciones de error
+  }
+};
+
+/**
+ * Endpoint principal de webhook
+ */
+router.post('/', async (req, res) => {
+  const requestId = req.headers['x-request-id'] || `webhook-${Date.now()}`;
+  
+  try {
+    // 1. Responder inmediatamente a MercadoPago
+    res.status(200).json({ 
+      status: 'received',
+      requestId
+    });
+
+    // 2. Opciones de procesamiento:
+    
+    // Opción A: Procesamiento directo (para cargas bajas)
+    // await processWebhookAsync(req.rawBody, req.headers, requestId);
+    
+    // Opción B: Procesamiento en cola (recomendado para producción)
+    await webhookQueue.add({
+      rawBody: req.rawBody.toString('base64'),
+      headers: req.headers,
+      requestId
+    }, {
+      jobId: requestId,
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 5000
+      }
+    });
+
+    console.log(`📥 [${requestId}] Webhook encolado para procesamiento`);
+
+  } catch (error) {
+    console.error(`⚠️ [${requestId}] Error inicial:`, error.message);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      requestId
+    });
+  }
+});
+
+// Configuración del worker de la cola (archivo separado normalmente)
+webhookQueue.process(async (job) => {
+  const { rawBody, headers, requestId } = job.data;
+  const buffer = Buffer.from(rawBody, 'base64');
+  await processWebhookAsync(buffer, headers, requestId);
+});
 
 export default router;
