@@ -2,19 +2,41 @@ import express from 'express';
 import crypto from 'crypto';
 import { handleWebhook } from '../controllers/paymentController.js';
 
-// Importación compatible con ESM para Bull
-import bull from 'bull';
-const { Queue } = bull;
+// Solución definitiva para importar Bull en ESM
+import { createBullBoard } from '@bull-board/api';
+import { BullAdapter } from '@bull-board/api/bullAdapter.js';
+import { ExpressAdapter } from '@bull-board/express';
+import pkg from 'bull';
+const { default: Bull } = pkg;
 
 const router = express.Router();
 
-// Configuración de cola de procesamiento (opcional)
-const webhookQueue = new Queue('mercado_pago_webhooks', {
-  redis: {
-    host: process.env.REDIS_HOST || '127.0.0.1',
-    port: process.env.REDIS_PORT || 6379
+// Configuración de Redis (asegúrate de tener estas variables de entorno)
+const redisConfig = {
+  host: process.env.REDIS_HOST || '127.0.0.1',
+  port: process.env.REDIS_PORT || 6379,
+  ...(process.env.REDIS_PASSWORD && { password: process.env.REDIS_PASSWORD })
+};
+
+// Crear instancia de cola
+const webhookQueue = new Bull('mercado_pago_webhooks', {
+  redis: redisConfig,
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 5000
+    }
   }
 });
+
+// Opcional: Panel de visualización de colas (Bull Board)
+const serverAdapter = new ExpressAdapter();
+createBullBoard({
+  queues: [new BullAdapter(webhookQueue)],
+  serverAdapter
+});
+router.use('/admin/queues', serverAdapter.getRouter());
 
 // Middleware para capturar el body exacto como Buffer
 router.use(express.raw({
@@ -72,28 +94,24 @@ const processWebhookAsync = async (rawBody, headers, requestId) => {
   try {
     console.log(`⌛ [${requestId}] Iniciando procesamiento...`);
     
-    // 1. Validar firma
     if (!verifySignature(rawBody, headers['x-signature'])) {
       throw new Error('Firma inválida');
     }
 
-    // 2. Parsear el body
     const data = JSON.parse(rawBody.toString('utf8'));
     
-    // 3. Registrar el webhook
     console.log(`📝 [${requestId}] Webhook recibido:`, {
       type: data.type || data.action,
       id: data.id || data.data?.id,
       date: data.date_created
     });
 
-    // 4. Manejar el evento según su tipo
     await handleWebhook(data, requestId);
 
     console.log(`✅ [${requestId}] Procesamiento completado`);
   } catch (error) {
     console.error(`❌ [${requestId}] Error en procesamiento:`, error.message);
-    throw error; // Propaga el error para manejo en la cola
+    throw error;
   }
 };
 
@@ -104,28 +122,22 @@ router.post('/', async (req, res) => {
   const requestId = req.headers['x-request-id'] || `webhook-${Date.now()}`;
   
   try {
-    // 1. Responder inmediatamente a MercadoPago
+    // Responder inmediatamente
     res.status(200).json({ 
       status: 'received',
       requestId
     });
 
-    // 2. Procesamiento en cola
+    // Agregar a la cola
     await webhookQueue.add({
       rawBody: req.rawBody.toString('base64'),
       headers: req.headers,
       requestId
     }, {
-      jobId: requestId,
-      attempts: 3,
-      backoff: {
-        type: 'exponential',
-        delay: 5000
-      }
+      jobId: requestId
     });
 
     console.log(`📥 [${requestId}] Webhook encolado para procesamiento`);
-
   } catch (error) {
     console.error(`⚠️ [${requestId}] Error inicial:`, error.message);
     res.status(500).json({ 
@@ -135,16 +147,11 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Configuración del worker de la cola
+// Configuración del worker
 webhookQueue.process(async (job) => {
   const { rawBody, headers, requestId } = job.data;
-  try {
-    const buffer = Buffer.from(rawBody, 'base64');
-    await processWebhookAsync(buffer, headers, requestId);
-  } catch (error) {
-    console.error(`🔄 [${requestId}] Reintentando trabajo fallido`);
-    throw error; // Para reintentos automáticos
-  }
+  const buffer = Buffer.from(rawBody, 'base64');
+  await processWebhookAsync(buffer, headers, requestId);
 });
 
 export default router;
