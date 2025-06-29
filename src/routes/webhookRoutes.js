@@ -1,7 +1,10 @@
 import express from 'express';
 import crypto from 'crypto';
 import { handleWebhook } from '../controllers/paymentController.js';
-import { Queue } from 'bull'; // Opcional: para procesamiento en cola
+
+// Importación compatible con ESM para Bull
+import bull from 'bull';
+const { Queue } = bull;
 
 const router = express.Router();
 
@@ -90,7 +93,7 @@ const processWebhookAsync = async (rawBody, headers, requestId) => {
     console.log(`✅ [${requestId}] Procesamiento completado`);
   } catch (error) {
     console.error(`❌ [${requestId}] Error en procesamiento:`, error.message);
-    // Aquí puedes agregar reintentos o notificaciones de error
+    throw error; // Propaga el error para manejo en la cola
   }
 };
 
@@ -107,12 +110,7 @@ router.post('/', async (req, res) => {
       requestId
     });
 
-    // 2. Opciones de procesamiento:
-    
-    // Opción A: Procesamiento directo (para cargas bajas)
-    // await processWebhookAsync(req.rawBody, req.headers, requestId);
-    
-    // Opción B: Procesamiento en cola (recomendado para producción)
+    // 2. Procesamiento en cola
     await webhookQueue.add({
       rawBody: req.rawBody.toString('base64'),
       headers: req.headers,
@@ -137,11 +135,16 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Configuración del worker de la cola (archivo separado normalmente)
+// Configuración del worker de la cola
 webhookQueue.process(async (job) => {
   const { rawBody, headers, requestId } = job.data;
-  const buffer = Buffer.from(rawBody, 'base64');
-  await processWebhookAsync(buffer, headers, requestId);
+  try {
+    const buffer = Buffer.from(rawBody, 'base64');
+    await processWebhookAsync(buffer, headers, requestId);
+  } catch (error) {
+    console.error(`🔄 [${requestId}] Reintentando trabajo fallido`);
+    throw error; // Para reintentos automáticos
+  }
 });
 
 export default router;
