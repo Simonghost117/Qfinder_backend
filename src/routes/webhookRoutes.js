@@ -4,43 +4,50 @@ import { verifyWebhookSignature } from '../config/mercadopago.js';
 
 const router = express.Router();
 
-// Middleware para procesar el body como raw buffer
-const rawBodyMiddleware = express.raw({ 
-  type: 'application/json',
-  verify: (req, res, buf, encoding) => {
-    req.rawBody = buf; // Preserva el buffer original
-    req.rawBodyString = buf.toString(encoding || 'utf8');
-  }
-});
+// Middleware para capturar el body crudo
+const captureRawBody = (req, res, next) => {
+  let data = '';
+  req.setEncoding('utf8');
+  
+  req.on('data', (chunk) => {
+    data += chunk;
+  });
 
-// Middleware de validación mejorado
-const validationMiddleware = async (req, res, next) => {
+  req.on('end', () => {
+    req.rawBody = data;
+    next();
+  });
+};
+
+// Middleware de validación
+const validateWebhook = async (req, res, next) => {
   const requestId = req.headers['x-request-id'] || `webhook-${Date.now()}`;
   
   try {
-    // Verificar que tenemos el body raw
-    if (!req.rawBody || !req.rawBodyString) {
-      console.error(`❌ [${requestId}] Body no disponible`);
-      return res.status(400).json({ error: 'Invalid request body' });
+    // Verificación crítica del body
+    if (!req.rawBody) {
+      console.error(`❌ [${requestId}] Body no disponible - rawBody:`, req.rawBody);
+      return res.status(400).json({ error: 'Request body missing' });
     }
 
-    // Verificar firma
+    console.log(`📦 [${requestId}] Body recibido:`, req.rawBody.substring(0, 100) + (req.rawBody.length > 100 ? '...' : ''));
+
+    // Verificación de firma
     const signature = req.headers['x-signature'];
     if (!signature) {
       console.error(`❌ [${requestId}] Firma faltante`);
       return res.status(403).json({ error: 'Signature header missing' });
     }
 
-    // Verificación segura
-    const isValid = verifyWebhookSignature(req.rawBody, signature);
+    const isValid = verifyWebhookSignature(Buffer.from(req.rawBody), signature);
     if (!isValid) {
       console.error(`❌ [${requestId}] Firma inválida`);
       return res.status(403).json({ error: 'Invalid signature' });
     }
 
-    // Parsear el body a JSON de manera segura
+    // Parseo seguro del JSON
     try {
-      req.body = JSON.parse(req.rawBodyString);
+      req.body = JSON.parse(req.rawBody);
       next();
     } catch (parseError) {
       console.error(`❌ [${requestId}] Error parseando JSON:`, parseError);
@@ -53,9 +60,9 @@ const validationMiddleware = async (req, res, next) => {
 };
 
 router.post('/', 
-  rawBodyMiddleware,
-  validationMiddleware,
-  handleWebhook
+  captureRawBody, // Captura el body crudo primero
+  validateWebhook, // Luego valida
+  handleWebhook // Finalmente procesa
 );
 
 export default router;
