@@ -4,15 +4,28 @@ import { verifyWebhookSignature } from '../config/mercadopago.js';
 
 const router = express.Router();
 
+// Middleware para capturar el body crudo
+router.use((req, res, next) => {
+  let data = '';
+  req.setEncoding('utf8');
+  req.on('data', (chunk) => {
+    data += chunk;
+  });
+  req.on('end', () => {
+    req.rawBody = data;
+    req.rawBodyString = data;
+    next();
+  });
+});
+
 router.post('/', 
-  // Middleware para validar firma
   async (req, res, next) => {
     const requestId = req.headers['x-request-id'] || `webhook-${Date.now()}`;
     
     try {
       // Debug: Mostrar datos recibidos
-      console.log(`📦 Body recibido (${req.rawBody.length} bytes):`, 
-        req.rawBodyString.substring(0, 100) + (req.rawBodyString.length > 100 ? '...' : ''));
+      console.log(`📦 Body recibido (${req.rawBody?.length || 0} bytes):`, 
+        req.rawBodyString?.substring(0, 100) + (req.rawBodyString?.length > 100 ? '...' : '') || 'No body');
 
       // Verificar firma
       const isValid = verifyWebhookSignature(req.rawBody, req.headers['x-signature']);
@@ -41,4 +54,5 @@ router.post('/',
   // Tu controlador principal
   handleWebhook
 );
+
 export default router;
