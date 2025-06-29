@@ -92,3 +92,36 @@ export const verifyWebhookSignature = (rawBody, signatureHeader) => {
     return false;
   }
 };
+
+export function testWebhookVerification() {
+  const testSecret = 'TEST_SECRET'; // Usa tu secret real para pruebas reales
+  const testBody = '{"test":"value"}';
+  const testTimestamp = Math.floor(Date.now() / 1000);
+  
+  const testSignature = crypto
+    .createHmac('sha256', testSecret)
+    .update(`${testTimestamp}.${testBody}`, 'utf8')
+    .digest('hex');
+  
+  const testHeader = `ts=${testTimestamp},v1=${testSignature}`;
+  
+  console.log('\n🧪 TEST WEBHOOK SIGNATURE VERIFICATION');
+  console.log('====================================');
+  console.log('Secret:', testSecret);
+  console.log('Body:', testBody);
+  console.log('Timestamp:', testTimestamp);
+  console.log('Generated signature:', testSignature);
+  console.log('Full header:', testHeader);
+  
+  const result = verifyWebhookSignature(Buffer.from(testBody), testHeader);
+  
+  console.log('\nResultado:', result ? '✅ FIRMA VÁLIDA' : '❌ FIRMA INVÁLIDA');
+  console.log('====================================\n');
+  
+  return result;
+}
+
+// Para ejecutar automáticamente en desarrollo
+if (process.env.NODE_ENV === 'development') {
+  testWebhookVerification();
+}
