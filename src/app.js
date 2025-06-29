@@ -20,15 +20,8 @@ const app = express();
 // Esto debe estar ANTES de cualquier otro middleware
 // app.js (o donde configures middlewares)
 app.use('/api/webhook', 
-  express.raw({ type: 'application/json' }),
-  (req, res, next) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('📦 Body completo (development):', req.body.toString());
-    }
-    req.rawBody = req.body;
-    next();
-  },
-  webhookRoutes
+  express.raw({ type: 'application/json' }), // Middleware raw para webhooks
+  webhookRouter
 );
 // Configuración de EventEmitter
 EventEmitter.defaultMaxListeners = 15;
