@@ -22,54 +22,58 @@ export const configureMercadoPago = () => {
 
 
 export const verifyWebhookSignature = (rawBody, signatureHeader) => {
-  // Validaciones básicas
-  if (!process.env.MERCADOPAGO_WEBHOOK_SECRET) {
+  // Validación básica de parámetros
+  if (!process.env.MERCADOPAGO_WEBHOOK_SECRET?.trim()) {
     console.error('❌ Webhook secret no configurado');
     return false;
   }
   
   if (!signatureHeader) {
-    console.error('❌ Header de firma faltante');
+    console.error('❌ Falta el header x-signature');
     return false;
   }
 
-  // Extraer componentes de la firma
+  // Parsear el header de firma
   const signatureParts = signatureHeader.split(',');
   if (signatureParts.length !== 2) {
-    console.error('❌ Formato de firma inválido');
+    console.error('❌ Formato de firma incorrecto');
     return false;
   }
 
-  const tsPart = signatureParts[0].split('=');
-  const v1Part = signatureParts[1].split('=');
-  
-  if (tsPart.length !== 2 || v1Part.length !== 2) {
-    console.error('❌ Estructura de firma incorrecta');
+  const [tsPart, v1Part] = signatureParts;
+  const timestamp = tsPart.split('=')[1]?.trim();
+  const receivedSig = v1Part.split('=')[1]?.trim();
+
+  if (!timestamp || !receivedSig) {
+    console.error('❌ Estructura de firma inválida');
     return false;
   }
 
-  const timestamp = tsPart[1];
-  const receivedSig = v1Part[1];
-
-  // Validar timestamp (debe ser numérico)
-  if (!/^\d+$/.test(timestamp)) {
-    console.error('❌ Timestamp inválido');
-    return false;
-  }
-
-  // Generar firma esperada
   try {
+    // Crear el payload exacto para verificación
     const payload = `${timestamp}.${rawBody.toString('utf8')}`;
+    
+    // Calcular la firma esperada
     const expectedSig = crypto
       .createHmac('sha256', process.env.MERCADOPAGO_WEBHOOK_SECRET.trim())
       .update(payload)
       .digest('hex');
 
-    // Comparación segura
-    return crypto.timingSafeEqual(
+    // Comparación segura contra timing attacks
+    const isValid = crypto.timingSafeEqual(
       Buffer.from(receivedSig, 'hex'),
       Buffer.from(expectedSig, 'hex')
     );
+
+    console.log('🔍 Resultado verificación:', {
+      timestamp,
+      payloadPreview: payload.substring(0, 50) + '...',
+      receivedSig,
+      expectedSig,
+      isValid
+    });
+
+    return isValid;
   } catch (error) {
     console.error('❌ Error al verificar firma:', error);
     return false;
