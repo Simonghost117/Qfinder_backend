@@ -1,12 +1,11 @@
 import express from 'express';
-import bodyParser from 'body-parser';
 import { handleWebhook } from '../controllers/paymentController.js';
 import { verifyWebhookSignature } from '../config/mercadopago.js';
 
 const router = express.Router();
 
-// Middleware para capturar el body RAW antes de cualquier procesamiento
-router.use(bodyParser.raw({
+// Middleware para capturar el body RAW
+router.use(express.raw({
   type: 'application/json',
   limit: '10mb'
 }));
@@ -16,14 +15,14 @@ router.post('/',
     const requestId = req.headers['x-request-id'] || `webhook-${Date.now()}`;
     
     try {
-      // Usar el body RAW directamente (como Buffer)
+      // El body ya es un Buffer gracias a express.raw()
       const rawBody = req.body;
-      const rawBodyString = rawBody.toString('utf8');
       
+      // Debug: Mostrar los primeros 100 bytes exactos (sin conversión a string)
       console.log(`📦 [${requestId}] Body recibido (${rawBody.length} bytes):`, 
-        rawBodyString.substring(0, 100) + (rawBodyString.length > 100 ? '...' : ''));
+        rawBody.slice(0, 100).toString('hex'));
 
-      // Verificar firma con el body sin modificar
+      // Verificar firma con el Buffer original
       const isValid = verifyWebhookSignature(rawBody, req.headers['x-signature']);
       
       if (!isValid) {
@@ -34,14 +33,17 @@ router.post('/',
         });
       }
 
-      // Parsear JSON solo después de validar la firma
-      req.body = JSON.parse(rawBodyString);
+      // Solo ahora parsear el JSON
+      req.body = JSON.parse(rawBody.toString('utf8'));
       next();
     } catch (error) {
-      console.error(`❌ [${requestId}] Error en webhook:`, error);
+      console.error(`❌ [${requestId}] Error en webhook:`, {
+        error: error.message,
+        headers: req.headers,
+        bodyPreview: req.body?.toString('hex')?.substring(0, 200)
+      });
       return res.status(400).json({ 
         error: 'Invalid request',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
         requestId
       });
     }
