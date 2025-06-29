@@ -1,57 +1,79 @@
 import express from 'express';
+import bodyParser from 'body-parser';
 import { handleWebhook } from '../controllers/paymentController.js';
 import { verifyWebhookSignature } from '../config/mercadopago.js';
 
 const router = express.Router();
 
-// Middleware para capturar el body crudo
-router.use((req, res, next) => {
-  let data = '';
-  req.setEncoding('utf8');
-  req.on('data', (chunk) => {
-    data += chunk;
-  });
-  req.on('end', () => {
-    req.rawBody = data;
-    req.rawBodyString = data;
-    next();
-  });
-});
-
 router.post('/', 
+  // Middleware para parsear el body crudo
+  bodyParser.raw({ 
+    type: 'application/json',
+    limit: '28mb' // Ajusta según tus necesidades
+  }),
+  
+  // Middleware para validar firma y procesar webhook
   async (req, res, next) => {
     const requestId = req.headers['x-request-id'] || `webhook-${Date.now()}`;
     
     try {
-      // Debug: Mostrar datos recibidos
-      console.log(`📦 Body recibido (${req.rawBody?.length || 0} bytes):`, 
-        req.rawBodyString?.substring(0, 100) + (req.rawBodyString?.length > 100 ? '...' : '') || 'No body');
-
-      // Verificar firma
-      const isValid = verifyWebhookSignature(req.rawBody, req.headers['x-signature']);
+      // Convertir el Buffer a string para logging
+      const rawBodyString = req.body.toString('utf8');
       
-      if (!isValid) {
-        console.error(`❌ [${requestId}] Firma inválida`);
-        return res.status(403).json({ 
-          error: 'Invalid signature',
-          requestId
-        });
+      // Debug: Mostrar datos recibidos
+      console.log(`📦 [${requestId}] Body recibido (${req.body.length} bytes):`, 
+        rawBodyString.substring(0, 100) + (rawBodyString.length > 100 ? '...' : ''));
+
+      // Verificar firma si está configurado el secret
+      if (process.env.MERCADOPAGO_WEBHOOK_SECRET) {
+        const signature = req.headers['x-signature'];
+        
+        if (!signature) {
+          console.error(`❌ [${requestId}] Faltan headers de firma`);
+          return res.status(403).json({ 
+            error: 'Missing signature header',
+            requestId
+          });
+        }
+
+        const isValid = verifyWebhookSignature(req.body, signature);
+        
+        if (!isValid) {
+          console.error(`❌ [${requestId}] Firma inválida`);
+          return res.status(403).json({ 
+            error: 'Invalid signature',
+            requestId
+          });
+        }
       }
 
-      // Parsear JSON
-      req.body = JSON.parse(req.rawBodyString);
+      // Parsear JSON y asignar al body
+      req.body = JSON.parse(rawBodyString);
+      
+      // Agregar rawBodyString al request por si se necesita después
+      req.rawBodyString = rawBodyString;
+      
       next();
     } catch (error) {
-      console.error(`❌ [${requestId}] Error en webhook:`, error);
+      console.error(`❌ [${requestId}] Error en webhook:`, {
+        error: error.message,
+        stack: error.stack,
+        headers: req.headers,
+        bodyPreview: req.body?.toString('utf8')?.substring(0, 200)
+      });
+      
       return res.status(400).json({ 
         error: 'Invalid request',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        details: process.env.NODE_ENV === 'development' ? {
+          message: error.message,
+          stack: error.stack
+        } : undefined,
         requestId
       });
     }
   },
   
-  // Tu controlador principal
+  // Controlador principal
   handleWebhook
 );
 
