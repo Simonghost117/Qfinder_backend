@@ -19,12 +19,9 @@ export const configureMercadoPago = () => {
     }
   });
 };
-
 export const verifyWebhookSignature = (rawBody, signatureHeader) => {
   try {
     console.log('🔐 Verificando firma...');
-    console.log('📌 Secret configurado:', process.env.MERCADOPAGO_WEBHOOK_SECRET ? '***' : 'NO CONFIGURADO');
-    console.log('📌 Signature header:', signatureHeader);
     
     if (!process.env.MERCADOPAGO_WEBHOOK_SECRET) {
       console.error('❌ Webhook secret no configurado');
@@ -40,28 +37,35 @@ export const verifyWebhookSignature = (rawBody, signatureHeader) => {
 
     // Parseo del header de firma
     const [tsPart, v1Part] = signatureHeader.split(',');
-    const timestamp = tsPart?.split('=')[1]?.trim();
+    const timestampMs = tsPart?.split('=')[1]?.trim();
     const receivedSig = v1Part?.split('=')[1]?.trim();
 
-    console.log('📌 Timestamp:', timestamp);
+    // Convertir timestamp a segundos (MercadoPago usa segundos)
+    const timestampSec = Math.floor(parseInt(timestampMs) / 1000);
+    
+    console.log('📌 Timestamp (ms):', timestampMs);
+    console.log('📌 Timestamp (sec):', timestampSec);
     console.log('📌 Firma recibida:', receivedSig);
 
-    if (!timestamp || !receivedSig) {
+    if (!timestampMs || !receivedSig) {
       console.error('❌ Formato de firma inválido');
       return false;
     }
 
-    // Generación de firmas alternativas
     const bodyString = rawBody.toString('utf8');
     console.log('📌 Body string:', bodyString.substring(0, 50) + '...');
     
+    // Versión oficial de MercadoPago: timestampEnSegundos.bodyString
+    const officialPayload = `${timestampSec}.${bodyString}`;
+    
     const payloads = [
-      `${timestamp}.${bodyString}`,  // Versión oficial
-      timestamp + bodyString,       // Versión sin punto
-      bodyString                    // Solo el body
+      officialPayload,  // Versión CORRECTA con timestamp en segundos
+      `${timestampMs}.${bodyString}`,  // Versión con ms por si acaso
+      timestampSec + bodyString,       // Versión sin punto
+      timestampMs + bodyString,        // Versión sin punto con ms
+      bodyString                       // Solo el body
     ];
 
-    // Comparación exhaustiva
     const receivedBuffer = Buffer.from(receivedSig, 'hex');
     
     return payloads.some((payload, i) => {
@@ -92,36 +96,21 @@ export const verifyWebhookSignature = (rawBody, signatureHeader) => {
     return false;
   }
 };
-
 export function testWebhookVerification() {
-  const testSecret = 'TEST_SECRET'; // Usa tu secret real para pruebas reales
-  const testBody = '{"test":"value"}';
-  const testTimestamp = Math.floor(Date.now() / 1000);
+  const testSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET || 'TEST_SECRET';
+  const testBody = '{"action":"test"}';
+  const testTimestampSec = Math.floor(Date.now() / 1000);
   
   const testSignature = crypto
     .createHmac('sha256', testSecret)
-    .update(`${testTimestamp}.${testBody}`, 'utf8')
+    .update(`${testTimestampSec}.${testBody}`, 'utf8')
     .digest('hex');
   
-  const testHeader = `ts=${testTimestamp},v1=${testSignature}`;
+  const testHeader = `ts=${testTimestampSec * 1000},v1=${testSignature}`;
   
-  console.log('\n🧪 TEST WEBHOOK SIGNATURE VERIFICATION');
-  console.log('====================================');
-  console.log('Secret:', testSecret);
-  console.log('Body:', testBody);
-  console.log('Timestamp:', testTimestamp);
-  console.log('Generated signature:', testSignature);
-  console.log('Full header:', testHeader);
-  
+  console.log('\n🧪 TEST CON TIMESTAMP CORRECTO (segundos)');
   const result = verifyWebhookSignature(Buffer.from(testBody), testHeader);
-  
-  console.log('\nResultado:', result ? '✅ FIRMA VÁLIDA' : '❌ FIRMA INVÁLIDA');
-  console.log('====================================\n');
+  console.log('Resultado:', result ? '✅ FIRMA VÁLIDA' : '❌ FIRMA INVÁLIDA');
   
   return result;
-}
-
-// Para ejecutar automáticamente en desarrollo
-if (process.env.NODE_ENV === 'development') {
-  testWebhookVerification();
 }
