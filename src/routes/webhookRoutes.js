@@ -62,7 +62,7 @@ const validateWebhook = async (req, res, next) => {
 router.post('/', 
   captureRawBody, // Captura el body crudo primero
   validateWebhook, // Luego valida
-  handleWebhook // Finalmente procesa
+  handleWebhook 
 );
 
 export default router;
