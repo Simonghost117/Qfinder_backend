@@ -21,8 +21,6 @@ export const configureMercadoPago = () => {
 };
 export const verifyWebhookSignature = (rawBody, signatureHeader) => {
   try {
-    console.log('🔐 Verificando firma...');
-    
     if (!process.env.MERCADOPAGO_WEBHOOK_SECRET) {
       console.error('❌ Webhook secret no configurado');
       return false;
@@ -35,62 +33,33 @@ export const verifyWebhookSignature = (rawBody, signatureHeader) => {
       return false;
     }
 
-    // Parseo del header de firma
+    // Parsear el header de firma
     const [tsPart, v1Part] = signatureHeader.split(',');
-    const timestampMs = tsPart?.split('=')[1]?.trim();
+    const timestamp = tsPart?.split('=')[1]?.trim();
     const receivedSig = v1Part?.split('=')[1]?.trim();
 
-    // Convertir timestamp a segundos (MercadoPago usa segundos)
-    const timestampSec = Math.floor(parseInt(timestampMs) / 1000);
-    
-    console.log('📌 Timestamp (ms):', timestampMs);
-    console.log('📌 Timestamp (sec):', timestampSec);
-    console.log('📌 Firma recibida:', receivedSig);
-
-    if (!timestampMs || !receivedSig) {
+    if (!timestamp || !receivedSig) {
       console.error('❌ Formato de firma inválido');
       return false;
     }
 
+    // Convertir el body a string manteniendo exactamente lo recibido
     const bodyString = rawBody.toString('utf8');
-    console.log('📌 Body string:', bodyString.substring(0, 50) + '...');
     
-    // Versión oficial de MercadoPago: timestampEnSegundos.bodyString
-    const officialPayload = `${timestampSec}.${bodyString}`;
+    // Crear el payload exacto que MercadoPago firma
+    const payload = `${timestamp}.${bodyString}`;
     
-    const payloads = [
-      officialPayload,  // Versión CORRECTA con timestamp en segundos
-      `${timestampMs}.${bodyString}`,  // Versión con ms por si acaso
-      timestampSec + bodyString,       // Versión sin punto
-      timestampMs + bodyString,        // Versión sin punto con ms
-      bodyString                       // Solo el body
-    ];
-
-    const receivedBuffer = Buffer.from(receivedSig, 'hex');
+    // Calcular la firma esperada
+    const expectedSig = crypto
+      .createHmac('sha256', secret)
+      .update(payload, 'utf8')
+      .digest('hex');
     
-    return payloads.some((payload, i) => {
-      const expectedSig = crypto
-        .createHmac('sha256', secret)
-        .update(payload, 'utf8')
-        .digest('hex');
-      
-      console.log(`🔍 Comparando variante ${i + 1}:`);
-      console.log('🔑 Payload:', payload.substring(0, 50) + '...');
-      console.log('🔑 Firma esperada:', expectedSig);
-      
-      try {
-        const match = crypto.timingSafeEqual(
-          receivedBuffer,
-          Buffer.from(expectedSig, 'hex')
-        );
-        
-        console.log(`✅ Variante ${i + 1}: ${match ? 'COINCIDE' : 'no coincide'}`);
-        return match;
-      } catch (e) {
-        console.error(`❌ Error en comparación ${i + 1}:`, e);
-        return false;
-      }
-    });
+    // Comparación segura contra timing attacks
+    return crypto.timingSafeEqual(
+      Buffer.from(receivedSig, 'hex'),
+      Buffer.from(expectedSig, 'hex')
+    );
   } catch (error) {
     console.error('❌ Error en verifyWebhookSignature:', error);
     return false;
