@@ -1,4 +1,3 @@
-// Importaciones de módulos base
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -15,10 +14,21 @@ dotenv.config();
 
 // Inicialización de la app
 const app = express();
-// En tu app.js
-// Esto debe ser lo PRIMERO en tu cadena de middlewares
-// Esto debe estar ANTES de cualquier otro middleware
-// app.js (o donde configures middlewares)
+
+
+app.post('/api/webhook-debug', 
+  express.raw({ type: 'application/json' }),
+  (req, res) => {
+    console.log('🔔 Webhook Debug - Headers:', req.headers);
+    console.log('🔔 Webhook Debug - Raw Body:', req.body.toString('utf8'));
+    res.json({
+      received: true,
+      bodyType: typeof req.body,
+      bodyLength: req.body.length,
+      signatureHeader: req.headers['x-signature']
+    });
+  }
+);
 app.use('/api/webhook', 
   express.raw({ type: 'application/json' }), // Middleware raw para webhooks
   webhookRoutes
