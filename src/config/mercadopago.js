@@ -22,36 +22,32 @@ export const configureMercadoPago = () => {
 
 
 export const verifyWebhookSignature = (rawBody, signatureHeader) => {
-  // Validación básica de parámetros
-  if (!process.env.MERCADOPAGO_WEBHOOK_SECRET?.trim()) {
+  if (!process.env.MERCADOPAGO_WEBHOOK_SECRET) {
     console.error('❌ Webhook secret no configurado');
     return false;
   }
-  
+
   if (!signatureHeader) {
     console.error('❌ Falta el header x-signature');
     return false;
   }
 
-  // Parsear el header de firma
-  const signatureParts = signatureHeader.split(',');
-  if (signatureParts.length !== 2) {
-    console.error('❌ Formato de firma incorrecto');
-    return false;
-  }
-
-  const [tsPart, v1Part] = signatureParts;
-  const timestamp = tsPart.split('=')[1]?.trim();
-  const receivedSig = v1Part.split('=')[1]?.trim();
-
-  if (!timestamp || !receivedSig) {
-    console.error('❌ Estructura de firma inválida');
-    return false;
-  }
-
   try {
+    // Parsear el header de firma
+    const [tsPart, v1Part] = signatureHeader.split(',');
+    const timestamp = tsPart.split('=')[1];
+    const receivedSig = v1Part.split('=')[1];
+
+    if (!timestamp || !receivedSig) {
+      console.error('❌ Formato de firma incorrecto');
+      return false;
+    }
+
+    // Convertir timestamp de milisegundos a segundos
+    const timestampSec = Math.floor(parseInt(timestamp) / 1000);
+    
     // Crear el payload exacto para verificación
-    const payload = `${timestamp}.${rawBody.toString('utf8')}`;
+    const payload = `${timestampSec}.${rawBody.toString('utf8')}`;
     
     // Calcular la firma esperada
     const expectedSig = crypto
@@ -67,10 +63,11 @@ export const verifyWebhookSignature = (rawBody, signatureHeader) => {
 
     console.log('🔍 Resultado verificación:', {
       timestamp,
-      payloadPreview: payload.substring(0, 50) + '...',
+      timestampSec,
       receivedSig,
       expectedSig,
-      isValid
+      isValid,
+      payloadPreview: payload.substring(0, 50) + '...'
     });
 
     return isValid;
