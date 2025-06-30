@@ -29,8 +29,13 @@ app.post('/api/webhook-debug',
     });
   }
 );
-app.use('/api/webhook', 
+app.post('/api/webhook', 
   express.raw({ type: 'application/json' }), // Middleware raw para webhooks
+  (req, res, next) => {
+    // Guardar el body raw para la verificación de firma
+    req.rawBody = req.body;
+    next();
+  },
   webhookRoutes
 );
 // Configuración de EventEmitter
