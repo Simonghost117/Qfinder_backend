@@ -16,19 +16,6 @@ dotenv.config();
 const app = express();
 
 
-app.post('/api/webhook-debug', 
-  express.raw({ type: 'application/json' }),
-  (req, res) => {
-    console.log('🔔 Webhook Debug - Headers:', req.headers);
-    console.log('🔔 Webhook Debug - Raw Body:', req.body.toString('utf8'));
-    res.json({
-      received: true,
-      bodyType: typeof req.body,
-      bodyLength: req.body.length,
-      signatureHeader: req.headers['x-signature']
-    });
-  }
-);
 app.post('/api/webhook', 
   express.raw({ type: 'application/json' }),  // Middleware para body sin procesar
   (req, res, next) => {
