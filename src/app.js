@@ -16,7 +16,7 @@ dotenv.config();
 const app = express();
 
 
-app.post('/api/webhook', 
+app.use('/api/webhook', 
   express.raw({ type: 'application/json' }),  // Middleware para body sin procesar
   (req, res, next) => {
     console.log('✅ Webhook endpoint reached'); // Log de confirmación
