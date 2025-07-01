@@ -30,13 +30,13 @@ app.post('/api/webhook-debug',
   }
 );
 app.post('/api/webhook', 
-  express.raw({ type: 'application/json' }), // Middleware raw para webhooks
+  express.raw({ type: 'application/json' }),  // Middleware para body sin procesar
   (req, res, next) => {
-    // Guardar el body raw para la verificación de firma
-    req.rawBody = req.body;
+    console.log('✅ Webhook endpoint reached'); // Log de confirmación
+    req.rawBody = req.body;  // Guarda el body original
     next();
   },
-  webhookRoutes
+  webhookRoutes  // Importa el router de webhooks
 );
 // Configuración de EventEmitter
 EventEmitter.defaultMaxListeners = 15;
