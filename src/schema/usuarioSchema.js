@@ -8,8 +8,8 @@ export const registerSchema = z.object({
         .min(1, { message: "El apellido es obligatorio" })
         .max(255, { message: "El apellido no puede exceder los 255 caracteres" }),
     identificacion_usuario: z.string()
-  .regex(/^[1-9]\d{7,10}$/, {
-    message: "La identificación debe tener entre 8 y 11 dígitos numéricos y no puede comenzar con cero",
+  .regex(/^[1-9]\d{6,10}$/, {
+    message: "La identificación debe tener entre 7 y 11 dígitos numéricos y no puede comenzar con cero",
   }),
     direccion_usuario: z.string()
         .min(1, { message: "La dirección es obligatoria" })
