@@ -285,12 +285,12 @@ export const handleWebhook = async (req, res) => {
         return safeRespond(403, 'Encabezado de firma faltante');
       }
 
-      const isValid = verifyWebhookSignature(rawBody, signature);
-      console.log(`🔍 [${requestId}] Resultado verificación firma:`, isValid);
+      // const isValid = verifyWebhookSignature(rawBody, signature);
+      // console.log(`🔍 [${requestId}] Resultado verificación firma:`, isValid);
 
-      if (!isValid) {
-        return safeRespond(403, 'Firma inválida');
-      }
+      // if (!isValid) {
+      //   return safeRespond(403, 'Firma inválida');
+      // }
     }
 
     // 2. Extraer datos

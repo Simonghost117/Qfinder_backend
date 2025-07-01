@@ -23,35 +23,20 @@ export const configureMercadoPago = () => {
 
 // mercadopago.js (versión corregida)
 export const verifyWebhookSignature = (rawBody, signatureHeader) => {
-  try {
-    const parts = signatureHeader.split(',');
-    let receivedSig, timestamp;
-    
-    for (const part of parts) {
-      if (part.startsWith('v1=')) receivedSig = part.split('=')[1];
-      if (part.startsWith('ts=')) timestamp = part.split('=')[1];
-    }
+  const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET?.trim();
+  if (!secret) throw new Error('Webhook secret not configured');
 
-    if (!timestamp || !receivedSig) return false;
+  const parts = signatureHeader.split(',');
+  const receivedSig = parts.find(p => p.startsWith('v1='))?.split('=')[1];
+  const timestamp = parts.find(p => p.startsWith('ts='))?.split('=')[1];
 
-    // ¡NO convertir a segundos! Usar el timestamp tal cual
-    const payload = `${timestamp}.${rawBody.toString('utf8')}`;
-    
-    const expectedSig = crypto
-      .createHmac('sha256', process.env.MERCADOPAGO_WEBHOOK_SECRET.trim())
-      .update(payload)
-      .digest('hex');
-console.log('ℹ️ Secreto usado:', process.env.MERCADOPAGO_WEBHOOK_SECRET.trim());
-console.log('ℹ️ Payload completo:', payload);
-console.log('ℹ️ Firma recibida:', receivedSig);
-console.log('ℹ️ Firma generada:', expectedSig);
-    return crypto.timingSafeEqual(
-      Buffer.from(receivedSig, 'hex'),
-      Buffer.from(expectedSig, 'hex')
-    );
-  } catch (error) {
-    console.error('❌ Error en verificación:', error);
-    return false;
-  }
-  
+  if (!receivedSig || !timestamp) return false;
+
+  const payload = `${timestamp}.${rawBody}`;
+  const expectedSig = crypto
+    .createHmac('sha256', secret)
+    .update(payload)
+    .digest('hex');
+
+  return receivedSig === expectedSig;
 };
