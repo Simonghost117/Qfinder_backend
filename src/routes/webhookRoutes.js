@@ -20,10 +20,7 @@ router.post('/',
           return res.status(403).json({ error: 'Missing signature' });
         }
         
-        // const isValid = verifyWebhookSignature(req.rawBody, signature);
-        // if (!isValid) {
-        //   return res.status(403).json({ error: 'Invalid signature' });
-        // }
+       
       }
 
       // Parsear el body una sola vez

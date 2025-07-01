@@ -21,60 +21,35 @@ export const configureMercadoPago = () => {
 };
 
 
+// mercadopago.js (versión corregida)
 export const verifyWebhookSignature = (rawBody, signatureHeader) => {
-  if (!process.env.MERCADOPAGO_WEBHOOK_SECRET) {
-    console.error('❌ Webhook secret no configurado');
-    return false;
-  }
+  if (!signatureHeader) return false;
 
-  if (!signatureHeader) {
-    console.error('❌ Falta el header x-signature');
-    return false;
-  }
+  // Parsear dinámicamente
+  let receivedSig, timestamp;
+  signatureHeader.split(',').forEach(part => {
+    const [key, value] = part.split('=');
+    if (key === 'v1') receivedSig = value;
+    if (key === 'ts') timestamp = value;
+  });
 
-  try {
-    // Parsear el header de firma
-    const [tsPart, v1Part] = signatureHeader.split(',');
-    const timestamp = tsPart.split('=')[1];
-    const receivedSig = v1Part.split('=')[1];
+  if (!timestamp || !receivedSig) return false;
 
-    if (!timestamp || !receivedSig) {
-      console.error('❌ Formato de firma incorrecto');
-      return false;
-    }
+  const timestampSec = Math.floor(parseInt(timestamp) / 1000); // Milisegundos -> Segundos
+  const payload = Buffer.concat([
+    Buffer.from(timestampSec + '.'),
+    rawBody // Mantener como Buffer
+  ]);
 
-    // Convertir timestamp de milisegundos a segundos
-    const timestampSec = Math.floor(parseInt(timestamp) / 1000);
-    
-    // Crear el payload exacto para verificación
-    const payload = `${timestampSec}.${rawBody.toString('utf8')}`;
-    
-    // Calcular la firma esperada
-    const expectedSig = crypto
-      .createHmac('sha256', process.env.MERCADOPAGO_WEBHOOK_SECRET.trim())
-      .update(payload)
-      .digest('hex');
+  const expectedSig = crypto
+    .createHmac('sha256', process.env.MERCADOPAGO_WEBHOOK_SECRET.trim())
+    .update(payload)
+    .digest('hex');
 
-    // Comparación segura contra timing attacks
-    const isValid = crypto.timingSafeEqual(
-      Buffer.from(receivedSig, 'hex'),
-      Buffer.from(expectedSig, 'hex')
-    );
-
-    console.log('🔍 Resultado verificación:', {
-      timestamp,
-      timestampSec,
-      receivedSig,
-      expectedSig,
-      isValid,
-      payloadPreview: payload.substring(0, 50) + '...'
-    });
-
-    return isValid;
-  } catch (error) {
-    console.error('❌ Error al verificar firma:', error);
-    return false;
-  }
+  return crypto.timingSafeEqual(
+    Buffer.from(receivedSig, 'hex'),
+    Buffer.from(expectedSig, 'hex')
+  );
 };
 export function testWebhookVerification() {
   const testSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET || 'TEST_SECRET';
