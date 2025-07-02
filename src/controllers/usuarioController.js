@@ -718,6 +718,12 @@ export const actualizarUsuario = async (req, res) => {
           where: { id_usuario },
           transaction
         });
+        if (estado_suscripcion === 'cancelled') {
+          await models.Usuario.update(
+            { membresia: 'free' },
+            { where: { id_usuario }, transaction }
+          );
+        }
       }
     } else {
       console.log(`El usuario ${id_usuario} no tiene suscripción previa. No se procesará.`);

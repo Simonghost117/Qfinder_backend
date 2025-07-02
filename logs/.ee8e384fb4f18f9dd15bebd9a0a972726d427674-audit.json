@@ -6,36 +6,6 @@
     "auditLog": "C:\\Users\\ASUS\\OneDrive\\Escritorio\\QfindeR\\final\\back\\Qfinder_backend\\logs\\.ee8e384fb4f18f9dd15bebd9a0a972726d427674-audit.json",
     "files": [
         {
-            "date": 1749732987767,
-            "name": "C:\\Users\\ASUS\\OneDrive\\Escritorio\\QfindeR\\final\\back\\Qfinder_backend\\logs\\application-2025-06-12.log",
-            "hash": "de46cb912fd5559223c3433fb7a65e4eaf0434b965970aa895cb6592a480117f"
-        },
-        {
-            "date": 1749818358963,
-            "name": "C:\\Users\\ASUS\\OneDrive\\Escritorio\\QfindeR\\final\\back\\Qfinder_backend\\logs\\application-2025-06-13.log",
-            "hash": "26bfa7ad1315064dfe49205cd9b9ff3bf7b19b1454ef241e1942ffd75ab2f350"
-        },
-        {
-            "date": 1749920137417,
-            "name": "C:\\Users\\ASUS\\OneDrive\\Escritorio\\QfindeR\\final\\back\\Qfinder_backend\\logs\\application-2025-06-14.log",
-            "hash": "572cd397aaa937b98e68ef7ef8965c63459f8909c41c7797288dd6aeb88258cd"
-        },
-        {
-            "date": 1750031586221,
-            "name": "C:\\Users\\ASUS\\OneDrive\\Escritorio\\QfindeR\\final\\back\\Qfinder_backend\\logs\\application-2025-06-15.log",
-            "hash": "04729641b2170a42c2c6b6a75c7c65a2c8c6fea0fd01746d65e4006cd08267fa"
-        },
-        {
-            "date": 1750078971832,
-            "name": "C:\\Users\\ASUS\\OneDrive\\Escritorio\\QfindeR\\final\\back\\Qfinder_backend\\logs\\application-2025-06-16.log",
-            "hash": "5af55919d63d2e6365ca7334293a0694f176f402aba4ef2ac1b5d4b336eebd62"
-        },
-        {
-            "date": 1750163381402,
-            "name": "C:\\Users\\ASUS\\OneDrive\\Escritorio\\QfindeR\\final\\back\\Qfinder_backend\\logs\\application-2025-06-17.log",
-            "hash": "00399133a7d04340e4738dda2b417507af4637ccbb097182fa4d72e7b31f32d6"
-        },
-        {
             "date": 1750554621486,
             "name": "C:\\Users\\ASUS\\OneDrive\\Escritorio\\QfindeR\\final\\back\\Qfinder_backend\\logs\\application-2025-06-21.log",
             "hash": "493c4734394ee4193c5fbdaa63f719fc8339a8fff8cf5343843d0a03f80bcc04"
@@ -49,6 +19,16 @@
             "date": 1750900331154,
             "name": "C:\\Users\\ASUS\\OneDrive\\Escritorio\\QfindeR\\final\\back\\Qfinder_backend\\logs\\application-2025-06-25.log",
             "hash": "3a47827d828e80f3204303b371fb2646dbdff4dacd7dbc46810e18c662201b7c"
+        },
+        {
+            "date": 1751382945998,
+            "name": "C:\\Users\\ASUS\\OneDrive\\Escritorio\\QfindeR\\final\\back\\Qfinder_backend\\logs\\application-2025-07-01.log",
+            "hash": "bc5d1bcb7319998d5c98192ebbc71f00c5999628f5ab73c21bd633894a672f1f"
+        },
+        {
+            "date": 1751477872302,
+            "name": "C:\\Users\\ASUS\\OneDrive\\Escritorio\\QfindeR\\final\\back\\Qfinder_backend\\logs\\application-2025-07-02.log",
+            "hash": "5f447dc1cf4649ef4fc046efa34e13361cc8411260ad2d932aeac6e9e9f2234c"
         }
     ],
     "hashType": "sha256"
