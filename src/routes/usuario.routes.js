@@ -4,11 +4,12 @@ import { login, logout, register,
     verifyUser, perfilUser, listarUsuarios, listarAdmin, eliminarUsuario, buscarUserNombre, registerUsuario, 
     actualizarUsuario, actualizarAdmin, eliminarAdmin, contarUsuarios, 
     listarUsuariosFiltrados,
-    traerMembresia
+    traerMembresia,
+    actualizarAdministradores
 } from '../controllers/usuarioController.js';
 import { resendVerificationCode } from '../services/usuarioService.js';
 import validateSchema from '../middlewares/validatoreSchema.js';
-import { loginSchema, registerSchema, updateSchema, cambiarContrasenaSchema, usuarioAdmiAct } from '../schema/usuarioSchema.js';
+import { loginSchema, registerSchema, updateSchema, cambiarContrasenaSchema, usuarioAdmiAct, actualizarAdministradores } from '../schema/usuarioSchema.js';
 import { verifyToken, verifyTokenWeb } from '../middlewares/verifyToken.js';
 import { recuperarContrasena, cambiarContrasena, verificarCodigo } from '../controllers/recuperarContrasena.js';
 import { validateAdmin, validateRol } from '../middlewares/validateAdmin.js';
@@ -169,6 +170,12 @@ router.post('/cambiar-passwordW',
     validateSchema(cambiarContrasenaSchema),
     cambiarContrasena
 );
+router.put('/actualizarAdministradores/:id_usuario',
+    verifyTokenWeb,
+    validateRol(['Super']),
+    validateSchema(actualizarAdministradores),
+    actualizarAdministradores
+)
 //listar todos los usuarios
 //listar todos los pacientes
 //actualizar informacion usuarios/pacientes

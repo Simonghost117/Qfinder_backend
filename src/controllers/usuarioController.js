@@ -1099,3 +1099,59 @@ export const traerMembresia = async (req, res) => {
     res.status(500).json({ message: 'Error al obtener la membresía', error });
   }
 }
+
+export const actualizarAdministradores = async (req, res) => {
+  try {
+    const { id_usuario } = req.params;
+    const { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, imagen_usuario } = req.body;
+
+    const usuario = await Usuario.findByPk(id_usuario);
+    if (!usuario) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
+
+    if (correo_usuario || identificacion_usuario) {
+      const existeCorreo = await Usuario.findOne({ where: { correo_usuario, id_usuario: { [Op.ne]: id_usuario } } });
+      if (existeCorreo) {
+        return res.status(400).json({ error: 'El correo ya está registrado' });
+      }
+
+      const existeIdentificacion = await Usuario.findOne({ where: { identificacion_usuario, id_usuario: { [Op.ne]: id_usuario } } });
+      if (existeIdentificacion) {
+        return res.status(400).json({ error: 'El número de identificación ya está registrado' });
+      }
+    }
+
+    let nueva_imagen;
+        try {
+          nueva_imagen = await manejarImagenes(imagen_usuario, usuario.imagen_usuario);
+        } catch (error) {
+          return res.status(400).json({ 
+            success: false,
+            message: error.message 
+          });
+        }
+
+    const dataToUpdate = { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, imagen_usuario: nueva_imagen };
+
+    await Usuario.update(dataToUpdate, {
+      where: { id_usuario: id_usuario },
+    });
+
+    res.status(200).json({ message: 'Información del administrador actualizada exitosamente',
+      usuario: {
+        id_usuario: usuario.id_usuario,
+        nombre_usuario: dataToUpdate.nombre_usuario,
+        apellido_usuario: dataToUpdate.apellido_usuario,
+        identificacion_usuario: dataToUpdate.identificacion_usuario,
+        direccion_usuario: dataToUpdate.direccion_usuario,
+        telefono_usuario: dataToUpdate.telefono_usuario,
+        correo_usuario: dataToUpdate.correo_usuario,
+        imagen_usuario: nueva_imagen
+      }
+     });
+  } catch (error) {
+    console.error('Error al actualizar el administrador:', error);
+    res.status(500).json({ message: 'Error al actualizar el administrador', error });
+  }
+}

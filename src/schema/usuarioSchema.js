@@ -80,3 +80,27 @@ export const usuarioAdmiAct = z.object({
     tipo_suscripcion: z.enum(['free', 'plus', 'pro']).optional(),
     estado_suscripcion: z.enum(['active', 'pending', 'paused', 'cancelled']).optional(),
 });
+
+export const actualizarAdministradores = z.object({
+    nombre_usuario: z.string()
+        .min(1, { message: "El nombre es obligatorio" })
+        .max(255, { message: "El nombre no puede exceder los 255 caracteres" }),
+    apellido_usuario: z.string()
+        .min(1, { message: "El apellido es obligatorio" })
+        .max(255, { message: "El apellido no puede exceder los 255 caracteres" }),
+    identificacion_usuario: z.string()
+  .regex(/^[1-9]\d{7,10}$/, {
+    message: "La identificación debe tener entre 8 y 11 dígitos numéricos y no puede comenzar con cero",
+  }),
+    direccion_usuario: z.string()
+        .min(1, { message: "La dirección es obligatoria" })
+        .max(255, { message: "La dirección no puede exceder los 255 caracteres" }),
+    telefono_usuario: z.string()
+    .regex(/^\d{10}$/, { message: "El teléfono debe tener exactamente 10 dígitos" }),
+    correo_usuario: z.string()
+        .email({ message: "El correo electrónico debe tener un formato válido" }),
+    tipo_usuario: z.enum(['Usuario', 'Medico', 'Administrador', 'Super']).optional(),
+    // contrasena_usuario: z.string()
+    //     .min(8, { message: "La contraseña debe tener al menos 8 caracteres" }), 
+    imagen_usuario: z.string().optional(),
+});
