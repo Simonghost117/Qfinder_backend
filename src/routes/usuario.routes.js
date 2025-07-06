@@ -5,7 +5,7 @@ import { login, logout, register,
     actualizarUsuario, actualizarAdmin, eliminarAdmin, contarUsuarios, 
     listarUsuariosFiltrados,
     traerMembresia,
-    actualizarAdministradores
+    actualizarAdministrador
 } from '../controllers/usuarioController.js';
 import { resendVerificationCode } from '../services/usuarioService.js';
 import validateSchema from '../middlewares/validatoreSchema.js';
@@ -174,7 +174,7 @@ router.put('/actualizarAdministradores/:id_usuario',
     verifyTokenWeb,
     validateRol(['Super']),
     validateSchema(actualizarAdministradores),
-    actualizarAdministradores
+    actualizarAdministrador
 )
 //listar todos los usuarios
 //listar todos los pacientes

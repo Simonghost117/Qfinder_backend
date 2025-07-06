@@ -1100,7 +1100,7 @@ export const traerMembresia = async (req, res) => {
   }
 }
 
-export const actualizarAdministradores = async (req, res) => {
+export const actualizarAdministrador = async (req, res) => {
   try {
     const { id_usuario } = req.params;
     const { nombre_usuario, apellido_usuario, identificacion_usuario, direccion_usuario, telefono_usuario, correo_usuario, imagen_usuario } = req.body;
