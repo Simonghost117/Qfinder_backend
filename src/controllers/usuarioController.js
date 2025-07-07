@@ -244,7 +244,11 @@ export const logout = async (req, res) => {
 
 export const listarUsers = async (req, res) => {
     try {
-        const usuarios = await Usuario.findAll();
+        const usuarios = await Usuario.findAll({
+          where: {
+            tipo_usuario: 'Usuario'
+          }
+        });
         if (!usuarios) {
             return res.status(404).json({ message: 'No se encontraron usuarios' });
         }
