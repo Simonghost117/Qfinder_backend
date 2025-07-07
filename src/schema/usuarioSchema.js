@@ -37,16 +37,18 @@ export const loginSchema = z.object({
 
 export const updateSchema = z.object({
     nombre_usuario: z.string()
-        .min(1, { message: "El nombre de usuario es obligatorio" })
-        .max(255, { message: "El nombre de usuario no puede exceder los 255 caracteres" }),
+        .min(1, { message: "El nombre es obligatorio" })
+        .max(255, { message: "El nombre no puede exceder los 255 caracteres" })
+        .regex(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/, { message: "El nombre solo debe contener letras y espacios" }),
     apellido_usuario: z.string()
-        .min(1, { message: "El apellido de usuario es obligatorio" })
-        .max(255, { message: "El apellido de usuario no puede exceder los 255 caracteres" }),
+        .min(1, { message: "El apellido es obligatorio" })
+        .max(255, { message: "El apellido no puede exceder los 255 caracteres" })
+        .regex(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/, { message: "El apellido solo debe contener letras y espacios" }),
     direccion_usuario: z.string()
         .min(1, { message: "La dirección es obligatoria" })
         .max(255, { message: "La dirección no puede exceder los 255 caracteres" }),
     telefono_usuario: z.string()
-    .regex(/^\d{10}$/, { message: "El teléfono debe tener exactamente 10 dígitos" }),
+        .regex(/^[1-9]\d{9}$/, { message: "El teléfono debe tener 10 dígitos y no comenzar con cero" }),
     // correo_usuario: z.string()
     //     .email({ message: "El correo electrónico debe tener un formato válido" }),
     imagen_usuario: z.string().url({ message: "La imagen debe ser una URL válida" }).optional(),
@@ -60,10 +62,12 @@ export const cambiarContrasenaSchema = z.object({
 export const usuarioAdmiAct = z.object({
     nombre_usuario: z.string()
         .min(1, { message: "El nombre es obligatorio" })
-        .max(255, { message: "El nombre no puede exceder los 255 caracteres" }),
+        .max(255, { message: "El nombre no puede exceder los 255 caracteres" })
+        .regex(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/, { message: "El nombre solo debe contener letras y espacios" }),
     apellido_usuario: z.string()
         .min(1, { message: "El apellido es obligatorio" })
-        .max(255, { message: "El apellido no puede exceder los 255 caracteres" }),
+        .max(255, { message: "El apellido no puede exceder los 255 caracteres" })
+        .regex(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/, { message: "El apellido solo debe contener letras y espacios" }),
     identificacion_usuario: z.string()
   .regex(/^[1-9]\d{7,10}$/, {
     message: "La identificación debe tener entre 8 y 11 dígitos numéricos y no puede comenzar con cero",
@@ -72,7 +76,7 @@ export const usuarioAdmiAct = z.object({
         .min(1, { message: "La dirección es obligatoria" })
         .max(255, { message: "La dirección no puede exceder los 255 caracteres" }),
     telefono_usuario: z.string()
-    .regex(/^\d{10}$/, { message: "El teléfono debe tener exactamente 10 dígitos" }),
+        .regex(/^[1-9]\d{9}$/, { message: "El teléfono debe tener 10 dígitos y no comenzar con cero" }),
     correo_usuario: z.string()
         .email({ message: "El correo electrónico debe tener un formato válido" }),
     tipo_usuario: z.enum(['Usuario', 'Medico', 'Administrador', 'Super']).optional(),
@@ -86,10 +90,12 @@ export const usuarioAdmiAct = z.object({
 export const actualizarAdministradores = z.object({
     nombre_usuario: z.string()
         .min(1, { message: "El nombre es obligatorio" })
-        .max(255, { message: "El nombre no puede exceder los 255 caracteres" }),
+        .max(255, { message: "El nombre no puede exceder los 255 caracteres" })
+        .regex(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/, { message: "El nombre solo debe contener letras y espacios" }),
     apellido_usuario: z.string()
         .min(1, { message: "El apellido es obligatorio" })
-        .max(255, { message: "El apellido no puede exceder los 255 caracteres" }),
+        .max(255, { message: "El apellido no puede exceder los 255 caracteres" })
+        .regex(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/, { message: "El apellido solo debe contener letras y espacios" }),
     identificacion_usuario: z.string()
   .regex(/^[1-9]\d{7,10}$/, {
     message: "La identificación debe tener entre 8 y 11 dígitos numéricos y no puede comenzar con cero",
@@ -98,7 +104,7 @@ export const actualizarAdministradores = z.object({
         .min(1, { message: "La dirección es obligatoria" })
         .max(255, { message: "La dirección no puede exceder los 255 caracteres" }),
     telefono_usuario: z.string()
-    .regex(/^\d{10}$/, { message: "El teléfono debe tener exactamente 10 dígitos" }),
+        .regex(/^[1-9]\d{9}$/, { message: "El teléfono debe tener 10 dígitos y no comenzar con cero" }),
     correo_usuario: z.string()
         .email({ message: "El correo electrónico debe tener un formato válido" }),
     tipo_usuario: z.enum(['Usuario', 'Medico', 'Administrador', 'Super']).optional(),

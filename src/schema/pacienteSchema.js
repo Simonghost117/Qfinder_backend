@@ -8,14 +8,16 @@ export const PacienteSchema = z.object({
     })
     .max(100, {
       message: "El nombre del paciente no puede exceder los 100 carácteres"
-    }),
+    })
+    .regex(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/, { message: "El nombre solo debe contener letras y espacios" }),
   apellido: z.string()
     .min(2, {
       message: "El apellido del paciente debe tener al menos 2 carácteres"
     })
     .max(100, {
       message: "El apellido del paciente no puede exceder los 100 carácteres"
-    }),
+    })
+        .regex(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/, { message: "El apellido solo debe contener letras y espacios" }),
   identificacion: z.string()
   .regex(/^[1-9]\d{7,10}$/, {
     message: "La identificación debe tener entre 8 y 11 dígitos numéricos y no puede comenzar con cero",
@@ -51,14 +53,16 @@ export const ActPacienteSchema = z.object({
     })
     .max(100, {
       message: "El nombre del paciente no puede exceder los 100 carácteres"
-    }),
+    })
+        .regex(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/, { message: "El nombre solo debe contener letras y espacios" }),
   apellido: z.string()
     .min(2, {
       message: "El apellido del paciente debe tener al menos 2 carácteres"
     })
     .max(100, {
       message: "El apellido del paciente no puede exceder los 100 carácteres"
-    }),
+    })
+        .regex(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/, { message: "El apellido solo debe contener letras y espacios" }),
   fecha_nacimiento: z.string()
     .transform((str) => new Date(str))
     .refine((date) => {
@@ -87,14 +91,16 @@ export const ActPaciente2 = z.object({
     })
     .max(100, {
       message: "El nombre del paciente no puede exceder los 100 carácteres"
-    }),
+    })
+        .regex(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/, { message: "El nombre solo debe contener letras y espacios" }),
   apellido: z.string()
     .min(2, {
       message: "El apellido del paciente debe tener al menos 2 carácteres"
     })
     .max(100, {
       message: "El apellido del paciente no puede exceder los 100 carácteres"
-    }),
+    })
+        .regex(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/, { message: "El apellido solo debe contener letras y espacios" }),
   identificacion: z.string()
   .regex(/^[1-9]\d{7,10}$/, {
     message: "La identificación debe tener entre 8 y 11 dígitos numéricos y no puede comenzar con cero",
@@ -136,14 +142,16 @@ export const PacienteSchema2 = z.object({
     })
     .max(100, {
       message: "El nombre del paciente no puede exceder los 100 carácteres"
-    }),
+    })
+        .regex(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/, { message: "El nombre solo debe contener letras y espacios" }),
   apellido: z.string()
     .min(2, {
       message: "El apellido del paciente debe tener al menos 2 carácteres"
     })
     .max(100, {
       message: "El apellido del paciente no puede exceder los 100 carácteres"
-    }),
+    })
+        .regex(/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/, { message: "El apellido solo debe contener letras y espacios" }),
   identificacion: z.string()
   .regex(/^[1-9]\d{7,10}$/, {
     message: "La identificación debe tener entre 8 y 11 dígitos numéricos y no puede comenzar con cero",
