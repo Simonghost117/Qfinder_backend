@@ -224,6 +224,7 @@ export const login = async (req, res) => {
           nombre: usuario.nombre_usuario,
           apellido: usuario.apellido_usuario,
           rol: usuario.tipo_usuario, 
+          immagen: usuario.imagen_usuario || null,
           token 
         });
       } catch (error) {

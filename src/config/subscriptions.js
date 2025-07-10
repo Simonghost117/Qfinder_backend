@@ -1,6 +1,6 @@
 export const SUBSCRIPTION_LIMITS = {
-  free: { pacientes: 2, cuidadores: 1 },
-  plus: { pacientes: 5, cuidadores: 3 },
+  free: { pacientes: 2, cuidadores: 0 },
+  plus: { pacientes: 5, cuidadores: 5 },
   pro: { pacientes: 15, cuidadores: 10 }
 };
 
